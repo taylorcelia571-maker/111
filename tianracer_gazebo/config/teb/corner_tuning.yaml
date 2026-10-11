@@ -1,0 +1,11 @@
+# Optional small changes; same Navfn/costmaps/obstacle weights as recovery mode.
+controller_frequency: 20.0
+TebLocalPlannerROS:
+  dt_ref: 0.2
+  dt_hysteresis: 0.02
+  max_global_plan_lookahead_dist: 4.0
+  exact_arc_length: true
+  wheelbase: 0.26
+  max_vel_theta: 4.0
+  acc_lim_x: 2.0
+  acc_lim_theta: 4.0

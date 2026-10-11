@@ -1,0 +1,4 @@
+# Experimental SOFT path reference, separate from corner tuning; default OFF.
+TebLocalPlannerROS:
+  global_plan_viapoint_sep: 0.8
+  weight_viapoint: 0.5

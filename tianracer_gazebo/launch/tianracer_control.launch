@@ -3,6 +3,7 @@
 <launch>
   <arg name="robot_name" default="tianracer"/>
   <arg name="race_profile" default="false"/>
+  <arg name="wheel_feedforward" default="false"/>
   <arg name="command_watchdog" default="false"/>
   <arg name="race_max_speed" default="2.4"/>
   <!-- Load joint controller configurations from YAML file to parameter server -->
@@ -22,7 +23,9 @@
         <remap from="/joint_states" to="/$(arg robot_name)/joint_states"/>
       </node>
       <!-- servo node -->
-      <node pkg="tianracer_gazebo" type="servo_commands.py" name="servo_commands" output="screen"/>
+      <node pkg="tianracer_gazebo" type="servo_commands.py" name="servo_commands" output="screen">
+        <param name="wheel_feedforward" value="$(arg wheel_feedforward)" type="bool"/>
+      </node>
 
       <!-- servo node -->
       <node pkg="tianracer_gazebo" type="transform.py" name="nav_sim" output="screen">

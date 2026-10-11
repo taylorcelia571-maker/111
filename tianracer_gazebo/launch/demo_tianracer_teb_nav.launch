@@ -8,6 +8,9 @@
     <arg name="command_watchdog" default="false"/>
     <arg name="race_max_speed" default="2.4"/>
     <arg name="planner_profile" default="false"/>
+    <arg name="wheel_feedforward" default="false"/>
+    <arg name="corner_tuning" default="false"/>
+    <arg name="path_bias" default="false"/>
     <arg name="planner_max_speed" default="2.6"/>
 
     <!-- rviz -->
@@ -30,6 +33,7 @@
             <arg name="race_profile" value="$(arg race_profile)"/>
             <arg name="race_max_speed" value="$(arg race_max_speed)"/>
                     <arg name="command_watchdog" value="$(arg command_watchdog)"/>
+                    <arg name="wheel_feedforward" value="$(arg wheel_feedforward)"/>
         </include>
 
         <!-- move base -->
@@ -39,6 +43,8 @@
             <arg name="race_max_speed" value="$(arg race_max_speed)"/>
                     <arg name="planner_profile" value="$(arg planner_profile)"/>
             <arg name="planner_max_speed" value="$(arg planner_max_speed)"/>
+                    <arg name="corner_tuning" value="$(arg corner_tuning)"/>
+            <arg name="path_bias" value="$(arg path_bias)"/>
         </include>
 
         <!-- AMCL -->
@@ -71,6 +77,7 @@
             <arg name="race_profile" value="$(arg race_profile)"/>
             <arg name="race_max_speed" value="$(arg race_max_speed)"/>
                     <arg name="command_watchdog" value="$(arg command_watchdog)"/>
+                    <arg name="wheel_feedforward" value="$(arg wheel_feedforward)"/>
         </include>
 
         <!-- move base -->
@@ -80,6 +87,8 @@
             <arg name="race_max_speed" value="$(arg race_max_speed)"/>
                     <arg name="planner_profile" value="$(arg planner_profile)"/>
             <arg name="planner_max_speed" value="$(arg planner_max_speed)"/>
+                    <arg name="corner_tuning" value="$(arg corner_tuning)"/>
+            <arg name="path_bias" value="$(arg path_bias)"/>
         </include>
 
         <!-- AMCL -->

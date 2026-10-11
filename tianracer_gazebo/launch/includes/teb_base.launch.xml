@@ -5,6 +5,8 @@
   <arg name="race_profile" default="false"/>
   <arg name="race_max_speed" default="2.4"/>
   <arg name="planner_profile" default="false"/>
+  <arg name="corner_tuning" default="false"/>
+  <arg name="path_bias" default="false"/>
   <arg name="planner_max_speed" default="2.6"/>
   
   <!-- Define various frame and topic IDs with default values -->
@@ -52,6 +54,9 @@
       <!-- Planner-only racing mode: no output smoothing or recorded line required. -->
       <rosparam if="$(arg planner_profile)" file="$(find tianracer_gazebo)/config/teb/planner_race_profile.yaml" command="load"/>
       <param if="$(arg planner_profile)" name="TebLocalPlannerROS/max_vel_x" value="$(arg planner_max_speed)" type="double"/>
+
+      <rosparam if="$(arg corner_tuning)" file="$(find tianracer_gazebo)/config/teb/corner_tuning.yaml" command="load"/>
+      <rosparam if="$(arg path_bias)" file="$(find tianracer_gazebo)/config/teb/path_bias.yaml" command="load"/>
 
       <!-- Reset frame_id parameters using user input data -->
       <param unless="$(eval robot_name=='/')" name="local_costmap/robot_base_frame" value="$(arg robot_name)/$(arg base_frame_id)"/>
