@@ -1,130 +1,116 @@
-# 无需录线的全局规划 / TEB 轨迹优化模式
+# 第三版不动问题的恢复修正
 
-用户提供的正式五圈基准为 **167.955 秒**，各圈 33.155、33.392、34.673、33.320、33.413 秒。
-该结果是对比基线，不是新模式的实测结果。
+第三版在用户的真实 Gazebo 环境中未能正常行驶，已撤回其激进规划组合。
+参数已加载、cmd_vel 达到 20 Hz，不能证明速度值非零或车辆能够跟踪路径。
+用户补充日志确认首个目标以 state 4 中止：`Failed to find a valid plan. Even after executing recovery behaviors.`
+这是导航规划失败，0/5 圈；后续消息断流发生在失败之后。当前仍不能定位具体哪一个参数使规划失效。
 
-录线的 `Connection refused` 表示无法连接 ROS master。先启动并保持仿真终端运行，
-才能录 TF 路线；单独启动录制器不会启动仿真。当前这条替代方案不需要录制文件。
+## 当前修正
 
-## 本次改动
+- 恢复默认原链路的 `navfn/NavfnROS`，不再切换 GlobalPlanner。
+- 代价地图、未知区域处理、膨胀半径和障碍代价恢复基础配置。
+- TEB 的预瞄、参考点、迭代数、障碍/运动学权重等全部恢复基础配置。
+- 控制频率回到 10 Hz，默认最大速度回到 1.8 m/s。
+- 保留指令超时停车，关闭额外的输出平滑和曲率限速。
+- 修复 watchdog 直接转换模式下零速消息暂时丢失转角的问题。
 
-1. 显式启用 `global_planner/GlobalPlanner`。此前只有 GlobalPlanner 参数，未选择插件；
-   move_base 可能使用默认 Navfn，使这些参数没有生效。
-2. A* 配合二次插值与连续路径提取，开启前向路径朝向；调整膨胀代价梯度引导路线离墙。
-3. TEB 预瞄 5 m、时间分辨率 0.15 s，内/外迭代由 3×2 改为 4×3；
-   同时考虑路径参考点、时间、加速约束和避障，不强制追逐最短贴墙路线。
-4. 默认速度测试档 2.4 m/s，可调 2.6、2.8；提高转动速度预算，允许局部规划器重新协调入弯速度。
-5. 关闭第一版额外输出平滑与曲率限速，让 TEB 直接控制；保留指令断流停车。
-6. 修正局部激光 sensor_frame 中多出来的 `l` 前缀。
+`planner_race_demo.launch` 现在是恢复入口，名称为兼容已有命令而保留。
+它不再启用第三版 GlobalPlanner/高约束优化，也不需要录线。
+`max_speed` 是唯一用于提速的参数；先恢复行驶，再逐档测试。
+原版官方赛道、车型、裁判、地图和航点没有修改。
 
-TEB 在运行时优化当前局部轨迹，不是离线生成整圈最优竞速线。
-默认四航点、官方地图、赛道、车辆、裁判和成绩规则保持不变。
-基础足迹、最小转弯半径、TEB 障碍间距也保留原值。
-新参数是待实测配置，不是已经证明的最优设置；避障权重与平滑梯度也可能使部分路段变慢。
+## 更新并完整重启
 
-## 更新与依赖
+先在各终端 Ctrl+C 停止本次自己启动的跑圈、仿真和裁判。
+不要仅在运行中设置 rosparam：旧插件实例和已加载代价地图需要重新初始化。
 
 ```bash
 source /opt/ros/noetic/setup.bash
 cd ~/ican_race_ws/src/tianracer
 git pull --ff-only
-```
-
-你已经 catkin 构建成功，但 rosdep 本地缓存还没有准备好。
-Noetic 已停止支持，更新缓存时需包含已结束支持的发行版；不要 sudo 执行 rosdep update：
-
-```bash
-rosdep update --include-eol-distros
-```
-
-若明确提示 `/etc/ros/rosdep/sources.list.d/20-default.list` 不存在，先执行一次 `sudo rosdep init`，
-然后再执行上面的 update。已有该文件时不重复 init。网络失败应解决网络，不把失败当作成功。
-
-```bash
 cd ~/ican_race_ws
-rosdep install --from-paths src --ignore-src -r -y --rosdistro noetic
 catkin_make
 source devel/setup.bash
 rospack find tianracer_gazebo
-rospack find global_planner
 ```
 
-如果仅缺少 GlobalPlanner 包，可安装：
-
-```bash
-sudo apt install ros-noetic-global-planner
-```
-
-tianracer_gazebo 应来自 `~/ican_race_ws/src/tianracer/`。每个新终端都重新 source 两个 setup.bash。
-
-## 三个终端直接跑圈
-
-先退出上一轮自己启动的跑圈节点和仿真；不得同时运行连续路径控制器和多航点控制。
+包应来自 `~/ican_race_ws/src/tianracer/`。每个新终端都加载上述两个 setup。
+已安装所需依赖时无需每次运行 rosdep update。
+若 rosdep 未初始化，使用 `rosdep update --include-eol-distros`；仅在默认源列表文件不存在时先做一次 `sudo rosdep init`。
 
 终端 A：
 
 ```bash
-source /opt/ros/noetic/setup.bash
-source ~/ican_race_ws/devel/setup.bash
-roslaunch tianracer_gazebo planner_race_demo.launch max_speed:=2.4
+roslaunch tianracer_gazebo planner_race_demo.launch max_speed:=1.8
 ```
 
-等待 Gazebo、定位、move_base 正常。终端 B：
+终端 B：
 
 ```bash
-source /opt/ros/noetic/setup.bash
-source ~/ican_race_ws/devel/setup.bash
 roslaunch tianracer_sim_referee referee.launch
 ```
 
-完成绑定与官方环境校验；车辆在起终点附近停稳后点击“准备发车”。终端 C：
+车辆停稳、官方环境和绑定正常后点击准备发车。终端 C：
 
 ```bash
-source /opt/ros/noetic/setup.bash
-source ~/ican_race_ws/devel/setup.bash
 roslaunch tianracer_gazebo waypoint_laps.launch world:=tianracer_racetrack robot_name:=tianracer laps:=5 switch_distance:=0.5
 ```
 
-第一轮保持 0.5 m 换点阈值，单独检验规划参数收益。
-在路线和官方检测线都正常的前提下，再测试 `switch_distance:=0.8`，减少到点前停顿。
-提高阈值可能改变路线或漏线；若漏线，立即回到 0.5，不继续增大。
-首个目标和最后闭环依然要求导航成功，中间点仍沿用已有换点机制。
-五次航点序列不自动等于五个官方有效圈，以裁判锁定五圈为准。
-
-## 确认配置生效与逐档提速
-
-启动后在另一个加载环境的终端检查：
+启动后检查：
 
 ```bash
 rosparam get /tianracer/move_base/base_global_planner
-rosparam get /tianracer/move_base/TebLocalPlannerROS/max_vel_x
+rosparam get /tianracer/move_base/TebLocalPlannerROS/global_plan_viapoint_sep
 rosparam get /tianracer/move_base/TebLocalPlannerROS/max_global_plan_lookahead_dist
-rosparam get /tianracer/nav_sim/race_profile
-rostopic hz /tianracer/cmd_vel
+rosparam get /tianracer/move_base/controller_frequency
 ```
 
-应分别为 `global_planner/GlobalPlanner`、2.4、5.0、false，控制目标频率 20 Hz。
-如果实际频率明显不足，更多 TEB 迭代可能超出电脑预算，先降低速度并检查计算负载。
+应分别为 `navfn/NavfnROS`、-1、3.0、10.0。
+如果仍为 GlobalPlanner、0.5、5.0 或 20，说明代码/进程没有完全更新或重启。
 
-每个速度档至少测三轮官方五圈总用时和有效完赛率。
-先测试 2.4，再重启 A 测 2.6、2.8；不要同时改速度和换点距离，以便定位收益。
-出现冲墙、左右摆动加剧、漏检测线或无法规划时，先回到已验证档位。
-目标是比 167.955 秒更快且稳定有效完赛；没有保证某一速度一定达到该目标。
+## 能行驶之后才提速
 
-记录 `/clock`、`/tianracer/cmd_vel`、`/tianracer/odom`、`/tianracer/scan`、`/tianracer/amcl_pose`
-以及裁判最终用时。如仍没有改善，可基于日志区分规划限速、跟踪误差和物理车速。
-
-## 验证与回退
+先用 1.8 完成一轮有效五圈，再分别测试 2.0、2.2、2.4：
 
 ```bash
-cd ~/ican_race_ws/src/tianracer
-python3 -m unittest discover -s tianracer_gazebo/test -p 'test_race_*.py' -v
-python3 -m unittest discover -s tianracer_gazebo/test -p 'test_planner_profile.py' -v
+roslaunch tianracer_gazebo planner_race_demo.launch max_speed:=2.0
 ```
 
-本次通过已有 29 项离线控制测试及 4 项配置测试，检查参数覆盖、插件选择和模式隔离。
-云端没有 ROS/Gazebo，未执行真实插件加载、catkin 构建或实测官方圈速。
-你提供的构建和 29 项测试成功属于此前版本，不代表新规划模式已经实测通过。
+每次更改都重启自己的仿真并准备新轮次。保持换点距离 0.5 和其他参数不变。
+原基础转弯速度预算保留，因此提高直线速度上限不代表所有弯道都会同幅提速。
+比较至少三轮的官方五圈总用时与完赛率；用户已有基准为 167.955 秒。
+这次修正的首要目标是恢复行驶，不能据此宣称已经提速。
 
-回退时停止仿真，使用原来的 `demo_tianracer_teb_nav.launch` 入口，`planner_profile` 默认 false。
-无需录线，也无需改动或替换官方模型。
+## 如果仍不动：采集实际指令
+
+在 A/B/C 保持运行、航点目标仍活跃、Gazebo 没有暂停时，新终端加载环境后执行：
+
+```bash
+rosrun tianracer_gazebo race_diagnostics.py __ns:=/tianracer _duration:=10
+```
+
+这个脚本只读，不发送车辆指令；采集 10 个墙钟秒后退出。
+报告保存到 `~/ican_race_logs/motion_report.json` 并打印到终端。
+将报告和终端 A 最后 30 行 WARN/ERROR 一起发来。
+
+- cmd_vel 有消息但 nonzero_count 为 0：规划端没有发出前进速度，需要检查目标状态和规划错误。
+- cmd_vel 有非零速度但 Ackermann 没有：检查转换节点、命名空间和超时。
+- Ackermann 有非零速度但 odom 近零：检查底盘控制器、急停、碰撞/卡住或物理执行。
+- simulation_elapsed_s 接近 0：先检查 Gazebo 是否暂停。
+- cmd_vel 断流：可能是导航失败、目标结束或恢复流程，不能仅凭频率确定原因。
+
+必要时补充单条消息：
+
+```bash
+rostopic echo -n 1 /tianracer/cmd_vel
+rostopic echo -n 1 /tianracer/ackermann_cmd_stamped
+```
+
+没有消息时单条 echo 会等待，所以优先使用有时间上限的诊断脚本。
+
+## 验证范围
+
+本次 30 项离线控制测试和 4 项配置测试通过。
+新的配置检查确认基础 TEB 参数完整保留，没有附加代价地图覆盖；
+控制测试检查零速转角保留和指令超时停车。
+这不是 Gazebo 行驶验证。云端没有 ROS/Gazebo，仍需本机确认恢复行驶。

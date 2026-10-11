@@ -1,54 +1,7 @@
-# Optional no-recording profile. Actual lap-time gains must be measured.
-base_global_planner: global_planner/GlobalPlanner
-controller_frequency: 20.0
-planner_frequency: 1.0
-GlobalPlanner:
-  allow_unknown: false
-  use_dijkstra: false
-  use_quadratic: true
-  use_grid_path: false
-  orientation_mode: 1
-  orientation_window_size: 3
-  publish_potential: false
-  neutral_cost: 50
-  cost_factor: 3.0
-# Wider, gentler cost gradient guides the global path away from walls.
-global_costmap:
-  inflation_layer:
-    inflation_radius: 0.85
-    cost_scaling_factor: 5.0
-local_costmap:
-  inflation_layer:
-    inflation_radius: 0.35
-    cost_scaling_factor: 5.0
+# Recovery profile: return to the original planner and original TEB constraints.
+# Change speed ONLY using the launch argument after motion is verified.
+base_global_planner: navfn/NavfnROS
+controller_frequency: 10.0
+planner_frequency: 0.5
 TebLocalPlannerROS:
-  dt_ref: 0.15
-  dt_hysteresis: 0.015
-  min_samples: 10
-  max_samples: 120
-  max_global_plan_lookahead_dist: 5.0
-  global_plan_overwrite_orientation: true
-  global_plan_viapoint_sep: 0.5
-  exact_arc_length: true
-  feasibility_check_no_poses: 5
-  wheelbase: 0.265
-  min_turning_radius: 0.5
-  cmd_angle_instead_rotvel: true
-  max_vel_x: 2.6
-  max_vel_x_backwards: 0.3
-  max_vel_theta: 4.5
-  acc_lim_x: 2.5
-  acc_lim_theta: 4.5
-  free_goal_vel: true
-  no_inner_iterations: 4
-  no_outer_iterations: 3
-  weight_optimaltime: 2.0
-  weight_shortest_path: 0.0
-  weight_viapoint: 2.0
-  weight_acc_lim_x: 4.0
-  weight_acc_lim_theta: 4.0
-  weight_obstacle: 50.0
-  weight_inflation: 2.0
-  weight_kinematics_nh: 1000.0
-  weight_kinematics_turning_radius: 1000.0
-  enable_homotopy_class_planning: false
+  max_vel_x: 1.8

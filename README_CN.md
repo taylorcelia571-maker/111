@@ -1,4 +1,4 @@
-> 无需录线的第三版全局规划 / TEB 优化步骤见 [PLANNER_RACING_CN.md](PLANNER_RACING_CN.md)。
+> 第三版不动问题的恢复修正步骤见 [PLANNER_RACING_CN.md](PLANNER_RACING_CN.md)。
 
 > 第二版连续闭环跟踪与弯前速度规划见 [CONTINUOUS_RACING_CN.md](CONTINUOUS_RACING_CN.md)。
 

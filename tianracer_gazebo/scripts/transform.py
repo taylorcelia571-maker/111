@@ -53,7 +53,7 @@ class Converter:
             self.received = rospy.Time.now()
             if speed == 0.0:
                 self.motion.speed = 0.0
-                self.publish(0.0, self.motion.steer)
+                self.publish(0.0, self.motion.steer if self.enabled else steer)
 
     def tick(self, event):
         with self.lock:

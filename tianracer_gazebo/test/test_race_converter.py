@@ -111,6 +111,13 @@ class ConverterTests(unittest.TestCase):
         converter.tick(None)
         self.assertEqual(self.latest(converter).speed, 0.0)
 
+    def test_watchdog_preserves_zero_speed_steering(self):
+        self.params.update({'~race_profile': False, '~command_watchdog': True})
+        converter = self.module.Converter()
+        self.command(converter, speed=0.0, steer=0.25)
+        self.assertEqual(self.latest(converter).speed, 0.0)
+        self.assertEqual(self.latest(converter).steering_angle, 0.25)
+
     def test_shutdown_stops_and_shuts_timer(self):
         converter = self.module.Converter()
         converter.motion.speed = 2.4

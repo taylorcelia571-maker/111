@@ -7,19 +7,16 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class PlannerProfileTests(unittest.TestCase):
-    def test_effective_planner_and_robot_constraints(self):
+    def test_recovery_keeps_all_baseline_teb_constraints(self):
         base = yaml.safe_load((ROOT/'config/teb/teb_local_planner_params.yaml').read_text())['TebLocalPlannerROS']
         profile = yaml.safe_load((ROOT/'config/teb/planner_race_profile.yaml').read_text())
         effective = dict(base, **profile['TebLocalPlannerROS'])
-        self.assertEqual(profile['base_global_planner'], 'global_planner/GlobalPlanner')
-        self.assertEqual(effective['footprint_model'], base['footprint_model'])
-        self.assertEqual(effective['min_obstacle_dist'], base['min_obstacle_dist'])
-        self.assertEqual(effective['min_turning_radius'], base['min_turning_radius'])
-        self.assertTrue(effective['cmd_angle_instead_rotvel'])
-        self.assertGreater(effective['max_global_plan_lookahead_dist'], base['max_global_plan_lookahead_dist'])
-        self.assertGreater(effective['no_inner_iterations']*effective['no_outer_iterations'],
-                           base['no_inner_iterations']*base['no_outer_iterations'])
-        self.assertLess(effective['dt_hysteresis'], effective['dt_ref'])
+        self.assertEqual(profile['base_global_planner'], 'navfn/NavfnROS')
+        self.assertEqual(effective, base)
+        self.assertNotIn('global_costmap', profile)
+        self.assertNotIn('local_costmap', profile)
+        self.assertNotIn('GlobalPlanner', profile)
+        self.assertEqual(profile['controller_frequency'], 10.0)
 
     def test_override_order_and_speed_argument(self):
         node = E.parse(ROOT/'launch/includes/teb_base.launch.xml').find('.//node')
