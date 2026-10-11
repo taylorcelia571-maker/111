@@ -7,6 +7,8 @@
     <arg name="start_navigation" default="true"/>
     <arg name="command_watchdog" default="false"/>
     <arg name="race_max_speed" default="2.4"/>
+    <arg name="planner_profile" default="false"/>
+    <arg name="planner_max_speed" default="2.6"/>
 
     <!-- rviz -->
     <group if="$(eval arg('robot_name') == '/')">
@@ -35,6 +37,8 @@
             <arg name="robot_name" value="$(arg namespace)" />
             <arg name="race_profile" value="$(arg race_profile)"/>
             <arg name="race_max_speed" value="$(arg race_max_speed)"/>
+                    <arg name="planner_profile" value="$(arg planner_profile)"/>
+            <arg name="planner_max_speed" value="$(arg planner_max_speed)"/>
         </include>
 
         <!-- AMCL -->
@@ -74,6 +78,8 @@
             <arg name="robot_name" value="$(arg robot_name)" />
             <arg name="race_profile" value="$(arg race_profile)"/>
             <arg name="race_max_speed" value="$(arg race_max_speed)"/>
+                    <arg name="planner_profile" value="$(arg planner_profile)"/>
+            <arg name="planner_max_speed" value="$(arg planner_max_speed)"/>
         </include>
 
         <!-- AMCL -->

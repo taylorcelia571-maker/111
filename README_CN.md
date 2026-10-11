@@ -1,3 +1,5 @@
+> 无需录线的第三版全局规划 / TEB 优化步骤见 [PLANNER_RACING_CN.md](PLANNER_RACING_CN.md)。
+
 > 第二版连续闭环跟踪与弯前速度规划见 [CONTINUOUS_RACING_CN.md](CONTINUOUS_RACING_CN.md)。
 
 > 本仓库优化版的克隆、构建和验收步骤见 [LOCAL_VALIDATION_CN.md](LOCAL_VALIDATION_CN.md)。

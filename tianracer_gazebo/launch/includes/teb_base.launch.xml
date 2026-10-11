@@ -4,6 +4,8 @@
   <arg name="robot_name" default="tianracer" />
   <arg name="race_profile" default="false"/>
   <arg name="race_max_speed" default="2.4"/>
+  <arg name="planner_profile" default="false"/>
+  <arg name="planner_max_speed" default="2.6"/>
   
   <!-- Define various frame and topic IDs with default values -->
   <arg name="odom_frame_id" default="odom"/>
@@ -47,10 +49,14 @@
       <rosparam if="$(arg race_profile)" file="$(find tianracer_gazebo)/config/teb/race_profile.yaml" command="load"/>
       <param if="$(arg race_profile)" name="TebLocalPlannerROS/max_vel_x" value="$(arg race_max_speed)" type="double"/>
 
+      <!-- Planner-only racing mode: no output smoothing or recorded line required. -->
+      <rosparam if="$(arg planner_profile)" file="$(find tianracer_gazebo)/config/teb/planner_race_profile.yaml" command="load"/>
+      <param if="$(arg planner_profile)" name="TebLocalPlannerROS/max_vel_x" value="$(arg planner_max_speed)" type="double"/>
+
       <!-- Reset frame_id parameters using user input data -->
       <param unless="$(eval robot_name=='/')" name="local_costmap/robot_base_frame" value="$(arg robot_name)/$(arg base_frame_id)"/>
       <param unless="$(eval robot_name=='/')" name="local_costmap/global_frame" value="$(arg robot_name)/$(arg odom_frame_id)"/>
-      <param unless="$(eval robot_name=='/')" name="local_costmap/scan/sensor_frame" value="$(arg robot_name)/l$(arg laser_frame_id)"/>
+      <param unless="$(eval robot_name=='/')" name="local_costmap/scan/sensor_frame" value="$(arg robot_name)/$(arg laser_frame_id)"/>
       <param unless="$(eval robot_name=='/')" name="local_costmap/scan/topic" value="/$(arg robot_name)/$(arg laser_topic)"/>
       <param unless="$(eval robot_name=='/')" name="global_costmap/robot_base_frame" value="$(arg robot_name)/$(arg base_frame_id)"/>
       <param unless="$(eval robot_name=='/')" name="global_costmap/global_frame" value="$(arg global_frame_id)"/>

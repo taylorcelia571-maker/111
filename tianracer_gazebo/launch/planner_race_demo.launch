@@ -1,0 +1,14 @@
+<launch>
+  <!-- Keep official world/model; run waypoint_laps separately after referee Prepare. -->
+  <arg name="robot_name" default="tianracer"/>
+  <arg name="max_speed" default="2.4"/>
+  <include file="$(find tianracer_gazebo)/launch/demo_tianracer_teb_nav.launch">
+    <arg name="world" value="tianracer_racetrack"/>
+    <arg name="robot_name" value="$(arg robot_name)"/>
+    <arg name="start_navigation" value="true"/>
+    <arg name="planner_profile" value="true"/>
+    <arg name="planner_max_speed" value="$(arg max_speed)"/>
+    <arg name="race_profile" value="false"/>
+    <arg name="command_watchdog" value="true"/>
+  </include>
+</launch>
