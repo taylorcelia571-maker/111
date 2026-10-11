@@ -1,0 +1,15 @@
+# Gazebo tuning starting point; values are not official competition limits.
+controller_frequency: 20.0
+TebLocalPlannerROS:
+  dt_ref: 0.15
+  dt_hysteresis: 0.015
+  max_global_plan_lookahead_dist: 4.5
+  feasibility_check_no_poses: 5
+  exact_arc_length: true
+  wheelbase: 0.265
+  max_vel_x: 2.4
+  acc_lim_x: 2.5
+  weight_acc_lim_x: 4.0
+  weight_acc_lim_theta: 4.0
+  weight_optimaltime: 1.0
+  # Keep the baseline footprint, turning radius and obstacle clearance.

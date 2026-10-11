@@ -1,0 +1,10 @@
+# Command shaping limits for the optional race profile.
+# max_speed is set by launch race_max_speed, matching the planner.
+wheelbase: 0.265
+max_steer: 0.48
+lateral_accel: 2.5
+acceleration: 2.5
+deceleration: 4.0
+steer_rate: 1.8
+steer_tau: 0.06
+command_timeout: 0.5
