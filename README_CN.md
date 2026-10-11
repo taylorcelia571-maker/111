@@ -1,3 +1,5 @@
+> 第二版连续闭环跟踪与弯前速度规划见 [CONTINUOUS_RACING_CN.md](CONTINUOUS_RACING_CN.md)。
+
 > 本仓库优化版的克隆、构建和验收步骤见 [LOCAL_VALIDATION_CN.md](LOCAL_VALIDATION_CN.md)。
 > 优化实现及调参说明见 [RACING_OPTIMIZATION_CN.md](RACING_OPTIMIZATION_CN.md)。
 

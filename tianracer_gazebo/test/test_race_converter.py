@@ -99,6 +99,18 @@ class ConverterTests(unittest.TestCase):
         self.assertEqual(self.latest(converter).steering_angle, 0.15)
         self.ros.Timer.assert_not_called()
 
+    def test_watchdog_without_smoothing_preserves_command_and_stops_on_timeout(self):
+        self.params.update({'~race_profile': False, '~command_watchdog': True})
+        converter = self.module.Converter()
+        self.command(converter, speed=2.8, steer=0.25)
+        Stamp.now_value = 0.02
+        converter.tick(None)
+        self.assertEqual(self.latest(converter).speed, 2.8)
+        self.assertEqual(self.latest(converter).steering_angle, 0.25)
+        Stamp.now_value = 0.6
+        converter.tick(None)
+        self.assertEqual(self.latest(converter).speed, 0.0)
+
     def test_shutdown_stops_and_shuts_timer(self):
         converter = self.module.Converter()
         converter.motion.speed = 2.4

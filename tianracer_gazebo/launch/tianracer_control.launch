@@ -3,6 +3,7 @@
 <launch>
   <arg name="robot_name" default="tianracer"/>
   <arg name="race_profile" default="false"/>
+  <arg name="command_watchdog" default="false"/>
   <arg name="race_max_speed" default="2.4"/>
   <!-- Load joint controller configurations from YAML file to parameter server -->
   <rosparam file="$(find tianracer_gazebo)/config/tianracer_control.yaml" command="load" ns="$(arg robot_name)"/>
@@ -27,6 +28,7 @@
       <node pkg="tianracer_gazebo" type="transform.py" name="nav_sim" output="screen">
         <rosparam if="$(arg race_profile)" file="$(find tianracer_gazebo)/config/race_motion.yaml" command="load"/>
         <param name="race_profile" value="$(arg race_profile)" type="bool"/>
+        <param name="command_watchdog" value="$(arg command_watchdog)" type="bool"/>
         <param name="max_speed" value="$(arg race_max_speed)" type="double"/>
       </node>
       <!-- Allow for Gazebo to broadcast odom -->

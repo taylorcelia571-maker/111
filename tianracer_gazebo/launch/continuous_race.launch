@@ -1,0 +1,15 @@
+<launch>
+  <!-- Run demo with start_navigation:=false race_profile:=false command_watchdog:=true. -->
+  <arg name="robot_name" default="tianracer"/>
+  <arg name="path_file"/>
+  <arg name="max_speed" default="3.0"/>
+  <arg name="lateral_accel" default="3.0"/>
+  <arg name="laps" default="5"/>
+  <node pkg="tianracer_gazebo" type="continuous_race.py" name="continuous_race"
+        ns="$(arg robot_name)" output="screen" required="true">
+    <param name="path_file" value="$(arg path_file)"/>
+    <param name="max_speed" value="$(arg max_speed)" type="double"/>
+    <param name="lateral_accel" value="$(arg lateral_accel)" type="double"/>
+    <param name="laps" value="$(arg laps)" type="int"/>
+  </node>
+</launch>

@@ -1,3 +1,5 @@
+> 第二版增加了连续路径跟踪，使用步骤见 [CONTINUOUS_RACING_CN.md](CONTINUOUS_RACING_CN.md)。下面保留第一版 TEB 的验收流程。
+
 # 本地克隆与验收
 
 这是基于用户上传代码制作的优化版，不是官方发行版。
@@ -36,7 +38,7 @@ python3 -m unittest discover -s tianracer_gazebo/test -p 'test_race_*.py' -v
 python3 -m unittest discover -s tianracer_gazebo/test -p 'test_waypoint_laps.py' -v
 ```
 
-第一条应运行 12 项并全部通过。第二条依赖 ROS 消息；云端没有运行，需在本机验证。
+当前第一条应运行 29 项并全部通过。第二条依赖 ROS 消息；云端没有运行，需在本机验证。
 任何失败都先解决；逻辑测试通过不代表官方模型校验和圈速通过。
 
 ## 3. 三个终端运行

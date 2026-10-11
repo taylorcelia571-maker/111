@@ -4,6 +4,8 @@
     <arg name="robot_name" default="$(optenv TIANRACER_NAME tianracer)" doc="robot name [tianracer_No1, tianracer_No2, tianracer_No3, ...]"/>
     <arg name="namespace" default="tianracer"/>
     <arg name="race_profile" default="false"/>
+    <arg name="start_navigation" default="true"/>
+    <arg name="command_watchdog" default="false"/>
     <arg name="race_max_speed" default="2.4"/>
 
     <!-- rviz -->
@@ -23,14 +25,15 @@
         <!-- launch tianracer control -->
         <include file="$(find tianracer_gazebo)/launch/tianracer_control.launch" >
             <arg name="robot_name" value="$(arg namespace)" />
-                    <arg name="race_profile" value="$(arg race_profile)"/>
+            <arg name="race_profile" value="$(arg race_profile)"/>
             <arg name="race_max_speed" value="$(arg race_max_speed)"/>
+                    <arg name="command_watchdog" value="$(arg command_watchdog)"/>
         </include>
 
         <!-- move base -->
-        <include file="$(find tianracer_gazebo)/launch/includes/teb_base.launch.xml" >
+        <include if="$(arg start_navigation)" file="$(find tianracer_gazebo)/launch/includes/teb_base.launch.xml" >
             <arg name="robot_name" value="$(arg namespace)" />
-                    <arg name="race_profile" value="$(arg race_profile)"/>
+            <arg name="race_profile" value="$(arg race_profile)"/>
             <arg name="race_max_speed" value="$(arg race_max_speed)"/>
         </include>
 
@@ -61,14 +64,15 @@
         <!-- launch tianracer control -->
         <include file="$(find tianracer_gazebo)/launch/tianracer_control.launch" >
             <arg name="robot_name" value="$(arg robot_name)" />
-                    <arg name="race_profile" value="$(arg race_profile)"/>
+            <arg name="race_profile" value="$(arg race_profile)"/>
             <arg name="race_max_speed" value="$(arg race_max_speed)"/>
+                    <arg name="command_watchdog" value="$(arg command_watchdog)"/>
         </include>
 
         <!-- move base -->
-        <include file="$(find tianracer_gazebo)/launch/includes/teb_base.launch.xml" >
+        <include if="$(arg start_navigation)" file="$(find tianracer_gazebo)/launch/includes/teb_base.launch.xml" >
             <arg name="robot_name" value="$(arg robot_name)" />
-                    <arg name="race_profile" value="$(arg race_profile)"/>
+            <arg name="race_profile" value="$(arg race_profile)"/>
             <arg name="race_max_speed" value="$(arg race_max_speed)"/>
         </include>
 
