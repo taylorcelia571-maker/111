@@ -5,11 +5,17 @@
   <arg name="acceleration" default="6.0"/>
   <arg name="braking" default="6.0"/>
   <arg name="yaw_rate" default="5.5"/>
+  <arg name="predict_pose" default="false"/>
+  <arg name="start_blend" default="false"/>
+  <arg name="refine_line" default="false"/>
   <include file="$(find tianracer_gazebo)/launch/rapid_race.launch">
     <arg name="max_speed" value="$(arg max_speed)"/>
     <arg name="lateral_accel" value="$(arg lateral_accel)"/>
     <arg name="acceleration" value="$(arg acceleration)"/>
     <arg name="braking" value="$(arg braking)"/>
     <arg name="yaw_rate" value="$(arg yaw_rate)"/>
+    <arg name="predict_pose" value="$(arg predict_pose)"/>
+    <arg name="start_blend" value="$(arg start_blend)"/>
+    <arg name="refine_line" value="$(arg refine_line)"/>
   </include>
 </launch>

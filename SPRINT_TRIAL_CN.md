@@ -1,3 +1,5 @@
+> 起步失败后的修正：已观察到同时启用 start_blend 和 predict_pose 时，在起步一秒内发生 0.1599m 跟踪偏差并停车。报错 pose 是预测后车姿，并非原始 TF；尚不能确定单项根因。日志和 status 现在同时返回原始/控制车姿与 prediction_applied。rapid_race 和 sprint_trial 现默认关闭这两项及 refine_line，回到此前完赛的配置组合；本文原先的默认启用描述和理想模型时间不能用来证明当前默认配置达标。先验证原参数五圈，再仅开启 refine_line 比较，暂不提高速度或制动预算。
+
 # 起步接入、逐弯优化和一分钟目标试验
 
 最近的官方成绩为 77 秒，启动参数为 max_speed=8、lateral_accel=6.5、acceleration=5、yaw_rate=3.8。本次修改默认不改变 rapid_race 的速度预算；先用同样参数核对算法收益。**一分钟官方完赛尚未验证，不能保证用下面的试验参数达到。**

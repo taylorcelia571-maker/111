@@ -20,6 +20,7 @@ class ContinuousRace:
         self.start_path_guard = start_path_guard
         self.clearance_guard = clearance_guard
         self.generated = path is not None
+        self.feedback_pose = {}
         self.predict_pose=rospy.get_param('~predict_pose',False) if self.generated else False
         if path is None:
             filename = os.path.expanduser(rospy.get_param('~path_file'))
@@ -98,6 +99,8 @@ class ContinuousRace:
         offset = 0.13 if self.generated else 0.0
         x,y=position[0]-offset*math.cos(yaw),position[1]-offset*math.sin(yaw)
         speed=self.odom.twist.twist.linear.x
+        self.feedback_pose=dict(raw_rear_pose=[x,y,yaw],tf_age_seconds=age,
+                                prediction_applied=False)
         angular=getattr(self.odom.twist.twist,'angular',None)
         omega=getattr(angular,'z',None)
         # Official odometry publishes at 20Hz. Compensate only a short,
@@ -109,6 +112,8 @@ class ContinuousRace:
                 base_lateral=getattr(self.odom.twist.twist.linear,'y',None)
                 rear_lateral=0 if base_lateral is None else base_lateral-omega*offset
                 x,y,yaw=predict_rear_pose(x,y,yaw,speed,omega,age,rear_lateral)
+                self.feedback_pose['prediction_applied']=True
+        self.feedback_pose['control_rear_pose']=[x,y,yaw]
         return x,y,yaw,speed
 
     def status(self, request):
@@ -118,6 +123,7 @@ class ContinuousRace:
                 return TriggerResponse(True,json.dumps(dict(active=self.active,pose=pose,
                                                             control=getattr(self.follower,'last_report',{}),
                                                             startup=self.start_metrics,
+                                                            feedback=self.feedback_pose,
                                                             message='Feedback ready; start still checks controller conflicts and pose')))
             except (ValueError,tf.Exception) as error:
                 return TriggerResponse(False,str(error))
@@ -174,7 +180,7 @@ class ContinuousRace:
                             self.control_cycle(now, dt)
                     except (ValueError, tf.Exception) as error:
                         self.stop(None)
-                        rospy.logerr('Race stopped: %s', error)
+                        rospy.logerr('Race stopped: %s; last_feedback=%s', error,json.dumps(self.feedback_pose))
             try:
                 rate.sleep()
             except rospy.exceptions.ROSTimeMovedBackwardsException:

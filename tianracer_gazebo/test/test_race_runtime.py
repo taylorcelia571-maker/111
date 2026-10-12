@@ -278,6 +278,8 @@ class RuntimeTests(unittest.TestCase):
         pose=self.node.sensors()
         self.assertAlmostEqual(pose[0],3)
         self.assertAlmostEqual(pose[1],-.13+.1)
+        self.assertTrue(self.node.feedback_pose['prediction_applied'])
+        self.assertAlmostEqual(self.node.feedback_pose['raw_rear_pose'][1],-.13)
         self.node.odom.header.stamp=Stamp(.85)
         self.node.listener.getLatestCommonTime.return_value=Stamp(.85)
         self.assertAlmostEqual(self.node.sensors()[1],-.13)

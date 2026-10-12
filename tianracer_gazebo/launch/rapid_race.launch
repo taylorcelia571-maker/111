@@ -7,6 +7,10 @@
   <arg name="braking" default="3.0"/>
   <arg name="yaw_rate" default="4.0"/>
   <arg name="steering_rate" default="2.0"/>
+  <!-- Disabled after an observed startup tracking failure; opt in one at a time. -->
+  <arg name="predict_pose" default="false"/>
+  <arg name="start_blend" default="false"/>
+  <arg name="refine_line" default="false"/>
   <include file="$(find tianracer_gazebo)/launch/planned_race.launch">
     <arg name="max_speed" value="$(arg max_speed)"/>
     <arg name="lateral_accel" value="$(arg lateral_accel)"/>
@@ -16,8 +20,8 @@
     <arg name="steering_rate" value="$(arg steering_rate)"/>
     <arg name="optimize_time" value="true"/>
     <arg name="fast_start" value="true"/>
-    <arg name="predict_pose" value="true"/>
-    <arg name="start_blend" value="true"/>
-    <arg name="refine_line" value="true"/>
+    <arg name="predict_pose" value="$(arg predict_pose)"/>
+    <arg name="start_blend" value="$(arg start_blend)"/>
+    <arg name="refine_line" value="$(arg refine_line)"/>
   </include>
 </launch>
