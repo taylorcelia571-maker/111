@@ -77,6 +77,34 @@ class PlannedLoopTests(unittest.TestCase):
             if seams==5:break
         self.assertEqual(seams,5)
 
+    def test_departure_aligns_at_low_speed_without_relaxing_error_limit(self):
+        p=rear_path(self.center); f=PredictiveFollower(p,max_speed=1.8)
+        yaw=1.3; x,y=.04-.13*math.cos(yaw),-.13*math.sin(yaw)
+        f.start(x,y,yaw); speed=steer=0; was_limited=False
+        for _ in range(500):
+            aligning=f.departure
+            desired_speed,desired_steer=f.step(x,y,yaw,speed,.02)
+            if aligning and f.departure:
+                self.assertLessEqual(desired_speed,.35)
+                was_limited=True
+            speed+=(desired_speed-speed)*.02/.12
+            steer+=(desired_steer-steer)*.02/.12
+            x+=speed*math.cos(yaw)*.02; y+=speed*math.sin(yaw)*.02
+            yaw+=speed*math.tan(steer)/.26*.02
+            self.assertLessEqual(f.error,.15)
+        self.assertTrue(was_limited)
+        self.assertFalse(f.departure)
+        self.assertGreater(speed,.35)
+
+    def test_departure_does_not_bypass_tracking_stop_and_reports_pose(self):
+        p=rear_path(self.center); f=PredictiveFollower(p)
+        x,y=p.points[0]; d=p.sample(.08)-p.sample(0);yaw=math.atan2(d[1],d[0])
+        f.start(x,y,yaw)
+        with self.assertRaisesRegex(ValueError,'global_error=.*measured_speed=.*elapsed='):
+            f.step(x-.5*math.sin(yaw),y+.5*math.cos(yaw),yaw,0,.02)
+        self.assertEqual(f.speed,0)
+        self.assertEqual(f.steer,0)
+
     def test_tracking_with_assumed_actuator_delay(self):
         # Hypothetical 80ms first-order response; not a measured vehicle model.
         p=rear_path(self.center); f=PredictiveFollower(p,max_speed=2.0)

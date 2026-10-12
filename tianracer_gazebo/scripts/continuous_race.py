@@ -93,6 +93,8 @@ class ContinuousRace:
                 self.follower.stop()
                 self.previous = rospy.Time.now() - rospy.Duration(0.02)
                 self.active = True
+                rospy.loginfo('Race start: rear_pose=(%.4f,%.4f,%.4f) measured_v=%.4f progress=%.4fm',
+                              *pose, self.follower.progress)
                 return TriggerResponse(True, 'Started; official referee determines valid laps')
             except (ValueError, tf.Exception, rosgraph.MasterError, rosgraph.MasterFailure, OSError) as error:
                 return TriggerResponse(False, str(error))

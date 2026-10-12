@@ -23,6 +23,11 @@ class PredictiveFollower(LineFollower):
             for i in range(path.n):
                 path.speeds[i] = min(path.speeds[i], math.sqrt(path.speeds[(i-1)%path.n]**2+2*acceleration*path.ds))
         self.steer = 0.0
+        self.departure = True
+
+    def start(self, x, y, yaw):
+        super().start(x, y, yaw)
+        self.departure = True
 
     def stop(self):
         super().stop()
@@ -39,7 +44,13 @@ class PredictiveFollower(LineFollower):
         if self.progress is None: self.start(x,y,yaw)
         s,self.error = self.path.project(x,y,self.progress-0.1,self.progress+self.max_speed*elapsed*2+0.20)
         if self.error > self.max_error:
-            self.stop(); raise ValueError('Tracking error exceeds safe corridor')
+            global_s,global_error = self.path.project(x,y)
+            details = ('error=%.4fm limit=%.3fm pose=(%.4f,%.4f,%.4f) '
+                       'progress=%.4fm projected=%.4fm global_projected=%.4fm global_error=%.4fm '
+                       'measured_speed=%.4f command_speed=%.4f steer=%.4f dt=%.6fs elapsed=%.6fs') % (
+                       self.error,self.max_error,x,y,yaw,self.progress,s,global_s,global_error,
+                       measured_speed,self.speed,self.steer,dt,elapsed)
+            self.stop(); raise ValueError('Tracking error exceeds safe corridor: '+details)
         self.progress = max(s,self.progress)
         i = int(self.progress/self.path.ds)%self.path.n
         # Velocity-scaled preview is short in tight turns, longer on straights.
@@ -55,6 +66,16 @@ class PredictiveFollower(LineFollower):
         desired = min(float(self.path.speeds[i]), math.sqrt(self.lateral_accel/max(abs(k),1e-6)))
         # Small localization corrections should not cause repeated strong braking.
         desired *= max(0.4, 1-0.6*(max(0,self.error-0.05)/max(0.01,self.max_error-0.05))**2)
+        if self.departure:
+            tangent = self.path.sample(self.progress+0.08)-self.path.sample(self.progress)
+            heading = math.atan2(tangent[1],tangent[0])
+            heading_error = math.atan2(math.sin(heading-yaw),math.cos(heading-yaw))
+            if self.error < 0.035 and abs(heading_error) < 0.15:
+                self.departure = False
+            else:
+                # Establish tracking once at departure, not at each lap seam.
+                # Keep the existing corridor/laser limits; never creep outside them.
+                desired = min(desired,0.35)
         self.speed = min(desired,self.speed+self.acceleration*dt)
         return self.speed,self.steer
 
