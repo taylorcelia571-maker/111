@@ -31,7 +31,12 @@ def main():
     planner = LoopPlanner(occupancy,grid.info.resolution,
                           [grid.info.origin.position.x,grid.info.origin.position.y])
     rospy.loginfo('Planning full course while stationary; no motion until start service')
-    center = planner.build(anchors)
+    optimize = rospy.get_param('~optimize_time',False)
+    center = planner.build(anchors,optimize_time=optimize,
+                           **{k:rospy.get_param('~'+k,v) for k,v in (
+                               ('max_speed',2.0),('lateral_accel',5.0),('acceleration',2.0),('braking',3.0))})
+    if optimize:
+        rospy.loginfo('Time-based route selection (model only): %s',planner.selection)
     tangent = np.roll(center.points,-1,axis=0)-np.roll(center.points,1,axis=0)
     tangent /= np.linalg.norm(tangent,axis=1)[:,None]
     rear = center.points-0.13*tangent

@@ -77,6 +77,44 @@ class PlannedLoopTests(unittest.TestCase):
             if seams==5:break
         self.assertEqual(seams,5)
 
+    def test_time_optimized_course_and_fast_start_against_baseline(self):
+        center=self.planner.build(self.anchors,optimize_time=True,max_speed=4)
+        optimized=rear_path(center); base=rear_path(self.center)
+        PredictiveFollower(base,max_speed=4); PredictiveFollower(optimized,max_speed=4)
+        self.assertLessEqual(float(np.sum(optimized.ds/optimized.speeds)),float(np.sum(base.ds/base.speeds)))
+        self.assertGreaterEqual(self.planner.segment_check(center.points),.26)
+        self.assertLess(abs(center.curvature).max(),math.tan(.48)/.26)
+        locations=[center.project(*p)[0] for p in self.anchors]
+        self.assertAlmostEqual(float((np.diff(np.r_[locations,locations[0]+center.length])%center.length).sum()),center.length)
+
+        def simulate(p, fast):
+            f=PredictiveFollower(p,max_speed=4,fast_start=fast)
+            x,y,yaw=.0081,-.1494,1.5709; f.start(x,y,yaw);speed=steer=0;first=None
+            for tick in range(8000):
+                v,d=f.step(x,y,yaw,speed,.02)
+                self.assertGreaterEqual(v,0)
+                speed+=(v-speed)*.02/.08;steer+=(d-steer)*.02/.08
+                x+=speed*math.cos(yaw)*.02;y+=speed*math.sin(yaw)*.02;yaw+=speed*math.tan(steer)/.26*.02
+                self.assertLess(f.error,.15)
+                self.assertGreater(self.planner.clearance_at([[x+.13*math.cos(yaw),y+.13*math.sin(yaw)]])[0],.23)
+                if first is None and f.progress-f.origin>=p.length: first=(tick+1)*.02
+                if f.progress-f.origin>=5*p.length: return first,(tick+1)*.02
+            self.fail('Did not complete five ideal-model reference loops')
+        baseline=simulate(base,False)
+        fast=simulate(rear_path(self.center),True)
+        combined=simulate(rear_path(center),True)
+        self.assertLess(fast[0],baseline[0])
+        self.assertLess(combined[1],baseline[1])
+
+    def test_fast_start_keeps_low_speed_fallback_for_larger_initial_error(self):
+        p=rear_path(self.center); f=PredictiveFollower(p,max_speed=4,fast_start=True)
+        x,y=p.points[0];d=p.sample(.08)-p.sample(0);yaw=math.atan2(d[1],d[0])
+        x-=.11*math.sin(yaw);y+=.11*math.cos(yaw)
+        f.start(x,y,yaw)
+        for _ in range(20):
+            v,_=f.step(x,y,yaw,0,.02)
+            self.assertLessEqual(v,.35)
+
     def test_departure_aligns_at_low_speed_without_relaxing_error_limit(self):
         p=rear_path(self.center); f=PredictiveFollower(p,max_speed=1.8)
         yaw=1.3; x,y=.04-.13*math.cos(yaw),-.13*math.sin(yaw)

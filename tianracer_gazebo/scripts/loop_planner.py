@@ -30,7 +30,7 @@ class LoopPlanner:
         n = max(1, int(math.ceil(np.max(np.linalg.norm(b-a, axis=1)) / (self.resolution / 2))))
         return min(float(self.clearance_at(a + (b-a)*t).min()) for t in np.linspace(0, 1, n+1))
 
-    def edge(self, start, goal):
+    def edge(self, start, goal, clearance_weight=8.0):
         def cell(p):
             c = np.floor((np.asarray(p)-self.origin)/self.resolution).astype(int)
             if not (0 <= c[0] < self.allowed.shape[1] and 0 <= c[1] < self.allowed.shape[0]):
@@ -55,23 +55,47 @@ class LoopPlanner:
                 b = a[0]+dy, a[1]+dx
                 if not (0 <= b[0] < h and 0 <= b[1] < w) or not self.allowed[b]: continue
                 if dy and dx and (not self.allowed[a[0]+dy, a[1]] or not self.allowed[a[0], a[1]+dx]): continue
-                penalty = 1 + 8*math.exp(-max(0, self.clearance[b]-self.margin)/0.18)
+                penalty = 1 + clearance_weight*math.exp(-max(0, self.clearance[b]-self.margin)/0.18)
                 new = cost + length*penalty
                 if new < distances.get(b, float('inf')):
                     distances[b], parent[b] = new, a
                     heapq.heappush(queue, (new+math.hypot(b[0]-goal[0], b[1]-goal[1]), new, b))
         raise ValueError('No connected collision-free route between waypoints')
 
-    def build(self, waypoints, max_steer=0.48, wheelbase=0.26):
+    def build(self, waypoints, max_steer=0.48, wheelbase=0.26, optimize_time=False,
+              max_speed=4.0, lateral_accel=5.0, acceleration=2.0, braking=3.0,
+              clearance_weight=None):
+        if optimize_time:
+            for name,value in (('max_speed',max_speed),('lateral_accel',lateral_accel),
+                               ('acceleration',acceleration),('braking',braking)):
+                positive(name,value)
+        if optimize_time and clearance_weight is None:
+            best = None
+            best_selection = None
+            for weight in (2.0,4.0,8.0,16.0):
+                try:
+                    trial = self.build(waypoints,max_steer,wheelbase,True,max_speed,
+                                       lateral_accel,acceleration,braking,weight)
+                except ValueError:
+                    continue  # infeasible alternatives never become motion plans
+                selection = dict(self.selection,clearance_weight=weight)
+                if best_selection is None or selection['estimated_lap_seconds'] < best_selection['estimated_lap_seconds']:
+                    best,best_selection = trial,selection
+            if best is None: raise ValueError('No time-optimized route meets geometry/clearance constraints')
+            self.selection = best_selection
+            return best
+        weight = 8.0 if clearance_weight is None else positive('clearance_weight',clearance_weight)
         anchors = np.asarray(waypoints, dtype=float)
         if anchors.ndim != 2 or anchors.shape[1] != 2 or len(anchors) < 3 or not np.isfinite(anchors).all():
             raise ValueError('Invalid ordered waypoints')
-        raw = np.concatenate([self.edge(a, b)[:-1] for a,b in zip(anchors, np.roll(anchors,-1,axis=0))])
+        raw = np.concatenate([self.edge(a, b,weight)[:-1] for a,b in zip(anchors, np.roll(anchors,-1,axis=0))])
         path = ClosedPath(np.vstack([raw, raw[0]]), spacing=0.04)
         original = path.points.copy()
         # Periodic smoothing also smooths the finish-line seam. Each candidate must
         # retain clearance and remain within the same corridor as the A* reference.
         chosen = None
+        best_time = float('inf')
+        self.selection = {}
         limit = math.tan(max_steer)/wheelbase
         for width in np.arange(0.12, 0.71, 0.02):
             candidate = gaussian_filter1d(original, width/path.ds, axis=0, mode='wrap')
@@ -83,8 +107,24 @@ class LoopPlanner:
             yaw = np.unwrap(np.arctan2(d[:,1], d[:,0]))
             turns = np.arctan2(np.sin(np.roll(yaw,-1)-yaw), np.cos(np.roll(yaw,-1)-yaw))/trial.ds
             if np.max(np.abs(turns)) > limit*0.95: continue
-            if any(trial.project(*p)[1] > 0.4 for p in anchors): continue
-            chosen = trial  # favor smoother feasible trajectory
+            projected = [trial.project(*p) for p in anchors]
+            if any(error > 0.4 for _,error in projected): continue
+            positions = [distance for distance,_ in projected]
+            increments = np.diff(np.r_[positions,positions[0]+trial.length]) % trial.length
+            if not math.isclose(float(increments.sum()),trial.length,rel_tol=1e-6): continue
+            if optimize_time:
+                from predictive_follower import PredictiveFollower
+                tangent = np.roll(trial.points,-1,axis=0)-np.roll(trial.points,1,axis=0)
+                tangent /= np.linalg.norm(tangent,axis=1)[:,None]
+                rear = trial.points-0.13*tangent
+                reference = ClosedPath(np.vstack([rear,rear[0]]),spacing=0.04)
+                PredictiveFollower(reference,max_speed=max_speed,lateral_accel=lateral_accel,
+                                   acceleration=acceleration,braking=braking)
+                estimated = float(np.sum(reference.ds/reference.speeds))
+                if estimated >= best_time: continue
+                best_time = estimated
+                self.selection = dict(estimated_lap_seconds=estimated,smoothing_width=float(width))
+            chosen = trial  # legacy: prefer smoothest feasible; optimized: lowest modeled time
         if chosen is None:
             raise ValueError('Route cannot meet clearance and steering limits; do not drive')
         return chosen

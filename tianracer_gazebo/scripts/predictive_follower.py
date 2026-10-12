@@ -7,7 +7,7 @@ from race_line import LineFollower, positive
 class PredictiveFollower(LineFollower):
     def __init__(self, path, max_speed=2.0, lateral_accel=5.0, acceleration=2.0,
                  braking=3.0, max_error=0.15, wheelbase=0.26, max_steer=0.48,
-                 steering_rate=2.0, yaw_rate=3.2):
+                 steering_rate=2.0, yaw_rate=3.2, fast_start=False):
         super().__init__(path, max_speed, lateral_accel, acceleration, braking,
                          wheelbase, max_steer, max_error)
         self.steering_rate = positive('steering_rate', steering_rate)
@@ -24,6 +24,8 @@ class PredictiveFollower(LineFollower):
                 path.speeds[i] = min(path.speeds[i], math.sqrt(path.speeds[(i-1)%path.n]**2+2*acceleration*path.ds))
         self.steer = 0.0
         self.departure = True
+        if not isinstance(fast_start,bool): raise ValueError('fast_start must be boolean')
+        self.fast_start = fast_start
 
     def start(self, x, y, yaw):
         super().start(x, y, yaw)
@@ -75,7 +77,14 @@ class PredictiveFollower(LineFollower):
             else:
                 # Establish tracking once at departure, not at each lap seam.
                 # Keep the existing corridor/laser limits; never creep outside them.
-                desired = min(desired,0.35)
+                departure_limit = 0.35
+                if self.fast_start:
+                    # Increase pace progressively as lateral and heading alignment
+                    # improve. Large errors retain the successful .35m/s fallback.
+                    lateral_quality = float(np.clip((0.10-self.error)/0.065,0,1))
+                    heading_quality = float(np.clip((0.35-abs(heading_error))/0.20,0,1))
+                    departure_limit += 0.65*min(lateral_quality,heading_quality)
+                desired = min(desired,departure_limit)
         self.speed = min(desired,self.speed+self.acceleration*dt)
         return self.speed,self.steer
 

@@ -31,8 +31,9 @@ class ContinuousRace:
                     ('braking', 3.0), ('max_error', 0.15)) if self.generated else (
                     ('max_speed', 3.0), ('lateral_accel', 3.0), ('acceleration', 2.5),
                     ('braking', 3.5), ('max_error', 0.6))
-        self.follower = follower_type(self.path, **{k: rospy.get_param('~' + k, v)
-                                                   for k, v in defaults})
+        options = {k: rospy.get_param('~' + k, v) for k,v in defaults}
+        if self.generated: options['fast_start'] = rospy.get_param('~fast_start',False)
+        self.follower = follower_type(self.path, **options)
         self.laps = rospy.get_param('~laps', 5)
         if isinstance(self.laps, bool) or not isinstance(self.laps, int) or self.laps < 1:
             raise ValueError('laps must be a positive integer')
