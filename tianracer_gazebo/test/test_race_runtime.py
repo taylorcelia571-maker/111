@@ -2,6 +2,7 @@
 import importlib.util
 import math
 import json
+import tempfile
 from pathlib import Path
 import sys
 from types import SimpleNamespace as NS
@@ -107,6 +108,34 @@ class RuntimeTests(unittest.TestCase):
         self.assertIn('scan timing invalid',state['last_fault']['reason'])
         self.node.stop(None)
         self.assertEqual(state['last_fault'],self.node.last_fault)
+
+    def test_run_report_is_saved_after_zero_command(self):
+        with tempfile.TemporaryDirectory() as directory:
+            self.node.run_report_file=str(Path(directory)/'control_run_report.json')
+            self.assertTrue(self.node.start(None).success)
+            self.tick();self.node.stop(None)
+            report=json.loads(Path(self.node.run_report_file).read_text())
+            self.assertFalse(report['official_result'])
+            self.assertEqual(report['limits']['max_speed'],self.node.follower.max_speed)
+            self.assertEqual(self.node.pub.publish.call_args.args[0].linear.x,0)
+            self.assertFalse(Path(self.node.run_report_file+'.tmp').exists())
+
+    def test_report_io_failure_does_not_prevent_stop(self):
+        with tempfile.TemporaryDirectory() as directory:
+            self.node.run_report_file=str(Path(directory)/'control_run_report.json')
+            self.assertTrue(self.node.start(None).success)
+            with patch.object(self.module.os,'replace',side_effect=OSError('disk error')):
+                self.assertTrue(self.node.stop(None).success)
+            self.assertFalse(self.node.active)
+            self.assertEqual(self.node.pub.publish.call_args.args[0].linear.x,0)
+
+    def test_periodic_report_skips_busy_writer_without_waiting(self):
+        self.node.run_report_file='/unused/report.json'
+        self.assertTrue(self.node.start(None).success)
+        with self.node.report_lock:
+            with patch.object(self.node,'write_run_report') as writer:
+                self.node.save_run_report(background=True)
+                writer.assert_not_called()
 
     def test_competing_controller_blocks_start(self):
         self.graph.Master.return_value.getSystemState.return_value = (

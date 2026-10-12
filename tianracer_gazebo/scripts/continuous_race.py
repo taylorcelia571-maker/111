@@ -15,6 +15,7 @@ from nav_msgs.msg import Odometry
 from sensor_msgs.msg import LaserScan, JointState
 from std_srvs.srv import Trigger, TriggerResponse
 from race_line import ClosedPath, LineFollower, clearance_speed
+from run_metrics import RunMetrics
 
 
 class ContinuousRace:
@@ -65,6 +66,9 @@ class ContinuousRace:
         self.last_fault = None
         self.start_metrics = {}
         self.started_at = None
+        self.run_metrics=None
+        self.run_report_file=os.path.expanduser(rospy.get_param('~run_report',''))
+        self.report_lock=threading.Lock()
         self.previous = rospy.Time.now()
         self.scan_sub = rospy.Subscriber('scan', LaserScan, self.on_scan, queue_size=1)
         self.odom_sub = rospy.Subscriber('odom', Odometry, self.on_odom, queue_size=1)
@@ -170,6 +174,7 @@ class ContinuousRace:
         with self.lock:
             state=dict(active=self.active,prepared_steer=self.prepared_steer,control=getattr(self.follower,'last_report',{}),
                        startup=self.start_metrics,feedback=self.feedback_pose,last_fault=self.last_fault)
+            if self.run_metrics is not None:state['run_metrics']=self.run_metrics.report()
             try:
                 pose = self.sensors()
                 state.update(pose=pose,feedback=self.feedback_pose,
@@ -201,6 +206,9 @@ class ContinuousRace:
                 if self.clearance_guard is not None:self.clearance_guard(pose)
                 probe=copy.deepcopy(self.follower)
                 probe.start(*pose[:3]);probe.stop()
+                if self.start_path_guard is not None and probe.connector_offset is not None:
+                    if not self.start_path_guard(probe):
+                        probe.connector_offset=None;probe.departure=True
                 probe.step(*pose,.02)
                 self.prepared_steer=probe.last_report['desired_steer']
                 msg=Twist();msg.angular.z=self.prepared_steer
@@ -221,6 +229,7 @@ class ContinuousRace:
                 if others: raise ValueError('Other cmd_vel publishers active: ' + ', '.join(others))
                 pose = self.sensors()
                 if abs(pose[3]) > 0.05: raise ValueError('Vehicle must be stationary')
+                prepared_used=self.prepared_steer is not None
                 self.follower.start(*pose[:3])
                 self.follower.stop()
                 if self.prepared_steer is not None:
@@ -237,7 +246,13 @@ class ContinuousRace:
                 self.prepared_steer = None
                 self.last_fault = None
                 self.started_at=rospy.Time.now()
-                self.start_metrics={}
+                self.start_metrics=dict(prepare_used=prepared_used,
+                    start_mode=dict(getattr(self.follower,'start_diagnostics',{})),
+                    initial_reference_error=self.follower.error)
+                self.run_metrics=RunMetrics()
+                i=int(self.follower.progress/self.path.ds)%self.path.n
+                self.run_metrics.observe(0,pose[3],0,self.follower.error,'startup_wait',
+                    getattr(self.follower,'departure',False),float(self.path.curvature[i]),0)
                 rospy.loginfo('Race start mode: %s',json.dumps(getattr(self.follower,'start_diagnostics',{})))
                 rospy.loginfo('Race start: rear_pose=(%.4f,%.4f,%.4f) measured_v=%.4f progress=%.4fm',
                               *pose, self.follower.progress)
@@ -251,7 +266,39 @@ class ContinuousRace:
             self.prepared_steer = None
             self.follower.stop()
             self.pub.publish(Twist())
+            self.save_run_report()
             return TriggerResponse(True, 'Stopped')
+
+    def save_run_report(self,background=False):
+        if not self.run_report_file or self.run_metrics is None:return
+        report=self.run_metrics.report()
+        report.update(controller=getattr(self.follower,'lateral_control','legacy'),
+                      startup=self.start_metrics,last_fault=self.last_fault,
+                      limits={name:getattr(self.follower,name) for name in
+                              ('max_speed','lateral_accel','acceleration','braking','max_error')})
+        report=copy.deepcopy(report)
+        if background:
+            # Never wait for storage in the 50Hz control loop. Skip a periodic
+            # snapshot when the previous writer is busy; stop saves the final one.
+            if not self.report_lock.acquire(blocking=False):return
+            def write():
+                try:self.write_run_report(report)
+                finally:self.report_lock.release()
+            worker=threading.Thread(target=write,daemon=True)
+            try:worker.start()
+            except RuntimeError as error:
+                self.report_lock.release();rospy.logwarn('Could not start report writer: %s',error)
+        else:
+            with self.report_lock:self.write_run_report(report)
+
+    def write_run_report(self,report):
+        try:
+            os.makedirs(os.path.dirname(os.path.abspath(self.run_report_file)),exist_ok=True)
+            temporary=self.run_report_file+'.tmp'
+            with open(temporary,'w') as stream:json.dump(report,stream,indent=2,sort_keys=True)
+            os.replace(temporary,self.run_report_file)
+        except OSError as error:
+            rospy.logwarn('Could not save controller run report: %s',error)
 
     def run(self):
         rate = rospy.Rate(50)
@@ -394,6 +441,12 @@ class ContinuousRace:
         if progress>=self.path.length and 'first_reference_loop_seconds' not in self.start_metrics:
             self.start_metrics['first_reference_loop_seconds']=elapsed
             rospy.loginfo('First reference loop: %.3fs (official referee time is separate)',elapsed)
+        if self.run_metrics is not None:
+            i=int(self.follower.progress/self.path.ds)%self.path.n
+            changed=self.run_metrics.observe(elapsed,pose[3],speed,self.follower.error,
+                getattr(self.follower,'last_report',{}).get('reason','legacy'),
+                getattr(self.follower,'departure',False),float(self.path.curvature[i]),progress/self.path.length)
+            if changed:self.save_run_report(background=True)
         if progress >= self.laps * self.path.length:
             self.stop(None)
             rospy.loginfo('Reference loops complete; check OFFICIAL referee laps separately')

@@ -1,6 +1,7 @@
 """High-budget pursuit regressions on the actual map, not Gazebo results."""
 import math
 import unittest
+import numpy as np
 import test_planned_loop as course
 from predictive_follower import PredictiveFollower
 
@@ -71,6 +72,45 @@ class SmoothPursuitTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError,'Tracking error exceeds safe corridor'):
             f.step(q[0]-.2*math.sin(heading),q[1]+.2*math.cos(heading),heading,2,.02)
         self.assertEqual(f.speed,0)
+
+    def test_connector_tracks_actual_start_not_nominal_offset(self):
+        f=PredictiveFollower(course.rear_path(self.center),**self.budgets,
+                             start_blend=True,fast_start=True,lateral_control='smooth_pursuit')
+        x,y,yaw=.0081,-.1577,1.5709;f.start(x,y,yaw)
+        self.assertEqual(f.start_diagnostics['mode'],'connector')
+        self.assertFalse(f.departure)
+        f.step(x,y,yaw,0,.02)
+        self.assertGreater(f.error,.06)  # nominal guard remains based on original line
+        self.assertLess(f.last_report['control_tracking_error'],1e-6)
+
+    def test_start_connector_vehicle_centers_have_required_map_clearance(self):
+        f=PredictiveFollower(course.rear_path(self.center),**self.budgets,
+                             start_blend=True,lateral_control='smooth_pursuit')
+        f.start(.0081,-.1577,1.5709)
+        centers=[]
+        for distance in np.linspace(f.origin,f.origin+f.connector_length,100):
+            point=f.sample_tracking(distance)
+            tangent=f.sample_tracking(distance+.02)-f.sample_tracking(distance-.02)
+            tangent/=np.linalg.norm(tangent)
+            centers.append(point+.13*tangent)
+        self.assertGreaterEqual(float(self.planner.clearance_at(centers).min()),.26)
+
+    def test_fast_connector_five_laps_keeps_wall_and_tracking_guards(self):
+        for lag in (.08,.12,.2):
+            with self.subTest(lag=lag):
+                f=PredictiveFollower(course.rear_path(self.center),**self.budgets,start_blend=True,
+                                     fast_start=True,response_delay=.15,lateral_control='smooth_pursuit')
+                x,y,yaw=.0081,-.1577,1.5709;f.start(x,y,yaw);speed=steer=0
+                for tick in range(8000):
+                    f.measured_steer=steer
+                    v,d=f.step(x,y,yaw,speed,.02)
+                    speed+=(v-speed)*.02/lag;steer+=(d-steer)*.02/lag
+                    x+=speed*math.cos(yaw)*.02;y+=speed*math.sin(yaw)*.02
+                    yaw+=speed*math.tan(steer)/.26*.02
+                    self.assertLess(f.error,.15)
+                    self.assertGreater(self.planner.clearance_at([[x+.13*math.cos(yaw),y+.13*math.sin(yaw)]])[0],.23)
+                    if f.progress-f.origin>=5*f.path.length:break
+                self.assertGreaterEqual(f.progress-f.origin,5*f.path.length)
 
 
 if __name__=='__main__':unittest.main()
