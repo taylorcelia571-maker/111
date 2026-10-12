@@ -123,3 +123,19 @@ rosbag record -O ~/ican_race_logs/planned_test.bag /clock /tf /tf_static /tianra
 出现 `Tracking error exceeds safe corridor` 时，旧日志没有车姿、实际误差和指令，不能仅凭这一行判断定位跳变、局部投影范围或实际偏离。更新后错误包含实际/全局投影误差、车姿、路径进度、实测速率、最近速度/转向指令及 dt；启动时也记录车姿。
 
 新增一次性的起步对齐阶段：偏离超过 3.5 厘米或航向偏差超过 0.15 弧度时，将前进速度限制在 0.35 m/s，先建立跟踪再加速。每圈接缝不会重新进入这个阶段。0.15 米误差阈值、地图距离和激光保护不变，起步阶段也不能越过保护阈值。离线验证包含初始横向/航向偏差和假设 120ms 执行器响应；不代表已确定本次故障根因或已在 Gazebo 验证修复。
+
+## 发车被拒绝或服务不存在
+
+先保持仿真终端 A 和导航终端 C 打开，Gazebo 解除暂停；只 source 环境不会启动节点。终端 C 必须正在运行 `planned_race.launch` 且已打印 Ready。另一个终端调用：
+
+```bash
+rosparam get /use_sim_time
+rosnode ping -c 1 /tianracer/continuous_race
+rosservice call /tianracer/continuous_race/status "{}"
+```
+
+`/use_sim_time` 应为 true。status 不发送运动指令。返回 True 表示当前反馈通过时效检查；正式发车仍需裁判准备，并调用 start。返回 False 时会指出 scan、odom 或定位 TF 的具体时间差，不能通过关闭时效保护发车。现在允许仅 20ms 的未来传输时差，300ms 的过期上限不变。旧版只显示笼统 timestamp stale，无法区分旧数据与未来时间戳。
+
+若 ping 不通、status/start 服务不可用，需要重新启动终端 C 的导航进程，而不是反复调用 start。查看终端 C 的退出码和 Traceback；没有退出日志时无法判断是关闭终端、ROS shutdown 还是进程异常。发车检查返回 False 的正常路径不会退出进程，也不会注销服务，该行为有假 ROS 传输测试覆盖。
+
+仍无法发车时，请保留 status 的完整 message，以及导航终端 C 最后 20 行。必要时在终端中查看一次 `/clock`、`/tianracer/scan/header` 和 `/tianracer/odom/header`，用于比对发布时钟，不要修改比赛计时器。

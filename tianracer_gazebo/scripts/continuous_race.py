@@ -50,6 +50,7 @@ class ContinuousRace:
         self.odom_sub = rospy.Subscriber('odom', Odometry, self.on_odom, queue_size=1)
         self.start_service = rospy.Service('~start', Trigger, self.start)
         self.stop_service = rospy.Service('~stop', Trigger, self.stop)
+        self.status_service = rospy.Service('~status', Trigger, self.status)
         rospy.on_shutdown(lambda: self.stop(None))
         rospy.loginfo('Loaded %.1fm closed path. Idle; prepare referee then call ~start.', self.path.length)
 
@@ -63,13 +64,23 @@ class ContinuousRace:
 
     def sensors(self):
         now = rospy.Time.now()
-        for msg, received in ((self.scan, self.scan_time), (self.odom, self.odom_time)):
-            if msg is None or received is None or not 0 <= (now - received).to_sec() <= 0.3:
-                raise ValueError('Scan or odometry missing/stale')
-            if not 0 <= (now - msg.header.stamp).to_sec() <= 0.3:
-                raise ValueError('Scan or odometry timestamp stale')
+        if now.to_sec() <= 0:
+            raise ValueError('Waiting for initialized ROS clock; start/unpause simulation')
+        for label,msg,received in (('scan',self.scan,self.scan_time),('odom',self.odom,self.odom_time)):
+            if msg is None or received is None:
+                raise ValueError('%s missing on %s' % (label,rospy.resolve_name(label)))
+            received_age = (now-received).to_sec()
+            stamp_age = (now-msg.header.stamp).to_sec()
+            # Separate topics can arrive just ahead of /clock over ROS transport.
+            # Allow only 20ms future skew; keep the 300ms stale-data limit.
+            if not -0.02 <= received_age <= 0.3 or not -0.02 <= stamp_age <= 0.3 or msg.header.stamp.to_sec() <= 0:
+                raise ValueError('%s timing invalid: now=%.6f stamp=%.6f stamp_age=%.6fs received_age=%.6fs '
+                                 '(allowed -0.020..0.300s); check /clock and topic publisher' %
+                                 (label,now.to_sec(),msg.header.stamp.to_sec(),stamp_age,received_age))
         stamp = self.listener.getLatestCommonTime(self.frame, self.base)
-        if not 0 <= (now - stamp).to_sec() <= 0.3: raise ValueError('Localization TF stale')
+        age = (now-stamp).to_sec()
+        if not -0.02 <= age <= 0.3:
+            raise ValueError('Localization TF timing invalid: age=%.6fs (allowed -0.020..0.300s)' % age)
         position, rotation = self.listener.lookupTransform(self.frame, self.base, rospy.Time(0))
         yaw = tf.transformations.euler_from_quaternion(rotation)[2]
         if not all(math.isfinite(v) for v in (*position[:2], yaw, self.odom.twist.twist.linear.x)):
@@ -77,6 +88,15 @@ class ContinuousRace:
         offset = 0.13 if self.generated else 0.0
         return (position[0]-offset*math.cos(yaw), position[1]-offset*math.sin(yaw),
                 yaw, self.odom.twist.twist.linear.x)
+
+    def status(self, request):
+        with self.lock:
+            try:
+                pose = self.sensors()
+                return TriggerResponse(True,json.dumps(dict(active=self.active,pose=pose,
+                                                            message='Feedback ready; start still checks controller conflicts and pose')))
+            except (ValueError,tf.Exception) as error:
+                return TriggerResponse(False,str(error))
 
     def start(self, request):
         with self.lock:

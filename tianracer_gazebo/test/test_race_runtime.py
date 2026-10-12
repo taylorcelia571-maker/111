@@ -214,5 +214,30 @@ class RuntimeTests(unittest.TestCase):
         self.assertFalse(self.node.active)
         self.assertEqual(self.node.pub.publish.call_args.args[0].linear.x,0)
 
+    def test_status_reports_stale_topic_without_starting_or_disappearing(self):
+        self.node.scan.header.stamp = Stamp(.5)
+        response=self.node.status(None)
+        self.assertFalse(response.success)
+        self.assertIn('scan timing invalid',response.message)
+        self.assertIn('stamp_age=0.500000',response.message)
+        self.assertFalse(self.node.start(None).success)
+        self.assertFalse(self.node.active)
+        self.node.scan.header.stamp=Stamp(1)
+        self.assertTrue(self.node.status(None).success)
+        self.assertTrue(self.node.start(None).success)
+
+    def test_small_future_transport_skew_allowed_but_large_skew_rejected(self):
+        self.node.scan.header.stamp=Stamp(1.01)
+        self.assertTrue(self.node.status(None).success)
+        self.node.scan.header.stamp=Stamp(1.05)
+        self.assertFalse(self.node.status(None).success)
+        self.assertIn('scan timing invalid',self.node.status(None).message)
+
+    def test_status_identifies_odom_and_uninitialized_clock(self):
+        self.node.odom.header.stamp=Stamp(.4)
+        self.assertIn('odom timing invalid',self.node.status(None).message)
+        Stamp.now_value=0
+        self.assertIn('Waiting for initialized ROS clock',self.node.status(None).message)
+
 
 if __name__ == '__main__': unittest.main()
