@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Track a closed path using localization, odometry and live LaserScan."""
 from collections import deque
+import copy
 import json
 import math
 import os
@@ -60,15 +61,17 @@ class ContinuousRace:
         self.scan_history = deque(maxlen=16)
         self.scan_time = self.odom_time = None
         self.active = False
+        self.prepared_steer = None
         self.last_fault = None
         self.start_metrics = {}
         self.started_at = None
         self.previous = rospy.Time.now()
         self.scan_sub = rospy.Subscriber('scan', LaserScan, self.on_scan, queue_size=1)
         self.odom_sub = rospy.Subscriber('odom', Odometry, self.on_odom, queue_size=1)
-        if self.require_joint_feedback:
+        if self.require_joint_feedback or (self.generated and self.follower.lateral_control=='smooth_pursuit'):
             self.joint_sub=rospy.Subscriber('joint_states',JointState,self.on_joints,queue_size=1)
         self.start_service = rospy.Service('~start', Trigger, self.start)
+        self.prepare_service = rospy.Service('~prepare',Trigger,self.prepare)
         self.stop_service = rospy.Service('~stop', Trigger, self.stop)
         self.status_service = rospy.Service('~status', Trigger, self.status)
         rospy.on_shutdown(lambda: self.stop(None))
@@ -94,6 +97,20 @@ class ContinuousRace:
         now = rospy.Time.now()
         if now.to_sec() <= 0:
             raise ValueError('Waiting for initialized ROS clock; start/unpause simulation')
+        if self.generated and self.follower.lateral_control=='smooth_pursuit':
+            # Optional enhancement to the already-working pursuit adapter.
+            # Never retain expired steering, and do not require an extra stream
+            # to run the command-slew fallback. Scan/odom/TF guards remain mandatory.
+            self.follower.measured_steer=None
+            msg=self.joints
+            if msg is not None and self.joints_time is not None:
+                age=(now-msg.header.stamp).to_sec()
+                if msg.header.stamp.to_sec()>0 and -.02<=age<=.3 and -.02<=(now-self.joints_time).to_sec()<=.3:
+                    positions=dict(zip(msg.name,msg.position))
+                    left=positions.get('left_steering_hinge_joint');right=positions.get('right_steering_hinge_joint')
+                    if left is not None and right is not None and all(math.isfinite(v) and abs(v)<=.65 for v in (left,right)):
+                        from wheel_kinematics import equivalent_steer
+                        self.follower.measured_steer=equivalent_steer(left,right)
         if self.require_joint_feedback:
             msg=self.joints
             if msg is None or self.joints_time is None:
@@ -151,7 +168,7 @@ class ContinuousRace:
 
     def status(self, request):
         with self.lock:
-            state=dict(active=self.active,control=getattr(self.follower,'last_report',{}),
+            state=dict(active=self.active,prepared_steer=self.prepared_steer,control=getattr(self.follower,'last_report',{}),
                        startup=self.start_metrics,feedback=self.feedback_pose,last_fault=self.last_fault)
             try:
                 pose = self.sensors()
@@ -167,6 +184,32 @@ class ContinuousRace:
                              control=dict(getattr(self.follower,'last_report',{})),
                              feedback=dict(self.feedback_pose))
 
+    def prepare(self,request):
+        """Pre-position steering while stopped; does not drive or start timing."""
+        with self.lock:
+            if self.active:return TriggerResponse(False,'Already active; stop before preparing')
+            if not self.generated or self.follower.lateral_control!='smooth_pursuit':
+                return TriggerResponse(False,'prepare requires smooth_pursuit')
+            try:
+                publishers,_,_=rosgraph.Master(rospy.get_name()).getSystemState()
+                topic=rospy.resolve_name('cmd_vel')
+                others=[name for published,names in publishers if published==topic
+                        for name in names if name!=rospy.get_name()]
+                if others:raise ValueError('Other cmd_vel publishers active: '+', '.join(others))
+                pose=self.sensors()
+                if abs(pose[3])>.05:raise ValueError('Vehicle must be stationary')
+                if self.clearance_guard is not None:self.clearance_guard(pose)
+                probe=copy.deepcopy(self.follower)
+                probe.start(*pose[:3]);probe.stop()
+                probe.step(*pose,.02)
+                self.prepared_steer=probe.last_report['desired_steer']
+                msg=Twist();msg.angular.z=self.prepared_steer
+                self.pub.publish(msg)  # linear.x remains zero throughout preparation
+                return TriggerResponse(True,'Steering prepared with zero speed; arm referee, then call start')
+            except (ValueError,tf.Exception,rosgraph.MasterError,rosgraph.MasterFailure,OSError) as error:
+                if self.prepared_steer is not None:self.stop(None)
+                return TriggerResponse(False,str(error))
+
     def start(self, request):
         with self.lock:
             if self.active: return TriggerResponse(False, 'Already active')
@@ -180,6 +223,10 @@ class ContinuousRace:
                 if abs(pose[3]) > 0.05: raise ValueError('Vehicle must be stationary')
                 self.follower.start(*pose[:3])
                 self.follower.stop()
+                if self.prepared_steer is not None:
+                    initial=self.follower.measured_steer
+                    if initial is None:initial=self.prepared_steer
+                    self.follower.steer=float(np.clip(initial,-self.follower.max_steer,self.follower.max_steer))
                 if self.start_path_guard is not None and self.follower.connector_offset is not None:
                     if not self.start_path_guard(self.follower):
                         self.follower.connector_offset=None
@@ -187,6 +234,7 @@ class ContinuousRace:
                         self.follower.start_diagnostics=dict(mode='alignment',reason='connector_map_clearance_failed')
                 self.previous = rospy.Time.now() - rospy.Duration(0.02)
                 self.active = True
+                self.prepared_steer = None
                 self.last_fault = None
                 self.started_at=rospy.Time.now()
                 self.start_metrics={}
@@ -200,6 +248,7 @@ class ContinuousRace:
     def stop(self, request):
         with self.lock:
             self.active = False
+            self.prepared_steer = None
             self.follower.stop()
             self.pub.publish(Twist())
             return TriggerResponse(True, 'Stopped')
@@ -222,6 +271,16 @@ class ContinuousRace:
                         self.record_fault(error)
                         self.stop(None)
                         rospy.logerr('Race stopped: %s; last_feedback=%s', error,json.dumps(self.feedback_pose))
+                elif self.prepared_steer is not None:
+                    try:
+                        pose=self.sensors()
+                        if abs(pose[3])>.05:raise ValueError('Vehicle moved during stationary preparation')
+                        if self.clearance_guard is not None:self.clearance_guard(pose)
+                        msg=Twist();msg.angular.z=self.prepared_steer
+                        self.pub.publish(msg)
+                    except (ValueError,tf.Exception) as error:
+                        self.record_fault(error);self.stop(None)
+                        rospy.logerr('Preparation stopped: %s',error)
             try:
                 rate.sleep()
             except rospy.exceptions.ROSTimeMovedBackwardsException:

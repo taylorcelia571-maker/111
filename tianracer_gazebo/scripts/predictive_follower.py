@@ -17,12 +17,13 @@ class PredictiveFollower(LineFollower):
         if not math.isfinite(response_delay) or not 0 <= response_delay <= 0.5:
             raise ValueError('response_delay must be between 0 and 0.5 seconds')
         self.response_delay = float(response_delay)
-        if lateral_control not in ('pursuit','curvature_feedback'):
+        if lateral_control not in ('pursuit','smooth_pursuit','curvature_feedback'):
             raise ValueError('Unknown lateral_control: '+str(lateral_control))
-        if lateral_control == 'curvature_feedback' and start_blend:
-            raise ValueError('curvature_feedback requires the unmodified reference path')
+        if lateral_control != 'pursuit' and start_blend:
+            raise ValueError('Selected lateral controller requires the unmodified reference path')
         self.lateral_control = lateral_control
         self.measured_steer = None
+        self.alignment_ready = 0.0
         curve = np.abs(path.curvature)
         delta = np.arctan(wheelbase*path.curvature)
         derivative = np.maximum(np.abs(np.roll(delta,-1)-delta), np.abs(delta-np.roll(delta,1)))/path.ds
@@ -89,6 +90,7 @@ class PredictiveFollower(LineFollower):
     def start(self, x, y, yaw):
         super().start(x, y, yaw)
         self.departure = True
+        self.alignment_ready = 0.0
         self.connector_offset = None
         self.start_diagnostics = dict(mode='alignment',reason='connector_disabled_or_geometry_not_eligible')
         self.last_report = {}
@@ -146,7 +148,12 @@ class PredictiveFollower(LineFollower):
         recovery_heading_error=heading_error
         recovering=(self.error>.02 and outward>.12) or (self.error>.06 and outward>.05)
         preview = min(0.80, max(0.28, (0.35+0.18*max(0,measured_speed))/(1+0.55*curve)))
-        if recovering:
+        if self.lateral_control=='smooth_pursuit':
+            severity=float(np.clip(max(0,self.error-.02)/.04*max(0,outward)/.12,0,1))
+            preview+=(min(preview,.30)-preview)*severity
+            if self.departure:
+                preview=max(preview,.55)
+        elif recovering:
             # A long preview can let an outward heading consume the remaining
             # corridor before steering catches up. Tighten only during drift.
             preview=min(preview,.30)
@@ -157,6 +164,15 @@ class PredictiveFollower(LineFollower):
         k = 2*(-math.sin(yaw)*dx+math.cos(yaw)*dy)/max(dx*dx+dy*dy,1e-6)
         desired_steer = float(np.clip(math.atan(self.wheelbase*k),-self.max_steer,self.max_steer))
         feedforward=None
+        if self.lateral_control=='smooth_pursuit':
+            advance=min(.25,max(0,measured_speed)*.10)
+            index=(self.progress+advance)/self.path.ds
+            a=int(math.floor(index));fraction=index-a
+            ahead=float((1-fraction)*self.path.curvature[a%self.path.n]+
+                        fraction*self.path.curvature[(a+1)%self.path.n])
+            feedforward=.4*(ahead-float(self.path.curvature[i]))
+            k+=feedforward
+            desired_steer=float(np.clip(math.atan(self.wheelbase*k),-self.max_steer,self.max_steer))
         if self.lateral_control == 'curvature_feedback':
             # Curvature feedforward plus continuous heading/cross-track feedback.
             # Avoid switching to a short pursuit target during an outward drift:
@@ -191,6 +207,18 @@ class PredictiveFollower(LineFollower):
         desired *= error_factor
         if error_factor < 0.99: reason='tracking_error'
         steering_mismatch=None
+        steering_risk=None
+        if self.lateral_control=='smooth_pursuit':
+            actual=self.steer if self.measured_steer is None else self.measured_steer
+            if not math.isfinite(actual):
+                self.stop();raise ValueError('Nonfinite measured steering')
+            steering_mismatch=abs(desired_steer-actual)
+            predicted_error=self.error+abs(math.sin(heading_error))*max(0,measured_speed)*self.response_delay
+            steering_risk=float(np.clip((predicted_error-.04)/.06,0,1))
+            steering_cap=max(.35,envelope/(1+steering_risk*(max(0,steering_mismatch-.04)/.10)**2))
+            if steering_cap<desired:
+                desired=steering_cap
+                reason='steering_slew'
         if self.lateral_control == 'curvature_feedback':
             # Include command slew even if an offline model has no joint feedback.
             actual=self.steer if self.measured_steer is None else self.measured_steer
@@ -203,11 +231,16 @@ class PredictiveFollower(LineFollower):
                 desired=min(steering_cap,heading_cap)
                 reason='steering_alignment'
         recovery_cap=None
-        if self.lateral_control == 'curvature_feedback':
+        if self.lateral_control in ('smooth_pursuit','curvature_feedback'):
             # Continuous time-to-boundary cap, without the old on/off recovery
             # switch. Preserve the same corridor and reaction allowance.
             remaining=max(0,self.max_error-self.error-.025)
-            recovery_cap=max(.2,min(self.max_speed,remaining/(.30*max(outward,1e-6))))
+            drift=outward;reaction=.3
+            if self.lateral_control=='smooth_pursuit':
+                # Smooth the error-side sign across the centerline rather than
+                # switching a fixed 1m/s cap on/off for millimeter perturbations.
+                drift=max(0,math.sin(heading_error)*math.tanh(signed_error/.02));reaction=.5
+            recovery_cap=max(.2,min(self.max_speed,remaining/(reaction*max(drift,1e-6))))
             if recovery_cap<desired:
                 desired=recovery_cap
                 reason='outward_error_recovery'
@@ -221,7 +254,13 @@ class PredictiveFollower(LineFollower):
             tangent = self.path.sample(self.progress+0.08)-self.path.sample(self.progress)
             heading = math.atan2(tangent[1],tangent[0])
             heading_error = math.atan2(math.sin(heading-yaw),math.cos(heading-yaw))
-            if self.error < 0.035 and abs(heading_error) < 0.15:
+            ready=self.error<.035 and abs(heading_error)<.15
+            if self.lateral_control=='smooth_pursuit':
+                ready=(self.error<.025 and abs(heading_error)<.05 and
+                       abs(desired_steer)<.12 and abs(desired_steer-self.steer)<.04)
+                self.alignment_ready=self.alignment_ready+dt if ready else 0.0
+                ready=self.alignment_ready>=.20
+            if ready:
                 self.departure = False
             else:
                 # Establish tracking once at departure, not at each lap seam.
@@ -235,7 +274,10 @@ class PredictiveFollower(LineFollower):
                     departure_limit += 0.65*min(lateral_quality,heading_quality)
                 if departure_limit < desired: reason='departure'
                 desired = min(desired,departure_limit)
-        acceleration_limit=self.speed+self.acceleration*dt
+        active_acceleration=self.acceleration
+        if self.lateral_control=='smooth_pursuit' and self.departure:
+            active_acceleration=min(active_acceleration,2.0)
+        acceleration_limit=self.speed+active_acceleration*dt
         if acceleration_limit < desired: reason='acceleration'
         self.speed = min(desired,acceleration_limit)
         self.last_report=dict(reason=reason,planned_speed=float(self.path.speeds[i]),
@@ -248,7 +290,11 @@ class PredictiveFollower(LineFollower):
                                 speed_excess=max(0,measured_speed-self.speed),
                                 lateral_control=self.lateral_control,desired_steer=desired_steer,
                                 measured_steer=self.measured_steer,steering_mismatch=steering_mismatch,
+                                steering_alignment_risk=steering_risk,
                                 feedforward_curvature=feedforward)
+        self.last_report.update(preview_length=preview,departure=self.departure,
+                                alignment_ready_seconds=self.alignment_ready,
+                                active_acceleration=active_acceleration)
         return self.speed,self.steer
 
 

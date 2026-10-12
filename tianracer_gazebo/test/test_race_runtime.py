@@ -136,6 +136,44 @@ class RuntimeTests(unittest.TestCase):
         self.node.on_joints(self.joints(stamp=.5))
         self.assertFalse(self.node.start(None).success)
 
+    def smooth_node(self):
+        old=self.node;self.params['~lateral_control']='smooth_pursuit'
+        self.node=self.module.ContinuousRace(old.path)
+        self.node.on_scan(old.scan);self.node.on_odom(old.odom)
+
+    def test_stationary_prepare_does_not_drive_or_activate_race(self):
+        self.smooth_node()
+        self.assertTrue(self.node.prepare(None).success)
+        self.assertFalse(self.node.active)
+        initial=self.node.prepared_steer
+        self.tick()
+        msg=self.node.pub.publish.call_args.args[0]
+        self.assertEqual(msg.linear.x,0)
+        self.assertEqual(msg.angular.z,initial)
+        self.assertTrue(self.node.start(None).success)
+        self.assertAlmostEqual(self.node.follower.steer,initial)
+        self.assertIsNone(self.node.prepared_steer)
+
+    def test_prepare_blocks_moving_or_competing_controller(self):
+        self.smooth_node();self.node.odom.twist.twist.linear.x=.1
+        self.assertFalse(self.node.prepare(None).success)
+        self.node.odom.twist.twist.linear.x=0
+        self.graph.Master.return_value.getSystemState.return_value=([('/tianracer/cmd_vel',['other'])],[],[])
+        self.assertFalse(self.node.prepare(None).success)
+
+    def test_optional_steering_never_reuses_stale_joint_position(self):
+        self.smooth_node();self.node.on_joints(self.joints((.2,.2)))
+        self.node.sensors();self.assertIsNotNone(self.node.follower.measured_steer)
+        self.refresh_at(1.4)
+        self.node.sensors();self.assertIsNone(self.node.follower.measured_steer)
+
+    def test_prepare_sensor_dropout_publishes_zero_and_records_fault(self):
+        self.smooth_node();self.assertTrue(self.node.prepare(None).success)
+        Stamp.now_value=1.5;self.tick()
+        self.assertIsNone(self.node.prepared_steer)
+        self.assertEqual(self.node.pub.publish.call_args.args[0].linear.x,0)
+        self.assertIn('scan timing invalid',self.node.last_fault['reason'])
+
     def test_feedback_mode_reads_actual_ackermann_angle(self):
         from wheel_kinematics import wheel_commands
         self.feedback_node();w=wheel_commands(0,.2,True)
