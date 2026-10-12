@@ -4,6 +4,9 @@
   <arg name="robot_name" default="tianracer"/>
   <arg name="race_profile" default="false"/>
   <arg name="wheel_feedforward" default="false"/>
+  <arg name="corner_speed_control" default="false"/>
+  <arg name="straight_speed" default="2.0"/>
+  <arg name="corner_speed" default="1.8"/>
   <arg name="command_watchdog" default="false"/>
   <arg name="race_max_speed" default="2.4"/>
   <!-- Load joint controller configurations from YAML file to parameter server -->
@@ -32,6 +35,9 @@
         <rosparam if="$(arg race_profile)" file="$(find tianracer_gazebo)/config/race_motion.yaml" command="load"/>
         <param name="race_profile" value="$(arg race_profile)" type="bool"/>
         <param name="command_watchdog" value="$(arg command_watchdog)" type="bool"/>
+        <param name="corner_speed_control" value="$(arg corner_speed_control)" type="bool"/>
+        <param name="straight_speed" value="$(arg straight_speed)" type="double"/>
+        <param name="corner_speed" value="$(arg corner_speed)" type="double"/>
         <param name="max_speed" value="$(arg race_max_speed)" type="double"/>
       </node>
       <!-- Allow for Gazebo to broadcast odom -->

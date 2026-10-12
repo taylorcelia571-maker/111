@@ -9,6 +9,9 @@
     <arg name="race_max_speed" default="2.4"/>
     <arg name="planner_profile" default="false"/>
     <arg name="wheel_feedforward" default="false"/>
+    <arg name="corner_speed_control" default="false"/>
+    <arg name="straight_speed" default="2.0"/>
+    <arg name="corner_speed" default="1.8"/>
     <arg name="corner_tuning" default="false"/>
     <arg name="path_bias" default="false"/>
     <arg name="planner_max_speed" default="2.6"/>
@@ -34,6 +37,9 @@
             <arg name="race_max_speed" value="$(arg race_max_speed)"/>
                     <arg name="command_watchdog" value="$(arg command_watchdog)"/>
                     <arg name="wheel_feedforward" value="$(arg wheel_feedforward)"/>
+                    <arg name="corner_speed_control" value="$(arg corner_speed_control)"/>
+            <arg name="straight_speed" value="$(arg straight_speed)"/>
+            <arg name="corner_speed" value="$(arg corner_speed)"/>
         </include>
 
         <!-- move base -->
@@ -78,6 +84,9 @@
             <arg name="race_max_speed" value="$(arg race_max_speed)"/>
                     <arg name="command_watchdog" value="$(arg command_watchdog)"/>
                     <arg name="wheel_feedforward" value="$(arg wheel_feedforward)"/>
+                    <arg name="corner_speed_control" value="$(arg corner_speed_control)"/>
+            <arg name="straight_speed" value="$(arg straight_speed)"/>
+            <arg name="corner_speed" value="$(arg corner_speed)"/>
         </include>
 
         <!-- move base -->

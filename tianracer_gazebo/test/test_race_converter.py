@@ -8,6 +8,7 @@ from unittest.mock import Mock, patch
 
 SCRIPTS = Path(__file__).resolve().parents[1] / 'scripts'
 sys.path.insert(0, str(SCRIPTS))
+from corner_speed import CornerSpeed  # Load NumPy before temporary sys.modules patches.
 
 
 class Stamp:
@@ -117,6 +118,38 @@ class ConverterTests(unittest.TestCase):
         self.command(converter, speed=0.0, steer=0.25)
         self.assertEqual(self.latest(converter).speed, 0.0)
         self.assertEqual(self.latest(converter).steering_angle, 0.25)
+
+    def guard(self):
+        self.params.update({'~race_profile': False, '~corner_speed_control': True, '~corner_speed': 1.6})
+        with patch.dict(sys.modules, {'nav_msgs.msg': SimpleNamespace(Path=object, Odometry=object),
+                                     'sensor_msgs.msg': SimpleNamespace(JointState=object)}):
+            return self.module.Converter()
+
+    def test_guard_requires_fresh_odometry(self):
+        converter = self.guard()
+        self.command(converter, speed=2.0, steer=0.1)
+        Stamp.now_value = 0.02
+        converter.tick(None)
+        self.assertEqual(self.latest(converter).speed, 0.0)
+
+    def test_guard_preserves_steering_and_zero_stop(self):
+        converter = self.guard()
+        for i in range(1, 100):
+            Stamp.now_value = i*0.02
+            converter.odom_received = converter.joint_received = converter.plan_received = Stamp.now()
+            converter.joint_steer = 0.25
+            converter.preview = [(0, 1.0), (3, 0)]
+            self.command(converter, speed=2.0, steer=0.25)
+            converter.tick(None)
+        self.assertLessEqual(self.latest(converter).speed, 1.6)
+        self.assertEqual(self.latest(converter).steering_angle, 0.25)
+        self.command(converter, speed=0.0, steer=0.1)
+        self.assertEqual(self.latest(converter).speed, 0.0)
+        self.assertEqual(converter.governor.speed, 0.0)
+
+    def test_guard_and_legacy_smoothing_cannot_stack(self):
+        self.params['~corner_speed_control'] = True
+        with self.assertRaises(ValueError): self.module.Converter()
 
     def test_shutdown_stops_and_shuts_timer(self):
         converter = self.module.Converter()

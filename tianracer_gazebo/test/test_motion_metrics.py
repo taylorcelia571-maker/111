@@ -18,6 +18,15 @@ class MetricsTests(unittest.TestCase):
         self.assertAlmostEqual(s['corner']['command_speed_mean_m_s'],1)
         self.assertAlmostEqual(s['corner']['speed_deficit_mean_m_s'],.4)
 
+    def test_speed_guard_is_not_misreported_as_actuator_deficit(self):
+        t=np.arange(0,3,.02)
+        samples={'cmd_vel':[dict(t=float(x),speed=2.2,steer=.2) for x in t],
+                 'ackermann':[dict(t=float(x),speed=1.6,steer=.2) for x in t],
+                 'odom':[dict(t=float(x),speed=1.6) for x in t]}
+        report=summarize(samples,2.2)['corner']
+        self.assertAlmostEqual(report['speed_deficit_mean_m_s'],0)
+        self.assertAlmostEqual(report['planner_to_actuator_reduction_mean_m_s'],.6)
+
     def test_known_steering_delay_estimation(self):
         t=np.arange(0,5,.02)
         sample={'cmd_vel':[], 'ackermann':[], 'joints':[]}

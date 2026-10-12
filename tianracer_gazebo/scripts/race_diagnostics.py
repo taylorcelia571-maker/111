@@ -55,6 +55,8 @@ def main():
         'TebLocalPlannerROS/max_vel_theta', 'TebLocalPlannerROS/wheelbase',
         'TebLocalPlannerROS/max_global_plan_lookahead_dist', 'TebLocalPlannerROS/global_plan_viapoint_sep')}
     settings['wheel_feedforward'] = rospy.get_param(namespace+'servo_commands/wheel_feedforward', False)
+    for key in ('corner_speed_control', 'straight_speed', 'corner_speed'):
+        settings[key] = rospy.get_param(namespace+'nav_sim/'+key, None)
     sim_start = rospy.Time.now().to_sec()
     while not rospy.is_shutdown() and time.monotonic() - started < duration:
         time.sleep(0.1)

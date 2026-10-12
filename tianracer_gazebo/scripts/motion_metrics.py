@@ -21,6 +21,7 @@ def summarize(samples, max_speed=1.8, max_yaw_rate=3.6, wheelbase=0.26):
     cmd = series(samples.get('cmd_vel', []), 'speed')
     angle = series(samples.get('cmd_vel', []), 'steer')
     odom = series(samples.get('odom', []), 'speed')
+    actuator = series(samples.get('ackermann', []), 'speed')
     if len(cmd) < 2 or len(angle) < 2:
         return {'insufficient_data': 'Need command speed and steering samples'}
     t, v = cmd[:, 0], np.abs(cmd[:, 1])
@@ -35,9 +36,16 @@ def summarize(samples, max_speed=1.8, max_yaw_rate=3.6, wheelbase=0.26):
         if len(odom) > 1:
             valid = mask & (t >= odom[0, 0]) & (t <= odom[-1, 0])
             measured = np.abs(np.interp(t, odom[:, 0], odom[:, 1]))
+            target_v = v
+            if len(actuator) > 1:
+                valid &= (t >= actuator[0, 0]) & (t <= actuator[-1, 0])
+                target_v = np.abs(np.interp(t, actuator[:, 0], actuator[:, 1]))
             if weights[valid].sum() > 0:
                 item['actual_speed_mean_m_s'] = float(np.average(measured[valid], weights=weights[valid]))
-                item['speed_deficit_mean_m_s'] = float(np.average(np.maximum(0, v[valid]-measured[valid]),
+                item['actuator_speed_mean_m_s'] = float(np.average(target_v[valid], weights=weights[valid]))
+                item['planner_to_actuator_reduction_mean_m_s'] = float(np.average(
+                    np.maximum(0, v[valid]-target_v[valid]), weights=weights[valid]))
+                item['speed_deficit_mean_m_s'] = float(np.average(np.maximum(0, target_v[valid]-measured[valid]),
                                                                                 weights=weights[valid]))
         result[name] = item
     result['near_zero_command_fraction'] = fraction(v < 0.05)

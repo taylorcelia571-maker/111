@@ -1,3 +1,5 @@
+> 最新直线/弯道速度调度与转向反馈保护见 [ADAPTIVE_SPEED_CN.md](ADAPTIVE_SPEED_CN.md)。
+
 > 最新弯道轮速前馈、可选 TEB 调优与瓶颈诊断见 [SMOOTH_RACING_CN.md](SMOOTH_RACING_CN.md)。
 
 > 第三版不动问题的恢复修正步骤见 [PLANNER_RACING_CN.md](PLANNER_RACING_CN.md)。
