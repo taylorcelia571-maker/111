@@ -1,0 +1,29 @@
+<launch>
+  <!-- Same finish-first budgets; route refinement must pass local referee validation.
+       A larger speed budget is an experiment, not a verified 60-second result. -->
+  <arg name="max_speed" default="2.2"/>
+  <arg name="lateral_accel" default="3.2"/>
+  <arg name="acceleration" default="1.5"/>
+  <arg name="braking" default="2.0"/>
+  <arg name="yaw_rate" default="2.5"/>
+  <arg name="steering_rate" default="2.0"/>
+  <arg name="response_delay" default="0.25"/>
+  <arg name="refine_line" default="true"/>
+  <arg name="run_report" default="~/ican_race_logs/control_run_report.json"/>
+  <include file="$(find tianracer_gazebo)/launch/planned_race.launch">
+    <arg name="max_speed" value="$(arg max_speed)"/>
+    <arg name="lateral_accel" value="$(arg lateral_accel)"/>
+    <arg name="acceleration" value="$(arg acceleration)"/>
+    <arg name="braking" value="$(arg braking)"/>
+    <arg name="yaw_rate" value="$(arg yaw_rate)"/>
+    <arg name="steering_rate" value="$(arg steering_rate)"/>
+    <arg name="response_delay" value="$(arg response_delay)"/>
+    <arg name="run_report" value="$(arg run_report)"/>
+    <arg name="lateral_control" value="curvature_feedback"/>
+    <arg name="fast_start" value="true"/>
+    <arg name="optimize_time" value="true"/>
+    <arg name="refine_line" value="$(arg refine_line)"/>
+    <arg name="start_blend" value="false"/>
+    <arg name="predict_pose" value="false"/>
+  </include>
+</launch>

@@ -36,7 +36,7 @@ def main():
     center = planner.build(anchors,optimize_time=optimize,refine_line=rospy.get_param('~refine_line',False),
                            **{k:rospy.get_param('~'+k,v) for k,v in (
                                ('max_speed',2.0),('lateral_accel',5.0),('acceleration',2.0),('braking',3.0),
-                               ('steering_rate',2.0),('yaw_rate',3.2))})
+                               ('steering_rate',2.0),('yaw_rate',3.2),('response_delay',0.0))})
     if optimize:
         rospy.loginfo('Time-based route selection (model only): %s',planner.selection)
     tangent = np.roll(center.points,-1,axis=0)-np.roll(center.points,1,axis=0)

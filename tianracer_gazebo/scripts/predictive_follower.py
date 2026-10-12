@@ -54,6 +54,21 @@ class PredictiveFollower(LineFollower):
         self.connector_length = 2.5
         self.last_report = {}
 
+    def preview_speed_profile(self):
+        """Conservative scoring profile using nominal speed for response travel.
+
+        Runtime still uses measured speed; this is a route-selection proxy, not
+        a prediction of actuator dynamics or an official lap time.
+        """
+        speed = self.path.speeds
+        counts = np.minimum(self.path.n-1,
+                            np.ceil(speed*self.response_delay/self.path.ds).astype(int))
+        result = speed.copy()
+        for offset in range(1, int(counts.max())+1):
+            mask = counts >= offset
+            result[mask] = np.minimum(result[mask], np.roll(speed, -offset)[mask])
+        return result
+
     def plan_report(self):
         names=list(self.speed_caps)
         caps=np.vstack([self.speed_caps[name] for name in names])
@@ -77,7 +92,11 @@ class PredictiveFollower(LineFollower):
             seconds=float(5*np.sum(other.path.ds/other.path.speeds))
             sensitivity[label]=dict(parameter=key,value=value,model_five_seconds=seconds,
                                     model_seconds_saved=float(5*weights.sum()-seconds))
-        return dict(length=self.path.length,model_lap_seconds=float(weights.sum()),
+        preview_seconds=float(5*np.sum(self.path.ds/self.preview_speed_profile()))
+        return dict(response_preview_proxy_five_seconds=preview_seconds,
+                    response_preview_proxy_includes_startup=False,
+                    response_preview_proxy_uses_nominal_speed=True,
+                    length=self.path.length,model_lap_seconds=float(weights.sum()),
                     model_five_seconds=float(5*weights.sum()),model_includes_startup=False,
                     required_mean_speed_for_60s=self.path.length/12,
                     response_delay_seconds=self.response_delay,

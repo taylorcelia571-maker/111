@@ -79,19 +79,22 @@ class LoopPlanner:
         return trial
 
     @staticmethod
-    def estimate(trial, max_speed, lateral_accel, acceleration, braking, steering_rate, yaw_rate):
+    def estimate(trial, max_speed, lateral_accel, acceleration, braking, steering_rate, yaw_rate, response_delay=0.0):
         from predictive_follower import PredictiveFollower
         tangent=np.roll(trial.points,-1,axis=0)-np.roll(trial.points,1,axis=0)
         tangent/=np.linalg.norm(tangent,axis=1)[:,None]
         rear=trial.points-.13*tangent
         reference=ClosedPath(np.vstack([rear,rear[0]]),spacing=.04)
-        PredictiveFollower(reference,max_speed=max_speed,lateral_accel=lateral_accel,
-                           acceleration=acceleration,braking=braking,steering_rate=steering_rate,yaw_rate=yaw_rate)
-        return float(np.sum(reference.ds/reference.speeds))
+        follower=PredictiveFollower(reference,max_speed=max_speed,lateral_accel=lateral_accel,
+                           acceleration=acceleration,braking=braking,steering_rate=steering_rate,yaw_rate=yaw_rate,
+                           response_delay=response_delay)
+        return float(np.sum(reference.ds/follower.preview_speed_profile()))
 
     def build(self, waypoints, max_steer=0.48, wheelbase=0.26, optimize_time=False,
               max_speed=4.0, lateral_accel=5.0, acceleration=2.0, braking=3.0,
-              clearance_weight=None, steering_rate=2.0, yaw_rate=3.2, refine_line=False):
+              clearance_weight=None, steering_rate=2.0, yaw_rate=3.2, refine_line=False, response_delay=0.0):
+        if not math.isfinite(response_delay) or not 0 <= response_delay <= .5:
+            raise ValueError("response_delay must be between 0 and 0.5 seconds")
         if optimize_time:
             for name,value in (('max_speed',max_speed),('lateral_accel',lateral_accel),
                                ('acceleration',acceleration),('braking',braking),('steering_rate',steering_rate),('yaw_rate',yaw_rate)):
@@ -102,7 +105,8 @@ class LoopPlanner:
             for weight in (2.0,4.0,8.0,16.0):
                 try:
                     trial = self.build(waypoints,max_steer,wheelbase,True,max_speed,
-                                       lateral_accel,acceleration,braking,weight,steering_rate,yaw_rate)
+                                       lateral_accel,acceleration,braking,weight,steering_rate,yaw_rate,
+                                       response_delay=response_delay)
                 except ValueError:
                     continue  # infeasible alternatives never become motion plans
                 selection = dict(self.selection,clearance_weight=weight)
@@ -120,7 +124,7 @@ class LoopPlanner:
             for offset in (-.12,-.08,-.04,.04,.08,.12):
                 candidate=self.feasible(seed.points+offset*shape[:,None]*normal,np.asarray(waypoints),max_steer,wheelbase)
                 if candidate is None: continue
-                estimated=self.estimate(candidate,max_speed,lateral_accel,acceleration,braking,steering_rate,yaw_rate)
+                estimated=self.estimate(candidate,max_speed,lateral_accel,acceleration,braking,steering_rate,yaw_rate,response_delay)
                 if estimated < best_selection['estimated_lap_seconds']:
                     best=candidate
                     best_selection.update(estimated_lap_seconds=estimated,corner_offset=offset)
@@ -151,12 +155,15 @@ class LoopPlanner:
                         for offset in (-.06,-.03,.03,.06):
                             candidate=self.feasible(current.points+offset*bump[:,None]*normal,np.asarray(waypoints),max_steer,wheelbase)
                             if candidate is None: continue
-                            estimated=self.estimate(candidate,max_speed,lateral_accel,acceleration,braking,steering_rate,yaw_rate)
+                            estimated=self.estimate(candidate,max_speed,lateral_accel,acceleration,braking,steering_rate,yaw_rate,response_delay)
                             if estimated < best_selection['estimated_lap_seconds']-1e-4:
                                 best=candidate
                                 best_selection['estimated_lap_seconds']=estimated
                                 accepted+=1
-            best_selection.update(refinement_moves=accepted,baseline_model_lap_seconds=baseline_time,
+            best_selection.update(scoring_response_delay=response_delay,
+                                  scoring_model='nominal_speed_response_preview_proxy',
+                                  scoring_includes_startup=False,
+                                  refinement_moves=accepted,baseline_model_lap_seconds=baseline_time,
                                   refinement_gain_seconds=baseline_time-best_selection['estimated_lap_seconds'],
                                   route_changed=accepted>0,
                                   route_sha256=hashlib.sha256(np.round(best.points,4).tobytes()).hexdigest())
@@ -180,7 +187,7 @@ class LoopPlanner:
             trial=self.feasible(candidate,anchors,max_steer,wheelbase)
             if trial is None: continue
             if optimize_time:
-                estimated=self.estimate(trial,max_speed,lateral_accel,acceleration,braking,steering_rate,yaw_rate)
+                estimated=self.estimate(trial,max_speed,lateral_accel,acceleration,braking,steering_rate,yaw_rate,response_delay)
                 if estimated >= best_time: continue
                 best_time = estimated
                 self.selection = dict(estimated_lap_seconds=estimated,smoothing_width=float(width))
