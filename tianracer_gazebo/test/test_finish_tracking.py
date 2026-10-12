@@ -116,5 +116,23 @@ class FinishTrackingTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 PredictiveFollower(rear_path(self.center),response_delay=delay)
 
+    def test_ceiling_sensitivity_above_peak_and_no_state_mutation(self):
+        p=rear_path(self.center)
+        f=PredictiveFollower(p,max_speed=8,lateral_accel=6.5,acceleration=5,yaw_rate=3.8)
+        points=p.points.copy();speeds=p.speeds.copy()
+        report=f.plan_report()
+        self.assertFalse(report['speed_ceiling_binding'])
+        self.assertLess(report['peak_planned_speed'],8)
+        self.assertAlmostEqual(report['same_route_parameter_sensitivity']['max_speed_plus_1']['model_seconds_saved'],0)
+        self.assertGreater(report['same_route_parameter_sensitivity']['lateral_plus_10_percent']['model_seconds_saved'],0)
+        np.testing.assert_array_equal(p.points,points)
+        np.testing.assert_array_equal(p.speeds,speeds)
+
+    def test_ceiling_sensitivity_detects_a_real_straight_speed_limit(self):
+        f=PredictiveFollower(rear_path(self.center),max_speed=1.5,lateral_accel=4)
+        report=f.plan_report()
+        self.assertTrue(report['speed_ceiling_binding'])
+        self.assertGreater(report['same_route_parameter_sensitivity']['max_speed_plus_1']['model_seconds_saved'],10)
+
 
 if __name__ == '__main__': unittest.main()

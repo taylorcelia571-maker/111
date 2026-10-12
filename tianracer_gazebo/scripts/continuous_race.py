@@ -60,6 +60,7 @@ class ContinuousRace:
         self.scan_history = deque(maxlen=16)
         self.scan_time = self.odom_time = None
         self.active = False
+        self.last_fault = None
         self.start_metrics = {}
         self.started_at = None
         self.previous = rospy.Time.now()
@@ -150,15 +151,21 @@ class ContinuousRace:
 
     def status(self, request):
         with self.lock:
+            state=dict(active=self.active,control=getattr(self.follower,'last_report',{}),
+                       startup=self.start_metrics,feedback=self.feedback_pose,last_fault=self.last_fault)
             try:
                 pose = self.sensors()
-                return TriggerResponse(True,json.dumps(dict(active=self.active,pose=pose,
-                                                            control=getattr(self.follower,'last_report',{}),
-                                                            startup=self.start_metrics,
-                                                            feedback=self.feedback_pose,
-                                                            message='Feedback ready; start still checks controller conflicts and pose')))
+                state.update(pose=pose,feedback=self.feedback_pose,
+                             message='Feedback ready; start still checks controller conflicts and pose')
+                return TriggerResponse(True,json.dumps(state))
             except (ValueError,tf.Exception) as error:
-                return TriggerResponse(False,str(error))
+                state['sensor_error']=str(error)
+                return TriggerResponse(False,json.dumps(state))
+
+    def record_fault(self,error):
+        self.last_fault=dict(reason=str(error),simulation_time=rospy.Time.now().to_sec(),
+                             control=dict(getattr(self.follower,'last_report',{})),
+                             feedback=dict(self.feedback_pose))
 
     def start(self, request):
         with self.lock:
@@ -180,6 +187,7 @@ class ContinuousRace:
                         self.follower.start_diagnostics=dict(mode='alignment',reason='connector_map_clearance_failed')
                 self.previous = rospy.Time.now() - rospy.Duration(0.02)
                 self.active = True
+                self.last_fault = None
                 self.started_at=rospy.Time.now()
                 self.start_metrics={}
                 rospy.loginfo('Race start mode: %s',json.dumps(getattr(self.follower,'start_diagnostics',{})))
@@ -211,11 +219,13 @@ class ContinuousRace:
                         if dt > 0:
                             self.control_cycle(now, dt)
                     except (ValueError, tf.Exception) as error:
+                        self.record_fault(error)
                         self.stop(None)
                         rospy.logerr('Race stopped: %s; last_feedback=%s', error,json.dumps(self.feedback_pose))
             try:
                 rate.sleep()
             except rospy.exceptions.ROSTimeMovedBackwardsException:
+                self.record_fault('ROS simulation clock moved backwards')
                 self.stop(None)
                 rate = rospy.Rate(50)
 

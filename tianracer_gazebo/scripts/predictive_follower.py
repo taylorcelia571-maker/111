@@ -1,5 +1,6 @@
 """Forward-only closed-loop tracking and reference-corridor laser clearance."""
 import math
+import copy
 import numpy as np
 from race_line import LineFollower, positive
 
@@ -54,6 +55,21 @@ class PredictiveFollower(LineFollower):
         weights=self.path.ds/self.path.speeds
         fractions={name:float(weights[(reason==i)&~envelope].sum()/weights.sum()) for i,name in enumerate(names)}
         fractions['acceleration_braking']=float(weights[envelope].sum()/weights.sum())
+        # Planning-time sensitivity only: no extra optimization in the driving
+        # loop. Use the same route and solver, with independent mutable paths.
+        budgets=dict(max_speed=self.max_speed,lateral_accel=self.lateral_accel,
+                     acceleration=self.acceleration,braking=self.braking,
+                     steering_rate=self.steering_rate,yaw_rate=self.yaw_rate)
+        sensitivity={}
+        for label,key,value in (('max_speed_plus_1','max_speed',self.max_speed+1),
+                                ('lateral_plus_10_percent','lateral_accel',self.lateral_accel*1.1),
+                                ('acceleration_plus_20_percent','acceleration',self.acceleration*1.2),
+                                ('braking_plus_20_percent','braking',self.braking*1.2)):
+            trial=dict(budgets);trial[key]=value
+            other=PredictiveFollower(copy.deepcopy(self.path),**trial)
+            seconds=float(5*np.sum(other.path.ds/other.path.speeds))
+            sensitivity[label]=dict(parameter=key,value=value,model_five_seconds=seconds,
+                                    model_seconds_saved=float(5*weights.sum()-seconds))
         return dict(length=self.path.length,model_lap_seconds=float(weights.sum()),
                     model_five_seconds=float(5*weights.sum()),model_includes_startup=False,
                     required_mean_speed_for_60s=self.path.length/12,
@@ -61,6 +77,10 @@ class PredictiveFollower(LineFollower):
                     response_delay_is_measured=False,
                     model_includes_response_preview=False,
                     lateral_control=self.lateral_control,
+                    peak_planned_speed=float(self.path.speeds.max()),
+                    speed_ceiling_binding=bool(np.any(self.path.speeds>=self.max_speed-1e-6)),
+                    same_route_parameter_sensitivity=sensitivity,
+                    sensitivity_is_physical_validation=False,
                     limits=dict(max_speed=self.max_speed,lateral_accel=self.lateral_accel,
                                 acceleration=self.acceleration,braking=self.braking,
                                 steering_rate=self.steering_rate,yaw_rate=self.yaw_rate),

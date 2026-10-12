@@ -1,6 +1,7 @@
 """ROS adapter tests with fake transport; not integration against ROS/Gazebo."""
 import importlib.util
 import math
+import json
 from pathlib import Path
 import sys
 from types import SimpleNamespace as NS
@@ -94,6 +95,18 @@ class RuntimeTests(unittest.TestCase):
         self.tick()
         self.assertFalse(self.node.active)
         self.assertEqual(self.node.pub.publish.call_args.args[0].linear.x, 0)
+
+    def test_fault_survives_stop_and_stale_status(self):
+        self.assertTrue(self.node.start(None).success)
+        Stamp.now_value=1.5
+        self.tick()
+        response=self.node.status(None)
+        state=json.loads(response.message)
+        self.assertFalse(response.success)
+        self.assertFalse(state['active'])
+        self.assertIn('scan timing invalid',state['last_fault']['reason'])
+        self.node.stop(None)
+        self.assertEqual(state['last_fault'],self.node.last_fault)
 
     def test_competing_controller_blocks_start(self):
         self.graph.Master.return_value.getSystemState.return_value = (

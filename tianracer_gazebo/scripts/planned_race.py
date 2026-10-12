@@ -67,6 +67,10 @@ def main():
     report_file=os.path.splitext(output)[0]+'_report.json'
     with open(report_file,'w') as stream: json.dump(report,stream,indent=2,sort_keys=True)
     rospy.loginfo('Speed budget report (model, not result): %s; saved %s',json.dumps(report,sort_keys=True),report_file)
+    if not report['speed_ceiling_binding']:
+        rospy.loginfo('max_speed=%.2f is not binding; peak planned speed=%.2f. '
+                      'See same_route_parameter_sensitivity before increasing the ceiling.',
+                      controller.follower.max_speed,report['peak_planned_speed'])
     preview = Path(); preview.header.frame_id=grid.header.frame_id
     preview.header.stamp=rospy.Time.now()
     for i,p in enumerate(path.points):
