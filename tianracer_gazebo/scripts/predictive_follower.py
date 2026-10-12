@@ -7,11 +7,15 @@ from race_line import LineFollower, positive
 class PredictiveFollower(LineFollower):
     def __init__(self, path, max_speed=2.0, lateral_accel=5.0, acceleration=2.0,
                  braking=3.0, max_error=0.15, wheelbase=0.26, max_steer=0.48,
-                 steering_rate=2.0, yaw_rate=3.2, fast_start=False, start_blend=False):
+                 steering_rate=2.0, yaw_rate=3.2, fast_start=False, start_blend=False,
+                 response_delay=0.0):
         super().__init__(path, max_speed, lateral_accel, acceleration, braking,
                          wheelbase, max_steer, max_error)
         self.steering_rate = positive('steering_rate', steering_rate)
         self.yaw_rate = positive('yaw_rate', yaw_rate)
+        if not math.isfinite(response_delay) or not 0 <= response_delay <= 0.5:
+            raise ValueError('response_delay must be between 0 and 0.5 seconds')
+        self.response_delay = float(response_delay)
         curve = np.abs(path.curvature)
         delta = np.arctan(wheelbase*path.curvature)
         derivative = np.maximum(np.abs(np.roll(delta,-1)-delta), np.abs(delta-np.roll(delta,1)))/path.ds
@@ -47,6 +51,9 @@ class PredictiveFollower(LineFollower):
         return dict(length=self.path.length,model_lap_seconds=float(weights.sum()),
                     model_five_seconds=float(5*weights.sum()),model_includes_startup=False,
                     required_mean_speed_for_60s=self.path.length/12,
+                    response_delay_seconds=self.response_delay,
+                    response_delay_is_measured=False,
+                    model_includes_response_preview=False,
                     limits=dict(max_speed=self.max_speed,lateral_accel=self.lateral_accel,
                                 acceleration=self.acceleration,braking=self.braking,
                                 steering_rate=self.steering_rate,yaw_rate=self.yaw_rate),
@@ -125,10 +132,18 @@ class PredictiveFollower(LineFollower):
         self.steer += float(np.clip(desired_steer-self.steer,-self.steering_rate*dt,self.steering_rate*dt))
         live_lateral = math.sqrt(self.lateral_accel/max(abs(k),1e-6))
         live_yaw = self.yaw_rate/max(abs(k),1e-6)
-        desired = min(float(self.path.speeds[i]),live_lateral,live_yaw)
+        # The spatial envelope assumes instantaneous execution. Real wheels keep
+        # moving after a lower command: advance the braking envelope by measured
+        # travel during the response allowance. Never substitute command speed
+        # here, since it can already be much lower than the actual speed.
+        preview_distance=max(0,measured_speed)*self.response_delay
+        count=min(self.path.n-1,int(math.ceil(preview_distance/self.path.ds)))
+        envelope=float(np.min(self.path.speeds[(i+np.arange(count+1))%self.path.n]))
+        desired = min(envelope,live_lateral,live_yaw)
         reason = 'planned_envelope'
-        if live_lateral < self.path.speeds[i]: reason='tracking_lateral'
-        if live_yaw < min(self.path.speeds[i],live_lateral): reason='tracking_yaw'
+        if envelope < self.path.speeds[i]-1e-6: reason='response_preview'
+        if live_lateral < envelope: reason='tracking_lateral'
+        if live_yaw < min(envelope,live_lateral): reason='tracking_yaw'
 
         # Small localization corrections should not cause repeated strong braking.
         error_factor = max(0.4, 1-0.6*(max(0,self.error-0.05)/max(0.01,self.max_error-0.05))**2)
@@ -167,6 +182,9 @@ class PredictiveFollower(LineFollower):
                               command_speed=self.speed,steer=self.steer,tracking_error=self.error,
                               start_connector=self.connector_offset is not None and self.progress-self.origin<self.connector_length,
                               outward_heading=outward,heading_error=recovery_heading_error,recovery_speed_cap=recovery_cap)
+        self.last_report.update(response_delay=self.response_delay,
+                                preview_distance=preview_distance,preview_speed=envelope,
+                                speed_excess=max(0,measured_speed-self.speed))
         return self.speed,self.steer
 
 

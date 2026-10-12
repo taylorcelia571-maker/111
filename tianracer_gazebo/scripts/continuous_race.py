@@ -39,6 +39,7 @@ class ContinuousRace:
         if self.generated:
             options.update(fast_start=rospy.get_param('~fast_start',False),
                            start_blend=rospy.get_param('~start_blend',False),
+                           response_delay=rospy.get_param('~response_delay',0.0),
                            steering_rate=rospy.get_param('~steering_rate',2.0),
                            yaw_rate=rospy.get_param('~yaw_rate',3.2))
         self.follower = follower_type(self.path, **options)
@@ -257,7 +258,8 @@ class ContinuousRace:
             obstacle_limit = reference_clearance(
                 self.path, self.follower.progress, pose, scan,
                 relative_laser, max(speed, abs(pose[3])),
-                self.follower.braking, diagnostics=report, sample=self.follower.sample_tracking)
+                self.follower.braking, diagnostics=report, sample=self.follower.sample_tracking,
+                reaction=max(.15,self.follower.response_delay))
             report.update(scan_age=(now-scan.header.stamp).to_sec(),
                           speed_limit=obstacle_limit if math.isfinite(obstacle_limit) else None,
                           tracking_error=self.follower.error)
@@ -278,6 +280,9 @@ class ContinuousRace:
                 raise ValueError('Obstacle/invalid scan: stopped; inspect then call start again')
         speed = min(speed, obstacle_limit)
         self.follower.speed = speed
+        if self.generated and pose[3] > speed + 0.5:
+            rospy.logwarn_throttle(1, 'Vehicle above requested speed: measured=%.3f command=%.3f; control=%s',
+                                   pose[3], speed, json.dumps(self.follower.last_report,sort_keys=True))
         if self.generated:
             self.follower.last_report['output_speed']=speed
             if obstacle_limit < self.follower.last_report['command_speed']:

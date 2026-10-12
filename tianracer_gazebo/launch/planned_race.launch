@@ -13,6 +13,7 @@
   <arg name="start_blend" default="false"/>
   <arg name="refine_line" default="false"/>
   <arg name="predict_pose" default="false"/>
+  <arg name="response_delay" default="0.0"/>
   <node pkg="tianracer_gazebo" type="planned_race.py" name="continuous_race"
         ns="tianracer" output="screen" required="true">
     <param name="max_speed" value="$(arg max_speed)" type="double"/>
@@ -21,6 +22,7 @@
     <param name="braking" value="$(arg braking)" type="double"/>
     <param name="steering_rate" value="$(arg steering_rate)" type="double"/>
     <param name="yaw_rate" value="$(arg yaw_rate)" type="double"/>
+    <param name="response_delay" value="$(arg response_delay)" type="double"/>
     <param name="predict_pose" value="$(arg predict_pose)" type="bool"/>
     <param name="start_blend" value="$(arg start_blend)" type="bool"/>
     <param name="refine_line" value="$(arg refine_line)" type="bool"/>

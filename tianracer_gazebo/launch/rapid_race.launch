@@ -7,6 +7,7 @@
   <arg name="braking" default="3.0"/>
   <arg name="yaw_rate" default="4.0"/>
   <arg name="steering_rate" default="2.0"/>
+  <arg name="response_delay" default="0.25"/>
   <!-- Disabled after an observed startup tracking failure; opt in one at a time. -->
   <arg name="predict_pose" default="false"/>
   <arg name="start_blend" default="false"/>
@@ -18,6 +19,7 @@
     <arg name="braking" value="$(arg braking)"/>
     <arg name="yaw_rate" value="$(arg yaw_rate)"/>
     <arg name="steering_rate" value="$(arg steering_rate)"/>
+    <arg name="response_delay" value="$(arg response_delay)"/>
     <arg name="optimize_time" value="true"/>
     <arg name="fast_start" value="true"/>
     <arg name="predict_pose" value="$(arg predict_pose)"/>
