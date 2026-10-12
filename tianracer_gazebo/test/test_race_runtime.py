@@ -293,7 +293,7 @@ class RuntimeTests(unittest.TestCase):
         self.node.odom.twist.twist.angular=NS(z=float('nan'))
         self.assertFalse(self.node.start(None).success)
 
-    def test_verified_laser_cache_avoids_blocking_and_rejects_expiry(self):
+    def test_verified_laser_cache_avoids_blocking_then_stops_if_tf_reacquisition_fails(self):
         self.generated_node()
         self.tick()
         self.assertIsNotNone(self.node.laser_cache)
@@ -306,9 +306,54 @@ class RuntimeTests(unittest.TestCase):
         self.assertTrue(self.node.active)
         self.node.listener.waitForTransform.assert_not_called()
         self.refresh_at(1.15)
+        self.node.listener.waitForTransform.side_effect=RuntimeError('TF unavailable')
+        self.tick()
+        self.assertFalse(self.node.active)
+        self.node.listener.waitForTransform.assert_called_once()
+        self.assertEqual(self.node.pub.publish.call_args.args[0].linear.x,0)
+
+    def test_fresh_scan_reacquired_when_short_cache_expires(self):
+        import copy
+        self.generated_node();self.tick()
+        self.node.scan=copy.deepcopy(self.node.scan)
+        self.refresh_at(1.15)
+        self.node.listener.canTransform.return_value=False
+        self.tick()
+        self.assertTrue(self.node.active)
+        self.node.listener.waitForTransform.assert_called_once()
+        self.assertIs(self.node.laser_cache[0],self.node.scan)
+        self.assertGreater(self.node.pub.publish.call_args.args[0].linear.x,0)
+
+    def test_recent_transformable_history_selected_without_waiting_for_latest_scan(self):
+        import copy
+        self.generated_node()
+        recent=copy.deepcopy(self.node.scan)
+        recent.header.stamp=Stamp(.97)
+        latest=copy.deepcopy(self.node.scan)
+        self.node.on_scan(recent);self.node.on_scan(latest)
+        self.node.listener.canTransform.side_effect=lambda target,source,stamp:stamp.to_sec()==.97
+        self.tick()
+        self.assertTrue(self.node.active)
+        self.assertIs(self.node.laser_cache[0],recent)
+        self.node.listener.waitForTransform.assert_not_called()
+
+    def test_stale_history_and_current_scan_cannot_restart_motion(self):
+        self.generated_node();self.tick()
+        Stamp.now_value=1.5
         self.tick()
         self.assertFalse(self.node.active)
         self.assertEqual(self.node.pub.publish.call_args.args[0].linear.x,0)
+
+    def test_tf_wait_refreshes_control_time_before_integrating(self):
+        self.generated_node()
+        self.node.listener.canTransform.return_value=False
+        self.node.listener.waitForTransform.side_effect=lambda *args:setattr(Stamp,'now_value',1.03)
+        with patch.object(self.node.follower,'step',wraps=self.node.follower.step) as step:
+            self.tick()
+        self.assertTrue(self.node.active)
+        self.assertAlmostEqual(self.node.previous.to_sec(),1.03)
+        self.assertAlmostEqual(step.call_args.args[-1],.04)
+        self.assertAlmostEqual(step.call_args.kwargs['projection_dt'],.05)
 
 
 if __name__ == '__main__': unittest.main()

@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Track a closed path using localization, odometry and live LaserScan."""
+from collections import deque
 import json
 import math
 import os
@@ -52,6 +53,7 @@ class ContinuousRace:
         self.lock = threading.RLock()
         self.scan = self.odom = None
         self.laser_cache = None
+        self.scan_history = deque(maxlen=16)
         self.scan_time = self.odom_time = None
         self.active = False
         self.start_metrics = {}
@@ -68,6 +70,7 @@ class ContinuousRace:
     def on_scan(self, msg):
         with self.lock:
             self.scan, self.scan_time = msg, rospy.Time.now()
+            self.scan_history.append(msg)
 
     def on_odom(self, msg):
         with self.lock:
@@ -187,8 +190,45 @@ class ContinuousRace:
                 self.stop(None)
                 rate = rospy.Rate(50)
 
+    def laser_feedback(self, now):
+        # Select the newest short-age scan whose acquisition transform exists.
+        # A 40Hz scan and 20Hz odometry need not share the latest timestamp.
+        for scan in reversed(self.scan_history):
+            age=(now-scan.header.stamp).to_sec()
+            if not -.02<=age<=.1: continue
+            if self.listener.canTransform(self.frame,scan.header.frame_id,scan.header.stamp):
+                position,rotation=self.listener.lookupTransform(self.frame,scan.header.frame_id,scan.header.stamp)
+                self.laser_cache=(scan,position,rotation)
+                return self.laser_cache
+        if self.laser_cache is not None and -.02<=(now-self.laser_cache[0].header.stamp).to_sec()<=.1:
+            return self.laser_cache
+        scan=self.scan
+        if scan is None: raise ValueError('No laser scan available')
+        age=(now-scan.header.stamp).to_sec()
+        if not -.02<=age<=.3:
+            raise ValueError('Current laser scan stale: age=%.6fs' % age)
+        # Cache expiry alone is not a sensor fault. Try bounded TF acquisition
+        # before stopping; never return a scan with an unverified transform.
+        self.listener.waitForTransform(self.frame,scan.header.frame_id,scan.header.stamp,
+                                       rospy.Duration(.05),rospy.Duration(.005))
+        position,rotation=self.listener.lookupTransform(self.frame,scan.header.frame_id,scan.header.stamp)
+        age=(rospy.Time.now()-scan.header.stamp).to_sec()
+        if not -.02<=age<=.3:
+            raise ValueError('Laser scan expired during TF acquisition: age=%.6fs' % age)
+        self.laser_cache=(scan,position,rotation)
+        return self.laser_cache
+
     def control_cycle(self, now, dt):
         pose = self.sensors()
+        if self.generated:
+            scan,laser_pos,laser_rot=self.laser_feedback(now)
+            # A bounded TF wait may have advanced simulation time. Refresh pose
+            # and integration interval before calculating a motion command.
+            now=rospy.Time.now()
+            dt=(now-self.previous).to_sec()
+            if not math.isfinite(dt) or dt<=0:
+                raise ValueError('Control clock invalid after TF acquisition: dt=%.6fs' % dt)
+            pose=self.sensors()
         maximum_gap = 0.3 if self.generated else 0.2
         if dt > maximum_gap:
             raise ValueError('Control scheduling gap: dt=%.6fs, limit=%.3fs' % (dt, maximum_gap))
@@ -208,22 +248,6 @@ class ContinuousRace:
             from predictive_follower import reference_clearance
             # A scan is already allowed to be up to 300ms old. Transform
             # its points at acquisition time, not at the latest car pose.
-            scan=self.scan
-            if self.listener.canTransform(self.frame,scan.header.frame_id,scan.header.stamp):
-                laser_pos,laser_rot=self.listener.lookupTransform(self.frame,scan.header.frame_id,scan.header.stamp)
-                self.laser_cache=(scan,laser_pos,laser_rot)
-            elif self.laser_cache is not None:
-                scan,laser_pos,laser_rot=self.laser_cache
-                if not 0<=(now-scan.header.stamp).to_sec()<=.1:
-                    raise ValueError('Timestamp-aligned laser cache stale; TF acquisition cannot be verified')
-            else:
-                # Only the first frame may wait briefly, while departure speed is
-                # near zero. Subsequent cycles use a verified <=100ms scan instead
-                # of repeatedly blocking control for the newest scan's TF.
-                self.listener.waitForTransform(self.frame,scan.header.frame_id,scan.header.stamp,
-                                               rospy.Duration(.05),rospy.Duration(.005))
-                laser_pos,laser_rot=self.listener.lookupTransform(self.frame,scan.header.frame_id,scan.header.stamp)
-                self.laser_cache=(scan,laser_pos,laser_rot)
             laser_yaw = tf.transformations.euler_from_quaternion(laser_rot)[2]
             dx,dy = laser_pos[0]-pose[0],laser_pos[1]-pose[1]
             relative_laser = (math.cos(pose[2])*dx+math.sin(pose[2])*dy,
