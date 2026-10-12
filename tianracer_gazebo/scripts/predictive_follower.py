@@ -28,13 +28,16 @@ class PredictiveFollower(LineFollower):
         super().stop()
         self.steer = 0.0
 
-    def step(self, x, y, yaw, measured_speed, dt):
+    def step(self, x, y, yaw, measured_speed, dt, projection_dt=None):
         if not all(math.isfinite(v) for v in (x,y,yaw,measured_speed,dt)) or not 0 < dt <= 0.2:
-            self.stop(); raise ValueError('Invalid feedback or stale control cycle')
+            self.stop(); raise ValueError('Invalid feedback/control step: dt=%.6fs, pose=(%s,%s,%s), speed=%s' % (dt,x,y,yaw,measured_speed))
+        elapsed = dt if projection_dt is None else projection_dt
+        if not math.isfinite(elapsed) or not 0 < elapsed <= 0.3:
+            self.stop(); raise ValueError('Invalid projection interval: %.6fs' % elapsed)
         if measured_speed < -0.1:
             self.stop(); raise ValueError('Unexpected backward vehicle motion')
         if self.progress is None: self.start(x,y,yaw)
-        s,self.error = self.path.project(x,y,self.progress-0.1,self.progress+self.max_speed*dt*2+0.20)
+        s,self.error = self.path.project(x,y,self.progress-0.1,self.progress+self.max_speed*elapsed*2+0.20)
         if self.error > self.max_error:
             self.stop(); raise ValueError('Tracking error exceeds safe corridor')
         self.progress = max(s,self.progress)

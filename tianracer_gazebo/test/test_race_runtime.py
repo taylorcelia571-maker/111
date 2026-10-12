@@ -148,5 +148,71 @@ class RuntimeTests(unittest.TestCase):
         self.assertAlmostEqual(relative[2],0.1)
         listener.lookupTransform.assert_any_call('map','laser',self.node.scan.header.stamp)
 
+    def generated_node(self):
+        old = self.node
+        self.node = self.module.ContinuousRace(old.path)
+        self.node.on_scan(old.scan)
+        self.node.on_odom(old.odom)
+        self.assertTrue(self.node.start(None).success)
+
+    def refresh_at(self, seconds):
+        Stamp.now_value = seconds
+        self.node.scan.header.stamp = Stamp(seconds)
+        self.node.odom.header.stamp = Stamp(seconds)
+        self.node.on_scan(self.node.scan)
+        self.node.on_odom(self.node.odom)
+        self.node.listener.getLatestCommonTime.return_value = Stamp(seconds)
+
+    def test_duplicate_clock_skips_tick_then_resumes(self):
+        self.generated_node()
+        self.node.previous = Stamp(1)
+        progress = self.node.follower.progress
+        self.tick()
+        self.assertTrue(self.node.active)
+        self.node.pub.publish.assert_not_called()
+        self.assertEqual(self.node.follower.progress, progress)
+        self.refresh_at(1.02)
+        self.tick()
+        self.assertTrue(self.node.active)
+        self.assertGreater(self.node.pub.publish.call_args.args[0].linear.x, 0)
+
+    def test_fresh_delayed_cycle_projects_actual_arc_without_acceleration_catchup(self):
+        self.generated_node()
+        self.node.previous = Stamp(1)
+        self.refresh_at(1.25)
+        theta = .15
+        self.node.listener.lookupTransform.side_effect = lambda target,source,stamp: (
+            ([3*math.cos(theta),3*math.sin(theta),0],[0,0,math.pi/2+theta,1]))
+        with patch.object(self.node.follower,'step',wraps=self.node.follower.step) as step:
+            self.tick()
+        self.assertTrue(self.node.active)
+        self.assertAlmostEqual(step.call_args.args[-1],.04)
+        self.assertAlmostEqual(step.call_args.kwargs['projection_dt'],.25)
+        self.assertLessEqual(self.node.pub.publish.call_args.args[0].linear.x,.08)
+        self.assertGreater(self.node.follower.progress-self.node.follower.origin,.3)
+
+    def test_excessive_gap_latches_stop_even_with_fresh_feedback(self):
+        self.generated_node()
+        self.node.previous = Stamp(1)
+        self.refresh_at(1.4)
+        self.tick()
+        self.assertFalse(self.node.active)
+        self.assertEqual(self.node.pub.publish.call_args.args[0].linear.x,0)
+        self.assertIn('dt=0.400000',self.ros.logerr.call_args.args[1].args[0])
+
+    def test_clock_rewind_latches_stop(self):
+        self.generated_node()
+        self.node.previous = Stamp(1.1)
+        self.tick()
+        self.assertFalse(self.node.active)
+        self.assertEqual(self.node.pub.publish.call_args.args[0].linear.x,0)
+
+    def test_nonfinite_feedback_latches_stop(self):
+        self.generated_node()
+        self.node.odom.twist.twist.linear.x = float('nan')
+        self.tick()
+        self.assertFalse(self.node.active)
+        self.assertEqual(self.node.pub.publish.call_args.args[0].linear.x,0)
+
 
 if __name__ == '__main__': unittest.main()
