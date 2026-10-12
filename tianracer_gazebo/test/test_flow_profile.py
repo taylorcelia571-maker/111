@@ -30,9 +30,11 @@ class FlowProfileTests(unittest.TestCase):
         for i in [i for i in includes if i.attrib['file'].endswith('/teb_base.launch.xml')]:
             self.assertIn('flow_tuning',[a.attrib['name'] for a in i.findall('arg')])
         node=E.parse(ROOT/'launch/includes/teb_base.launch.xml').find('.//node')
-        last=node.findall('rosparam')[-1]
-        self.assertTrue(last.attrib['file'].endswith('/flow_tuning.yaml'))
-        self.assertEqual(last.attrib['if'],'$(arg flow_tuning)')
+        loads=node.findall('rosparam')
+        flow=next(x for x in loads if x.attrib['file'].endswith('/flow_tuning.yaml'))
+        corner=next(x for x in loads if x.attrib['file'].endswith('/corner_tuning.yaml'))
+        self.assertGreater(loads.index(flow),loads.index(corner))
+        self.assertEqual(flow.attrib['if'],'$(arg flow_tuning)')
 
 
 if __name__=='__main__':unittest.main()

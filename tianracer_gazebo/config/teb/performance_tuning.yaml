@@ -1,0 +1,12 @@
+# Overlay after the proven flow profile. Do not change vehicle/physics/PID.
+# Replan globally on new goals/recovery; TEB and live obstacles still update.
+planner_frequency: 0.0
+local_costmap:
+  width: 8.0
+  height: 8.0
+  publish_frequency: 2.0
+  # Keep 0.05m resolution, 15Hz update and all obstacle layers/checks.
+global_costmap:
+  publish_frequency: 2.0
+TebLocalPlannerROS:
+  use_proportional_saturation: true

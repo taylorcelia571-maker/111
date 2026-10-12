@@ -42,6 +42,12 @@ class MetricsTests(unittest.TestCase):
         s=summarize({'cmd_vel':[dict(t=2,speed=1,steer=0),dict(t=1,speed=1,steer=0)]})
         self.assertIn('Simulation clock reset',s['insufficient_data'])
 
+    def test_command_gaps_are_reported(self):
+        samples={'cmd_vel':[dict(t=x,speed=1,steer=0) for x in [0,.05,.1,.45]]}
+        report=summarize(samples)
+        self.assertEqual(report['cmd_gaps_above_0_2s'],1)
+        self.assertAlmostEqual(report['cmd_interval_max_s'],.35)
+
     def test_insufficient_data_report(self):
         self.assertIn('insufficient_data',summarize({}))
 

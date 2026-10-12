@@ -43,6 +43,9 @@ def main():
     def planner_log(msg):
         if msg.name.rstrip('/') == rospy.get_namespace().rstrip('/')+'/move_base' and 'trajectory is not feasible' in msg.msg:
             save('teb_resets', {'kind': 'trajectory_infeasible'})
+        if msg.name.rstrip('/') == rospy.get_namespace().rstrip('/')+'/move_base':
+            if 'Control loop missed' in msg.msg: save('control_deadlines', {'kind': 'control_loop_overrun'})
+            if 'Map update loop missed' in msg.msg: save('map_deadlines', {'kind': 'map_loop_overrun'})
 
     subs = [rospy.Subscriber('/rosout_agg', Log, planner_log, queue_size=100), rospy.Subscriber('joint_states', JointState, joint_sample, queue_size=10),
         rospy.Subscriber('cmd_vel', Twist, lambda m: save('cmd_vel',
@@ -56,7 +59,9 @@ def main():
             {'statuses': [g.status for g in m.status_list]}), queue_size=1)]
     namespace = rospy.get_namespace()
     settings = {key: rospy.get_param(namespace+'move_base/'+key, None) for key in (
-        'base_global_planner', 'controller_frequency', 'TebLocalPlannerROS/max_vel_x',
+        'base_global_planner', 'controller_frequency', 'planner_frequency', 'TebLocalPlannerROS/max_vel_x',
+        'TebLocalPlannerROS/max_vel_trans', 'TebLocalPlannerROS/use_proportional_saturation',
+        'TebLocalPlannerROS/min_turning_radius', 'local_costmap/width', 'local_costmap/height',
         'TebLocalPlannerROS/max_vel_theta', 'TebLocalPlannerROS/wheelbase',
         'TebLocalPlannerROS/max_global_plan_lookahead_dist', 'TebLocalPlannerROS/global_plan_viapoint_sep')}
     settings['wheel_feedforward'] = rospy.get_param(namespace+'servo_commands/wheel_feedforward', False)

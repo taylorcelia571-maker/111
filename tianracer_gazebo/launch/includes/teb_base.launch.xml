@@ -7,6 +7,8 @@
   <arg name="planner_profile" default="false"/>
   <arg name="corner_tuning" default="false"/>
   <arg name="flow_tuning" default="false"/>
+  <arg name="performance_tuning" default="false"/>
+  <arg name="turn_rate_budget" default="3.6"/>
   <arg name="path_bias" default="false"/>
   <arg name="planner_max_speed" default="2.6"/>
   
@@ -61,6 +63,10 @@
       <rosparam if="$(arg path_bias)" file="$(find tianracer_gazebo)/config/teb/path_bias.yaml" command="load"/>
 
       <rosparam if="$(arg flow_tuning)" file="$(find tianracer_gazebo)/config/teb/flow_tuning.yaml" command="load"/>
+
+      <rosparam if="$(arg performance_tuning)" file="$(find tianracer_gazebo)/config/teb/performance_tuning.yaml" command="load"/>
+      <param if="$(arg performance_tuning)" name="TebLocalPlannerROS/max_vel_trans" value="$(arg planner_max_speed)" type="double"/>
+      <param if="$(arg performance_tuning)" name="TebLocalPlannerROS/max_vel_theta" value="$(arg turn_rate_budget)" type="double"/>
 
       <!-- Reset frame_id parameters using user input data -->
       <param unless="$(eval robot_name=='/')" name="local_costmap/robot_base_frame" value="$(arg robot_name)/$(arg base_frame_id)"/>

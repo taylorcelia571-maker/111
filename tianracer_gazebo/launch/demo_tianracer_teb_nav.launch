@@ -14,6 +14,9 @@
     <arg name="corner_speed" default="1.8"/>
     <arg name="corner_tuning" default="false"/>
     <arg name="flow_tuning" default="false"/>
+    <arg name="performance_tuning" default="false"/>
+    <arg name="turn_rate_budget" default="3.6"/>
+    <arg name="use_rviz" default="true"/>
     <arg name="path_bias" default="false"/>
     <arg name="planner_max_speed" default="2.6"/>
 
@@ -53,6 +56,8 @@
                     <arg name="corner_tuning" value="$(arg corner_tuning)"/>
             <arg name="path_bias" value="$(arg path_bias)"/>
                     <arg name="flow_tuning" value="$(arg flow_tuning)"/>
+                    <arg name="performance_tuning" value="$(arg performance_tuning)"/>
+            <arg name="turn_rate_budget" value="$(arg turn_rate_budget)"/>
         </include>
 
         <!-- AMCL -->
@@ -60,7 +65,7 @@
             <arg name="robot_name" value="$(arg namespace)" />
         </include>
 
-        <node pkg="rviz" type="rviz" name="rviz" args="-d $(find tianracer_gazebo)/rviz/nav.rviz"/>
+        <node if="$(arg use_rviz)" pkg="rviz" type="rviz" name="rviz" args="-d $(find tianracer_gazebo)/rviz/nav.rviz"/>
     </group>
 
     <group unless="$(eval arg('robot_name') == '/')">
@@ -101,6 +106,8 @@
                     <arg name="corner_tuning" value="$(arg corner_tuning)"/>
             <arg name="path_bias" value="$(arg path_bias)"/>
                     <arg name="flow_tuning" value="$(arg flow_tuning)"/>
+                    <arg name="performance_tuning" value="$(arg performance_tuning)"/>
+            <arg name="turn_rate_budget" value="$(arg turn_rate_budget)"/>
         </include>
 
         <!-- AMCL -->
@@ -108,7 +115,7 @@
             <arg name="robot_name" value="$(arg robot_name)" />
         </include>
 
-        <node pkg="rviz" type="rviz" name="rviz" args="-d $(find tianracer_gazebo)/rviz/nav_$(arg robot_name).rviz"/>
+        <node if="$(arg use_rviz)" pkg="rviz" type="rviz" name="rviz" args="-d $(find tianracer_gazebo)/rviz/nav_$(arg robot_name).rviz"/>
     </group>
 
 </launch>

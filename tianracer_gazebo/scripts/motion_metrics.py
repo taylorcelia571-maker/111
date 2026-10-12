@@ -48,6 +48,10 @@ def summarize(samples, max_speed=1.8, max_yaw_rate=3.6, wheelbase=0.26):
                 item['speed_deficit_mean_m_s'] = float(np.average(np.maximum(0, target_v[valid]-measured[valid]),
                                                                                 weights=weights[valid]))
         result[name] = item
+    intervals = np.diff(t)
+    result['cmd_interval_p95_s'] = float(np.percentile(intervals, 95))
+    result['cmd_interval_max_s'] = float(intervals.max())
+    result['cmd_gaps_above_0_2s'] = int(np.sum(intervals > 0.2))
     result['near_zero_command_fraction'] = fraction(v < 0.05)
     result['speed_ceiling_fraction'] = fraction(v >= 0.95*max_speed)
     yaw = v*np.abs(np.tan(steer))/wheelbase
