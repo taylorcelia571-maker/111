@@ -95,6 +95,37 @@ class SmoothPursuitTests(unittest.TestCase):
             centers.append(point+.13*tangent)
         self.assertGreaterEqual(float(self.planner.clearance_at(centers).min()),.26)
 
+    def test_logged_start_cannot_request_four_meters_per_second_in_first_second(self):
+        f=PredictiveFollower(course.rear_path(self.center),**self.budgets,start_blend=True,
+                             response_delay=.25,lateral_control='smooth_pursuit',fast_start=True)
+        x,y,yaw=.0081,-.1591,1.5707;f.start(x,y,yaw);speed=steer=0
+        for _ in range(50):
+            f.measured_steer=steer
+            v,d=f.step(x,y,yaw,speed,.02)
+            self.assertTrue(f.launch_limited)
+            self.assertLessEqual(v,1.2)
+            self.assertLessEqual(f.last_report['active_acceleration'],1.5)
+            speed+=(v-speed)*.02/.12;steer+=(d-steer)*.02/.12
+            x+=speed*math.cos(yaw)*.02;y+=speed*math.sin(yaw)*.02
+            yaw+=speed*math.tan(steer)/.26*.02
+        self.assertLessEqual(speed,1.2)
+
+    def test_launch_limit_resets_on_restart(self):
+        f=PredictiveFollower(course.rear_path(self.center),**self.budgets,start_blend=True,
+                             lateral_control='smooth_pursuit')
+        f.start(.0081,-.1591,1.5707)
+        f.launch_ready=.28
+        f.stop();f.start(.0081,-.1591,1.5707)
+        self.assertEqual(f.launch_ready,0)
+        self.assertTrue(f.launch_limited)
+
+    def test_misaligned_start_uses_departure_instead_of_connector(self):
+        f=PredictiveFollower(course.rear_path(self.center),**self.budgets,start_blend=True,
+                             lateral_control='smooth_pursuit')
+        f.start(.0081,-.1591,1.7107)
+        self.assertIsNone(f.connector_offset)
+        self.assertTrue(f.departure)
+
     def test_fast_connector_five_laps_keeps_wall_and_tracking_guards(self):
         for lag in (.08,.12,.2):
             with self.subTest(lag=lag):

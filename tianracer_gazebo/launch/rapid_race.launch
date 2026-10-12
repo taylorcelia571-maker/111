@@ -9,6 +9,8 @@
   <arg name="steering_rate" default="2.0"/>
   <arg name="response_delay" default="0.25"/>
   <arg name="lateral_control" default="pursuit"/>
+  <arg name="startup_speed" default="1.2"/>
+  <arg name="startup_acceleration" default="1.5"/>
   <!-- Disabled after an observed startup tracking failure; opt in one at a time. -->
   <arg name="predict_pose" default="false"/>
   <arg name="start_blend" default="false"/>
@@ -22,6 +24,8 @@
     <arg name="steering_rate" value="$(arg steering_rate)"/>
     <arg name="response_delay" value="$(arg response_delay)"/>
     <arg name="lateral_control" value="$(arg lateral_control)"/>
+    <arg name="startup_speed" value="$(arg startup_speed)"/>
+    <arg name="startup_acceleration" value="$(arg startup_acceleration)"/>
     <arg name="optimize_time" value="true"/>
     <arg name="fast_start" value="true"/>
     <arg name="predict_pose" value="$(arg predict_pose)"/>

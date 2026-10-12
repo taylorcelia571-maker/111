@@ -43,6 +43,8 @@ class ContinuousRace:
                            start_blend=rospy.get_param('~start_blend',False),
                            response_delay=rospy.get_param('~response_delay',0.0),
                            lateral_control=rospy.get_param('~lateral_control','pursuit'),
+                           startup_speed=rospy.get_param('~startup_speed',1.2),
+                           startup_acceleration=rospy.get_param('~startup_acceleration',1.5),
                            steering_rate=rospy.get_param('~steering_rate',2.0),
                            yaw_rate=rospy.get_param('~yaw_rate',3.2))
         self.follower = follower_type(self.path, **options)
@@ -157,6 +159,10 @@ class ContinuousRace:
                                 prediction_applied=False)
         angular=getattr(self.odom.twist.twist,'angular',None)
         omega=getattr(angular,'z',None)
+        lateral=getattr(self.odom.twist.twist.linear,'y',None)
+        self.feedback_pose.update(
+            odometry_yaw_rate=omega if omega is not None and math.isfinite(omega) else None,
+            odometry_lateral_speed=lateral if lateral is not None and math.isfinite(lateral) else None)
         # Official odometry publishes at 20Hz. Compensate only a short,
         # timestamp-matched acquisition delay using public odometry feedback.
         if self.predict_pose and omega is not None:

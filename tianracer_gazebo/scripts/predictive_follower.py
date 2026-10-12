@@ -9,7 +9,8 @@ class PredictiveFollower(LineFollower):
     def __init__(self, path, max_speed=2.0, lateral_accel=5.0, acceleration=2.0,
                  braking=3.0, max_error=0.15, wheelbase=0.26, max_steer=0.48,
                  steering_rate=2.0, yaw_rate=3.2, fast_start=False, start_blend=False,
-                 response_delay=0.0, lateral_control='pursuit'):
+                 response_delay=0.0, lateral_control='pursuit',
+                 startup_speed=1.2, startup_acceleration=1.5):
         super().__init__(path, max_speed, lateral_accel, acceleration, braking,
                          wheelbase, max_steer, max_error)
         self.steering_rate = positive('steering_rate', steering_rate)
@@ -23,6 +24,11 @@ class PredictiveFollower(LineFollower):
             raise ValueError('Selected lateral controller requires the unmodified reference path')
         self.lateral_control = lateral_control
         self.measured_steer = None
+        self.startup_speed=positive('startup_speed',startup_speed)
+        self.startup_acceleration=positive('startup_acceleration',startup_acceleration)
+        self.launch_limited=False
+        self.launch_ready=0.0
+        self.launch_guard_distance=5.0
         self.alignment_ready = 0.0
         curve = np.abs(path.curvature)
         delta = np.arctan(wheelbase*path.curvature)
@@ -78,6 +84,8 @@ class PredictiveFollower(LineFollower):
                     response_delay_is_measured=False,
                     model_includes_response_preview=False,
                     lateral_control=self.lateral_control,
+                    startup_limits=dict(speed=self.startup_speed,acceleration=self.startup_acceleration,
+                                        acceleration_guard_distance=self.launch_guard_distance),
                     peak_planned_speed=float(self.path.speeds.max()),
                     speed_ceiling_binding=bool(np.any(self.path.speeds>=self.max_speed-1e-6)),
                     same_route_parameter_sensitivity=sensitivity,
@@ -92,6 +100,8 @@ class PredictiveFollower(LineFollower):
         self.departure = True
         self.alignment_ready = 0.0
         self.connector_offset = None
+        self.launch_limited=False
+        self.launch_ready=0.0
         self.start_diagnostics = dict(mode='alignment',reason='connector_disabled_or_geometry_not_eligible')
         self.last_report = {}
         tangent=self.path.sample(self.origin+.08)-self.path.sample(self.origin)
@@ -99,10 +109,12 @@ class PredictiveFollower(LineFollower):
                               math.cos(math.atan2(tangent[1],tangent[0])-yaw))
         initial_error=math.hypot(*(np.array([x,y])-self.path.sample(self.origin)))
         ids=np.arange(int(self.origin/self.path.ds),int((self.origin+self.connector_length)/self.path.ds)+1)%self.path.n
-        if self.start_blend and initial_error<=.10 and abs(difference)<=.15 and np.max(abs(self.path.curvature[ids]))<.20:
+        heading_limit=.05 if self.lateral_control=='smooth_pursuit' else .15
+        if self.start_blend and initial_error<=.10 and abs(difference)<=heading_limit and np.max(abs(self.path.curvature[ids]))<.20:
             self.connector_offset=np.array([x,y])-self.path.sample(self.origin)
             self.departure=False
             self.start_diagnostics=dict(mode='connector',length=self.connector_length,initial_error=initial_error)
+            self.launch_limited=self.lateral_control=='smooth_pursuit'
 
     def sample_tracking(self, distance):
         point=self.path.sample(distance)
@@ -292,7 +304,20 @@ class PredictiveFollower(LineFollower):
                     departure_limit += 0.65*min(lateral_quality,heading_quality)
                 if departure_limit < desired: reason='departure'
                 desired = min(desired,departure_limit)
+        if self.launch_limited:
+            actual=self.steer if self.measured_steer is None else self.measured_steer
+            ready=(not connector_active and control_error<.025 and
+                   abs(recovery_heading_error)<.05 and abs(desired_steer-actual)<.05)
+            self.launch_ready=self.launch_ready+dt if ready else 0.0
+            if self.launch_ready>=.3:
+                self.launch_limited=False
+            else:
+                if self.startup_speed<desired:reason='startup_connector'
+                desired=min(desired,self.startup_speed)
         active_acceleration=self.acceleration
+        if self.lateral_control=='smooth_pursuit' and self.start_blend and (
+                self.launch_limited or self.progress-self.origin<self.launch_guard_distance):
+            active_acceleration=min(active_acceleration,self.startup_acceleration)
         if self.lateral_control=='smooth_pursuit' and self.departure:
             active_acceleration=min(active_acceleration,2.0)
         acceleration_limit=self.speed+active_acceleration*dt
@@ -312,6 +337,8 @@ class PredictiveFollower(LineFollower):
                                 feedforward_curvature=feedforward)
         self.last_report.update(preview_length=preview,departure=self.departure,
                                 control_tracking_error=control_error,
+                                launch_limited=self.launch_limited,launch_ready_seconds=self.launch_ready,
+                                startup_speed=self.startup_speed,startup_acceleration=self.startup_acceleration,
                                 alignment_ready_seconds=self.alignment_ready,
                                 active_acceleration=active_acceleration)
         return self.speed,self.steer
