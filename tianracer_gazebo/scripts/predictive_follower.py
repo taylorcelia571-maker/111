@@ -102,7 +102,20 @@ class PredictiveFollower(LineFollower):
         i = int(self.progress/self.path.ds)%self.path.n
         # Velocity-scaled preview is short in tight turns, longer on straights.
         curve = abs(self.path.curvature[i])
+        reference=self.path.sample(self.progress)
+        tangent=self.path.sample(self.progress+.08)-self.path.sample(self.progress-.08)
+        tangent/=max(float(np.linalg.norm(tangent)),1e-9)
+        heading=math.atan2(tangent[1],tangent[0])
+        heading_error=math.atan2(math.sin(yaw-heading),math.cos(yaw-heading))
+        signed_error=float((x-reference[0])*(-tangent[1])+(y-reference[1])*tangent[0])
+        outward=math.copysign(1,signed_error)*math.sin(heading_error) if abs(signed_error)>1e-6 else 0
+        recovery_heading_error=heading_error
+        recovering=(self.error>.02 and outward>.12) or (self.error>.06 and outward>.05)
         preview = min(0.80, max(0.28, (0.35+0.18*max(0,measured_speed))/(1+0.55*curve)))
+        if recovering:
+            # A long preview can let an outward heading consume the remaining
+            # corridor before steering catches up. Tighten only during drift.
+            preview=min(preview,.30)
         target = self.sample_tracking(self.progress+preview)
         dx,dy = target-[x,y]
         forward = math.cos(yaw)*dx+math.sin(yaw)*dy
@@ -121,6 +134,13 @@ class PredictiveFollower(LineFollower):
         error_factor = max(0.4, 1-0.6*(max(0,self.error-0.05)/max(0.01,self.max_error-0.05))**2)
         desired *= error_factor
         if error_factor < 0.99: reason='tracking_error'
+        recovery_cap=None
+        if recovering:
+            remaining=max(0,self.max_error-self.error-.025)
+            recovery_cap=max(.2,min(1.0,remaining/(.30*max(outward,.05))))
+            if recovery_cap<desired:
+                desired=recovery_cap
+                reason='outward_error_recovery'
         if self.departure:
             tangent = self.path.sample(self.progress+0.08)-self.path.sample(self.progress)
             heading = math.atan2(tangent[1],tangent[0])
@@ -145,7 +165,8 @@ class PredictiveFollower(LineFollower):
         self.last_report=dict(reason=reason,planned_speed=float(self.path.speeds[i]),
                               live_curvature=float(k),measured_speed=measured_speed,
                               command_speed=self.speed,steer=self.steer,tracking_error=self.error,
-                              start_connector=self.connector_offset is not None and self.progress-self.origin<self.connector_length)
+                              start_connector=self.connector_offset is not None and self.progress-self.origin<self.connector_length,
+                              outward_heading=outward,heading_error=recovery_heading_error,recovery_speed_cap=recovery_cap)
         return self.speed,self.steer
 
 

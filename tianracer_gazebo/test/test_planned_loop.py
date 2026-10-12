@@ -202,6 +202,33 @@ class PlannedLoopTests(unittest.TestCase):
         self.assertGreaterEqual(f.progress-f.origin,5*p.length)
         self.assertLess((tick+1)*.02,65)  # ideal-model regression bound, not an official result
 
+    def test_outward_heading_recovery_acts_before_corridor_limit(self):
+        budgets=dict(max_speed=8,lateral_accel=6.5,acceleration=5,yaw_rate=3.8)
+        p=rear_path(self.planner.build(self.anchors,optimize_time=True,**budgets))
+        s=7.5;q=p.sample(s);t=p.sample(s+.08)-p.sample(s-.08)
+        heading=math.atan2(t[1],t[0])
+        x=q[0]-.025*math.sin(heading);y=q[1]+.025*math.cos(heading);yaw=heading+.2
+        f=PredictiveFollower(p,fast_start=True,**budgets)
+        f.start(x,y,yaw);f.departure=False;f.speed=2.2
+        v,d=f.step(x,y,yaw,2.2,.02)
+        self.assertLessEqual(v,1)
+        self.assertEqual(f.last_report['reason'],'outward_error_recovery')
+        self.assertLess(f.error,.05)  # responds to heading drift before large lateral error
+        speed=2.2;steer=math.atan(.26*p.curvature[int(s/p.ds)])
+        for _ in range(180):
+            v,d=f.step(x,y,yaw,speed,.02)
+            speed+=(v-speed)*.02/.12;steer+=(d-steer)*.02/.12
+            x+=speed*math.cos(yaw)*.02;y+=speed*math.sin(yaw)*.02;yaw+=speed*math.tan(steer)/.26*.02
+            self.assertLess(f.error,.15)
+        self.assertLess(f.error,.05)
+
+    def test_small_aligned_error_does_not_trigger_recovery_cap(self):
+        p=rear_path(self.center);s=7.5;q=p.sample(s);t=p.sample(s+.08)-p.sample(s-.08)
+        heading=math.atan2(t[1],t[0]);x=q[0]-.025*math.sin(heading);y=q[1]+.025*math.cos(heading)
+        f=PredictiveFollower(p);f.start(x,y,heading);f.departure=False
+        f.step(x,y,heading,1,.02)
+        self.assertIsNone(f.last_report['recovery_speed_cap'])
+
     def test_departure_aligns_at_low_speed_without_relaxing_error_limit(self):
         p=rear_path(self.center); f=PredictiveFollower(p,max_speed=1.8)
         yaw=1.3; x,y=.04-.13*math.cos(yaw),-.13*math.sin(yaw)
