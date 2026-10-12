@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Follow a recorded, verified full lap using localization and LaserScan only."""
+"""Track a closed path using localization, odometry and live LaserScan."""
 import math
 import os
 import threading
@@ -15,13 +15,23 @@ from race_line import ClosedPath, LineFollower, clearance_speed
 
 
 class ContinuousRace:
-    def __init__(self):
-        filename = os.path.expanduser(rospy.get_param('~path_file'))
-        data = np.loadtxt(filename, delimiter=',', comments='#')
-        self.path = ClosedPath(data)
-        self.follower = LineFollower(self.path, **{k: rospy.get_param('~' + k, v) for k, v in (
-            ('max_speed', 3.0), ('lateral_accel', 3.0), ('acceleration', 2.5),
-            ('braking', 3.5), ('max_error', 0.6))})
+    def __init__(self, path=None, clearance_guard=None):
+        self.clearance_guard = clearance_guard
+        self.generated = path is not None
+        if path is None:
+            filename = os.path.expanduser(rospy.get_param('~path_file'))
+            path = ClosedPath(np.loadtxt(filename, delimiter=',', comments='#'))
+        self.path = path
+        follower_type = LineFollower
+        if self.generated:
+            from predictive_follower import PredictiveFollower
+            follower_type = PredictiveFollower
+        defaults = (('max_speed', 2.0), ('lateral_accel', 5.0), ('acceleration', 2.0),
+                    ('braking', 3.0), ('max_error', 0.15)) if self.generated else (
+                    ('max_speed', 3.0), ('lateral_accel', 3.0), ('acceleration', 2.5),
+                    ('braking', 3.5), ('max_error', 0.6))
+        self.follower = follower_type(self.path, **{k: rospy.get_param('~' + k, v)
+                                                   for k, v in defaults})
         self.laps = rospy.get_param('~laps', 5)
         if isinstance(self.laps, bool) or not isinstance(self.laps, int) or self.laps < 1:
             raise ValueError('laps must be a positive integer')
@@ -63,7 +73,9 @@ class ContinuousRace:
         yaw = tf.transformations.euler_from_quaternion(rotation)[2]
         if not all(math.isfinite(v) for v in (*position[:2], yaw, self.odom.twist.twist.linear.x)):
             raise ValueError('Nonfinite localization or odometry')
-        return position[0], position[1], yaw, self.odom.twist.twist.linear.x
+        offset = 0.13 if self.generated else 0.0
+        return (position[0]-offset*math.cos(yaw), position[1]-offset*math.sin(yaw),
+                yaw, self.odom.twist.twist.linear.x)
 
     def start(self, request):
         with self.lock:
@@ -101,15 +113,24 @@ class ContinuousRace:
                         now = rospy.Time.now()
                         dt = (now - self.previous).to_sec()
                         self.previous = now
+                        if self.clearance_guard is not None:
+                            self.clearance_guard(pose)
                         speed, steer = self.follower.step(*pose, dt)
                         laser_pos, laser_rot = self.listener.lookupTransform(
                             self.base, self.scan.header.frame_id, rospy.Time(0))
                         laser_yaw = tf.transformations.euler_from_quaternion(laser_rot)[2]
-                        obstacle_limit = clearance_speed(
-                            self.scan.ranges, self.scan.angle_min, self.scan.angle_increment,
-                            self.scan.range_min, self.scan.range_max, max(speed, abs(pose[3])), steer,
-                            braking=self.follower.braking,
-                            laser_x=laser_pos[0], laser_y=laser_pos[1], laser_yaw=laser_yaw)
+                        if self.generated:
+                            from predictive_follower import reference_clearance
+                            obstacle_limit = reference_clearance(
+                                self.path, self.follower.progress, pose, self.scan,
+                                (laser_pos[0]+0.13, laser_pos[1], laser_yaw),
+                                max(speed, abs(pose[3])), self.follower.braking)
+                        else:
+                            obstacle_limit = clearance_speed(
+                                self.scan.ranges, self.scan.angle_min, self.scan.angle_increment,
+                                self.scan.range_min, self.scan.range_max, max(speed, abs(pose[3])), steer,
+                                braking=self.follower.braking,
+                                laser_x=laser_pos[0], laser_y=laser_pos[1], laser_yaw=laser_yaw)
                         if obstacle_limit < 0.05:
                             raise ValueError('Obstacle/invalid scan: stopped; inspect then call start again')
                         speed = min(speed, obstacle_limit)

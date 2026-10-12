@@ -1,0 +1,16 @@
+<launch>
+  <arg name="max_speed" default="2.0"/>
+  <arg name="lateral_accel" default="5.0"/>
+  <!-- Six uninterrupted reference loops allow the referee to lock five valid laps.
+       Stop the controller as soon as the official result is locked. -->
+  <arg name="laps" default="6"/>
+  <node pkg="tianracer_gazebo" type="planned_race.py" name="continuous_race"
+        ns="tianracer" output="screen" required="true">
+    <param name="max_speed" value="$(arg max_speed)" type="double"/>
+    <param name="lateral_accel" value="$(arg lateral_accel)" type="double"/>
+    <param name="acceleration" value="2.0"/>
+    <param name="braking" value="3.0"/>
+    <param name="max_error" value="0.15"/>
+    <param name="laps" value="$(arg laps)" type="int"/>
+  </node>
+</launch>

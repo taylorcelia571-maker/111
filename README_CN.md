@@ -1,3 +1,5 @@
+> 最新连续导航入口：见 [无需录线的连续闭环导航](CONTINUOUS_PLANNED_RACE_CN.md)。针对倒车纠偏、TEB 重置和每圈目标停车，新增整圈预规划与连续曲率限速控制；需要重新启动仿真，不能与 waypoint_laps 同时运行。
+
 > 从约 142 秒向两分钟目标推进的减负、原生曲率保持与速度预算见 [FAST_RACING_CN.md](FAST_RACING_CN.md)。
 
 > 根据 160.474 秒运行日志修正的局部规划与到点朝向方案见 [FLOW_RACING_CN.md](FLOW_RACING_CN.md)。

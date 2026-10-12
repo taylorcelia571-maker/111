@@ -1,0 +1,90 @@
+"""Forward-only closed-loop tracking and reference-corridor laser clearance."""
+import math
+import numpy as np
+from race_line import LineFollower, positive
+
+
+class PredictiveFollower(LineFollower):
+    def __init__(self, path, max_speed=2.0, lateral_accel=5.0, acceleration=2.0,
+                 braking=3.0, max_error=0.15, wheelbase=0.26, max_steer=0.48,
+                 steering_rate=2.0, yaw_rate=3.2):
+        super().__init__(path, max_speed, lateral_accel, acceleration, braking,
+                         wheelbase, max_steer, max_error)
+        self.steering_rate = positive('steering_rate', steering_rate)
+        positive('yaw_rate', yaw_rate)
+        curve = np.abs(path.curvature)
+        delta = np.arctan(wheelbase*path.curvature)
+        derivative = np.maximum(np.abs(np.roll(delta,-1)-delta), np.abs(delta-np.roll(delta,1)))/path.ds
+        path.speeds = np.minimum.reduce([path.speeds, yaw_rate/np.maximum(curve,1e-6),
+                                        steering_rate/np.maximum(derivative,1e-6)])
+        for _ in range(2):
+            for i in range(path.n-1,-1,-1):
+                path.speeds[i] = min(path.speeds[i], math.sqrt(path.speeds[(i+1)%path.n]**2+2*braking*path.ds))
+            for i in range(path.n):
+                path.speeds[i] = min(path.speeds[i], math.sqrt(path.speeds[(i-1)%path.n]**2+2*acceleration*path.ds))
+        self.steer = 0.0
+
+    def stop(self):
+        super().stop()
+        self.steer = 0.0
+
+    def step(self, x, y, yaw, measured_speed, dt):
+        if not all(math.isfinite(v) for v in (x,y,yaw,measured_speed,dt)) or not 0 < dt <= 0.2:
+            self.stop(); raise ValueError('Invalid feedback or stale control cycle')
+        if measured_speed < -0.1:
+            self.stop(); raise ValueError('Unexpected backward vehicle motion')
+        if self.progress is None: self.start(x,y,yaw)
+        s,self.error = self.path.project(x,y,self.progress-0.1,self.progress+self.max_speed*dt*2+0.20)
+        if self.error > self.max_error:
+            self.stop(); raise ValueError('Tracking error exceeds safe corridor')
+        self.progress = max(s,self.progress)
+        i = int(self.progress/self.path.ds)%self.path.n
+        # Velocity-scaled preview is short in tight turns, longer on straights.
+        curve = abs(self.path.curvature[i])
+        preview = min(0.80, max(0.28, (0.35+0.18*max(0,measured_speed))/(1+0.55*curve)))
+        target = self.path.sample(self.progress+preview)
+        dx,dy = target-[x,y]
+        forward = math.cos(yaw)*dx+math.sin(yaw)*dy
+        if forward <= 0: self.stop(); raise ValueError('Reference behind vehicle; reposition instead of reversing')
+        k = 2*(-math.sin(yaw)*dx+math.cos(yaw)*dy)/max(dx*dx+dy*dy,1e-6)
+        desired_steer = float(np.clip(math.atan(self.wheelbase*k),-self.max_steer,self.max_steer))
+        self.steer += float(np.clip(desired_steer-self.steer,-self.steering_rate*dt,self.steering_rate*dt))
+        desired = min(float(self.path.speeds[i]), math.sqrt(self.lateral_accel/max(abs(k),1e-6)))
+        # Small localization corrections should not cause repeated strong braking.
+        desired *= max(0.4, 1-0.6*(max(0,self.error-0.05)/max(0.01,self.max_error-0.05))**2)
+        self.speed = min(desired,self.speed+self.acceleration*dt)
+        return self.speed,self.steer
+
+
+def reference_clearance(path, progress, pose, scan, laser_pose, speed, braking=3.0,
+                        half_width=0.22, reaction=0.15):
+    """Check laser hits along the *planned* turn, rather than extrapolating one steer."""
+    r = np.asarray(scan.ranges, dtype=float)
+    if len(r)<3 or not math.isfinite(scan.angle_increment) or scan.angle_increment<=0:
+        return 0.0
+    if not all(math.isfinite(v) for v in (scan.angle_min,scan.range_min,scan.range_max,*laser_pose)):
+        return 0.0
+    if scan.range_min < 0 or scan.range_max <= scan.range_min: return 0.0
+    x,y,yaw,_ = pose
+    lx,ly,lyaw = laser_pose
+    angles = scan.angle_min+np.arange(len(r))*scan.angle_increment+lyaw
+    forward = np.cos(angles)>=0
+    valid = np.isfinite(r)&(r>=scan.range_min)&(r<=scan.range_max)
+    if not forward.any() or np.mean((valid|np.isposinf(r))[forward])<0.9: return 0.0
+    select = valid  # also protect the sides in a tight turn
+    bx = lx+r[select]*np.cos(angles[select]); by = ly+r[select]*np.sin(angles[select])
+    obstacles = np.column_stack([x+math.cos(yaw)*bx-math.sin(yaw)*by,
+                                 y+math.sin(yaw)*bx+math.cos(yaw)*by])
+    horizon = max(0.6,speed*reaction+speed**2/(2*braking)+0.35)
+    arcs = np.linspace(0,horizon,int(math.ceil(horizon/0.04))+1)
+    rear = np.array([path.sample(progress+d) for d in arcs])
+    tangents = np.array([path.sample(progress+d+0.04)-path.sample(progress+d-0.04) for d in arcs])
+    tangents /= np.maximum(np.linalg.norm(tangents,axis=1)[:,None],1e-9)
+    centers = rear+0.13*tangents  # base center lies ahead of rear axle
+    actual_center = np.array([x+0.13*math.cos(yaw),y+0.13*math.sin(yaw)])
+    centers += (actual_center-centers[0])*np.maximum(0,1-arcs[:,None]/0.6)
+    if not len(obstacles): return float('inf')
+    hits = np.where(np.any(np.linalg.norm(obstacles[:,None,:]-centers[None,:,:],axis=2)<half_width,axis=0))[0]
+    if not len(hits): return float('inf')
+    free=max(0,float(arcs[hits[0]])-0.20)
+    return max(0,math.sqrt((braking*reaction)**2+2*braking*free)-braking*reaction)

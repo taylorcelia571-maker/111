@@ -107,5 +107,27 @@ class RuntimeTests(unittest.TestCase):
         self.assertFalse(self.node.active)
         self.assertEqual(self.node.pub.publish.call_args.args[0].linear.x, 0)
 
+    def test_generated_path_uses_rear_axle_and_waits_for_start(self):
+        old = self.node
+        self.node = self.module.ContinuousRace(old.path)
+        self.node.on_scan(old.scan)
+        self.node.on_odom(old.odom)
+        self.assertAlmostEqual(self.node.sensors()[1], -0.13)
+        self.assertFalse(self.node.active)
+        self.assertTrue(self.node.start(None).success)
+        self.tick()
+        self.assertGreater(self.node.pub.publish.call_args.args[0].linear.x, 0)
+
+    def test_generated_path_static_clearance_guard_latches_stop(self):
+        old = self.node
+        def reject(pose): raise ValueError('near wall')
+        self.node = self.module.ContinuousRace(old.path, clearance_guard=reject)
+        self.node.on_scan(old.scan)
+        self.node.on_odom(old.odom)
+        self.assertTrue(self.node.start(None).success)
+        self.tick()
+        self.assertFalse(self.node.active)
+        self.assertEqual(self.node.pub.publish.call_args.args[0].linear.x, 0)
+
 
 if __name__ == '__main__': unittest.main()
