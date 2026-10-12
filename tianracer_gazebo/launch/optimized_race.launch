@@ -1,6 +1,8 @@
 <launch>
   <!-- Same finish-first budgets; route refinement must pass local referee validation.
        A larger speed budget is an experiment, not a verified 60-second result. -->
+  <!-- 11cm nominal reserve above unchanged 23cm wall-stop threshold. -->
+  <arg name="route_margin" default="0.34"/>
   <arg name="max_speed" default="2.2"/>
   <arg name="lateral_accel" default="3.2"/>
   <arg name="acceleration" default="1.5"/>
@@ -11,6 +13,7 @@
   <arg name="refine_line" default="true"/>
   <arg name="run_report" default="~/ican_race_logs/control_run_report.json"/>
   <include file="$(find tianracer_gazebo)/launch/planned_race.launch">
+    <arg name="route_margin" value="$(arg route_margin)"/>
     <arg name="max_speed" value="$(arg max_speed)"/>
     <arg name="lateral_accel" value="$(arg lateral_accel)"/>
     <arg name="acceleration" value="$(arg acceleration)"/>

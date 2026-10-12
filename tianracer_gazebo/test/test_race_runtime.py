@@ -183,6 +183,26 @@ class RuntimeTests(unittest.TestCase):
         self.assertAlmostEqual(self.node.follower.steer,initial)
         self.assertIsNone(self.node.prepared_steer)
 
+    def test_curvature_feedback_prepare_is_stationary_and_keeps_joint_checks(self):
+        self.feedback_node()
+        self.assertFalse(self.node.prepare(None).success)  # missing joints
+        self.node.on_joints(self.joints())
+        self.assertTrue(self.node.prepare(None).success)
+        self.assertFalse(self.node.active)
+        self.assertEqual(self.node.pub.publish.call_args.args[0].linear.x,0)
+        self.tick()
+        self.assertEqual(self.node.pub.publish.call_args.args[0].linear.x,0)
+        self.assertTrue(self.node.start(None).success)
+
+    def test_wall_guard_rejects_start_before_any_motion(self):
+        def reject(pose):raise ValueError('Localized vehicle too close to static wall')
+        self.node.clearance_guard=reject
+        response=self.node.start(None)
+        self.assertFalse(response.success)
+        self.assertIn('static wall',response.message)
+        self.assertFalse(self.node.active)
+        self.node.pub.publish.assert_not_called()
+
     def test_prepare_blocks_moving_or_competing_controller(self):
         self.smooth_node();self.node.odom.twist.twist.linear.x=.1
         self.assertFalse(self.node.prepare(None).success)
@@ -239,10 +259,11 @@ class RuntimeTests(unittest.TestCase):
     def test_generated_path_static_clearance_guard_latches_stop(self):
         old = self.node
         def reject(pose): raise ValueError('near wall')
-        self.node = self.module.ContinuousRace(old.path, clearance_guard=reject)
+        self.node = self.module.ContinuousRace(old.path, clearance_guard=lambda pose:None)
         self.node.on_scan(old.scan)
         self.node.on_odom(old.odom)
         self.assertTrue(self.node.start(None).success)
+        self.node.clearance_guard=reject  # wall approached after a valid start
         self.tick()
         self.assertFalse(self.node.active)
         self.assertEqual(self.node.pub.publish.call_args.args[0].linear.x, 0)

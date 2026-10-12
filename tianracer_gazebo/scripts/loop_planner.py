@@ -25,6 +25,20 @@ class LoopPlanner:
         return map_coordinates(self.clearance, [cells[:, 1], cells[:, 0]],
                                order=1, mode='constant', cval=-1)
 
+    def check_vehicle_clearance(self, pose):
+        """Check the localized center, with the unchanged 23cm stop threshold."""
+        x,y,yaw,_=pose
+        if not all(math.isfinite(v) for v in pose):
+            raise ValueError('Invalid localized vehicle pose')
+        center=[x+.13*math.cos(yaw),y+.13*math.sin(yaw)]
+        clearance=float(self.clearance_at([center])[0])
+        if clearance < .23:
+            raise ValueError('Localized vehicle too close to static wall: '
+                             'center_clearance=%.4fm stop_limit=0.2300m '
+                             'center=(%.4f,%.4f) rear_pose=(%.4f,%.4f,%.4f)' %
+                             (clearance,*center,x,y,yaw))
+        return clearance
+
     def segment_check(self, points):
         a = np.asarray(points)
         b = np.roll(a, -1, axis=0)

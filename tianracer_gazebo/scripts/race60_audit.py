@@ -9,7 +9,7 @@ import numpy as np
 import yaml
 from loop_planner import LoopPlanner
 from predictive_follower import PredictiveFollower
-from race_line import ClosedPath
+from race_line import ClosedPath, positive
 
 
 def load_course(package):
@@ -76,6 +76,8 @@ def main():
                           ('braking', 2.0), ('yaw-rate', 2.5), ('steering-rate', 2.0),
                           ('response-delay', .25)]:
         parser.add_argument('--'+name, type=float, default=default)
+    parser.add_argument('--route-margin', type=float, default=.34,
+                        help='candidate center-route clearance, baseline remains .26m')
     parser.add_argument('--simulate', action='store_true')
     parser.add_argument('--lags', type=float, nargs='+', default=[.08, .15, .25])
     parser.add_argument('--output', type=Path, required=True)
@@ -86,14 +88,19 @@ def main():
                ('max_speed', 'lateral_accel', 'acceleration', 'braking', 'yaw_rate', 'steering_rate')}
     planner, anchors = load_course(Path(__file__).resolve().parents[1])
     report = dict(official_result=False, official_five_laps_under_60_verified=False,
-                  budgets=budgets, response_delay=args.response_delay, routes={})
+                  budgets=budgets, response_delay=args.response_delay,
+                  candidate_route_margin=args.route_margin, routes={})
     for name, options in [('finish_baseline', dict(optimize_time=False)),
                           ('time_selected', dict(optimize_time=True)),
                           ('refined', dict(optimize_time=True, refine_line=True))]:
+        margin=.26 if name=='finish_baseline' else args.route_margin
+        planner.margin=positive('route_margin',margin)
+        planner.allowed=planner.clearance>=margin
         center = planner.build(anchors, response_delay=args.response_delay, **budgets, **options)
         follower = PredictiveFollower(rear_path(center), response_delay=args.response_delay, **budgets)
         row = dict(selection=copy.deepcopy(planner.selection), plan=follower.plan_report(),
-                   minimum_center_route_clearance=planner.segment_check(center.points))
+                   minimum_center_route_clearance=planner.segment_check(center.points),
+                   route_margin=margin, wall_stop_clearance=.23)
         if args.simulate:
             row['hypothetical_tracking'] = [simulate(center, planner, budgets, args.response_delay, lag)
                                              for lag in args.lags]

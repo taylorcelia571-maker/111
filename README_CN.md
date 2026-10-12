@@ -1,3 +1,5 @@
+> 最新第二圈靠墙停车修正：[SECOND_LAP_WALL_FIX_CN.md](SECOND_LAP_WALL_FIX_CN.md)。先确认稳定完赛，再继续 60 秒目标调参。
+
 > 最新 60 秒目标优化与完整验证流程：[RACE60_VALIDATION_CN.md](RACE60_VALIDATION_CN.md)。已完成离线回归，官方亚 60 秒仍待实测。
 
 > 最新起步故障修正：rapid_race 默认关闭起步接入、姿态预测和逐弯重整；先恢复此前完赛配置，再分别验证新模块。一分钟目标尚未实际达成。

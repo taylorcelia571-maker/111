@@ -30,7 +30,8 @@ def main():
     anchors = [[w['pose']['position'][k] for k in ('x','y')] for w in data['waypoints']]
     occupancy = np.asarray(grid.data).reshape(grid.info.height,grid.info.width)
     planner = LoopPlanner(occupancy,grid.info.resolution,
-                          [grid.info.origin.position.x,grid.info.origin.position.y])
+                          [grid.info.origin.position.x,grid.info.origin.position.y],
+                          margin=rospy.get_param("~route_margin",0.26))
     rospy.loginfo('Planning full course while stationary; no motion until start service')
     optimize = rospy.get_param('~optimize_time',False)
     center = planner.build(anchors,optimize_time=optimize,refine_line=rospy.get_param('~refine_line',False),
@@ -44,10 +45,7 @@ def main():
     rear = center.points-0.13*tangent
     path = ClosedPath(np.vstack([rear,rear[0]]),spacing=0.04)
     def guard(pose):
-        x,y,yaw,_=pose
-        base=[[x+0.13*math.cos(yaw),y+0.13*math.sin(yaw)]]
-        if planner.clearance_at(base)[0] < 0.23:
-            raise ValueError('Localized vehicle too close to static wall')
+        planner.check_vehicle_clearance(pose)
     def start_guard(follower):
         arcs=np.linspace(0,follower.connector_length,100)+follower.origin
         centers=[]
@@ -63,7 +61,9 @@ def main():
     np.savetxt(output,np.column_stack([path.points,path.curvature,path.speeds]),delimiter=',',
                header='rear_axle_x,rear_axle_y,curvature,speed_limit')
     report=controller.follower.plan_report()
-    report.update(route_selection=planner.selection,official_lap_validation_required=True)
+    report.update(route_selection=planner.selection,official_lap_validation_required=True,
+                  route_margin=planner.margin,wall_stop_clearance=.23,
+                  nominal_wall_tracking_reserve=planner.margin-.23)
     report_file=os.path.splitext(output)[0]+'_report.json'
     with open(report_file,'w') as stream: json.dump(report,stream,indent=2,sort_keys=True)
     rospy.loginfo('Speed budget report (model, not result): %s; saved %s',json.dumps(report,sort_keys=True),report_file)

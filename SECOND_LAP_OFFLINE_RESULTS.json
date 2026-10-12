@@ -1,0 +1,348 @@
+{
+  "official_result": false,
+  "official_five_laps_under_60_verified": false,
+  "budgets": {
+    "max_speed": 2.2,
+    "lateral_accel": 3.2,
+    "acceleration": 1.5,
+    "braking": 2.0,
+    "yaw_rate": 2.5,
+    "steering_rate": 2.0
+  },
+  "response_delay": 0.25,
+  "candidate_route_margin": 0.34,
+  "routes": {
+    "finish_baseline": {
+      "selection": {},
+      "plan": {
+        "response_preview_proxy_five_seconds": 118.85619604701701,
+        "response_preview_proxy_includes_startup": false,
+        "response_preview_proxy_uses_nominal_speed": true,
+        "length": 43.831226986931114,
+        "model_lap_seconds": 22.614445808331656,
+        "model_five_seconds": 113.07222904165828,
+        "model_includes_startup": false,
+        "required_mean_speed_for_60s": 3.652602248910926,
+        "response_delay_seconds": 0.25,
+        "response_delay_is_measured": false,
+        "model_includes_response_preview": false,
+        "lateral_control": "pursuit",
+        "startup_limits": {
+          "speed": 1.2,
+          "acceleration": 1.5,
+          "acceleration_guard_distance": 5.0
+        },
+        "peak_planned_speed": 2.2,
+        "speed_ceiling_binding": true,
+        "same_route_parameter_sensitivity": {
+          "max_speed_plus_1": {
+            "parameter": "max_speed",
+            "value": 3.2,
+            "model_five_seconds": 106.09626648385138,
+            "model_seconds_saved": 6.975962557806895
+          },
+          "lateral_plus_10_percent": {
+            "parameter": "lateral_accel",
+            "value": 3.5200000000000005,
+            "model_five_seconds": 110.325202474236,
+            "model_seconds_saved": 2.7470265674222816
+          },
+          "acceleration_plus_20_percent": {
+            "parameter": "acceleration",
+            "value": 1.7999999999999998,
+            "model_five_seconds": 112.72353043531369,
+            "model_seconds_saved": 0.34869860634458405
+          },
+          "braking_plus_20_percent": {
+            "parameter": "braking",
+            "value": 2.4,
+            "model_five_seconds": 112.86246350734982,
+            "model_seconds_saved": 0.20976553430845968
+          }
+        },
+        "sensitivity_is_physical_validation": false,
+        "limits": {
+          "max_speed": 2.2,
+          "lateral_accel": 3.2,
+          "acceleration": 1.5,
+          "braking": 2.0,
+          "steering_rate": 2.0,
+          "yaw_rate": 2.5
+        },
+        "time_fraction_by_limit": {
+          "straight": 0.38905392899283797,
+          "lateral": 0.3523816328470374,
+          "yaw_rate": 0.0,
+          "steering_rate": 0.0,
+          "acceleration_braking": 0.2585644381601247
+        }
+      },
+      "minimum_center_route_clearance": 0.2726388328301282,
+      "route_margin": 0.26,
+      "wall_stop_clearance": 0.23,
+      "hypothetical_tracking": [
+        {
+          "completed": true,
+          "seconds": 119.52,
+          "peak_error": 0.07328003689634544,
+          "minimum_center_clearance": 0.26862870796950766,
+          "hypothetical_actuator_lag": 0.08,
+          "official_result": false
+        },
+        {
+          "completed": true,
+          "seconds": 127.58,
+          "peak_error": 0.07328003689634544,
+          "minimum_center_clearance": 0.30513561171180825,
+          "hypothetical_actuator_lag": 0.15,
+          "official_result": false
+        },
+        {
+          "completed": true,
+          "seconds": 155.28,
+          "peak_error": 0.08003106738049791,
+          "minimum_center_clearance": 0.3299008620019703,
+          "hypothetical_actuator_lag": 0.25,
+          "official_result": false
+        }
+      ]
+    },
+    "time_selected": {
+      "selection": {
+        "estimated_lap_seconds": 25.068703994413468,
+        "smoothing_width": 0.45999999999999985,
+        "clearance_weight": 2.0,
+        "corner_offset": 0.0,
+        "scoring_response_delay": 0.25,
+        "scoring_model": "nominal_speed_response_preview_proxy",
+        "scoring_includes_startup": false,
+        "refinement_moves": 0,
+        "baseline_model_lap_seconds": 25.068703994413468,
+        "refinement_gain_seconds": 0.0,
+        "route_changed": false,
+        "route_sha256": "ab0c8c15b68de3114a8a49bc591e0b812d090182ee0f6d37585505a684735751"
+      },
+      "plan": {
+        "response_preview_proxy_five_seconds": 125.34351997206734,
+        "response_preview_proxy_includes_startup": false,
+        "response_preview_proxy_uses_nominal_speed": true,
+        "length": 45.065646606615005,
+        "model_lap_seconds": 23.67290249854465,
+        "model_five_seconds": 118.36451249272326,
+        "model_includes_startup": false,
+        "required_mean_speed_for_60s": 3.7554705505512502,
+        "response_delay_seconds": 0.25,
+        "response_delay_is_measured": false,
+        "model_includes_response_preview": false,
+        "lateral_control": "pursuit",
+        "startup_limits": {
+          "speed": 1.2,
+          "acceleration": 1.5,
+          "acceleration_guard_distance": 5.0
+        },
+        "peak_planned_speed": 2.2,
+        "speed_ceiling_binding": true,
+        "same_route_parameter_sensitivity": {
+          "max_speed_plus_1": {
+            "parameter": "max_speed",
+            "value": 3.2,
+            "model_five_seconds": 112.12071113352079,
+            "model_seconds_saved": 6.243801359202479
+          },
+          "lateral_plus_10_percent": {
+            "parameter": "lateral_accel",
+            "value": 3.5200000000000005,
+            "model_five_seconds": 115.2677607945694,
+            "model_seconds_saved": 3.0967516981538665
+          },
+          "acceleration_plus_20_percent": {
+            "parameter": "acceleration",
+            "value": 1.7999999999999998,
+            "model_five_seconds": 117.92544569087173,
+            "model_seconds_saved": 0.43906680185153846
+          },
+          "braking_plus_20_percent": {
+            "parameter": "braking",
+            "value": 2.4,
+            "model_five_seconds": 118.10027779773831,
+            "model_seconds_saved": 0.26423469498494967
+          }
+        },
+        "sensitivity_is_physical_validation": false,
+        "limits": {
+          "max_speed": 2.2,
+          "lateral_accel": 3.2,
+          "acceleration": 1.5,
+          "braking": 2.0,
+          "steering_rate": 2.0,
+          "yaw_rate": 2.5
+        },
+        "time_fraction_by_limit": {
+          "straight": 0.34474171794339376,
+          "lateral": 0.3488908135792566,
+          "yaw_rate": 0.0,
+          "steering_rate": 0.0,
+          "acceleration_braking": 0.3063674684773496
+        }
+      },
+      "minimum_center_route_clearance": 0.3420933667427082,
+      "route_margin": 0.34,
+      "wall_stop_clearance": 0.23,
+      "hypothetical_tracking": [
+        {
+          "completed": true,
+          "seconds": 125.88000000000001,
+          "peak_error": 0.07366793268350592,
+          "minimum_center_clearance": 0.3362234902202824,
+          "hypothetical_actuator_lag": 0.08,
+          "official_result": false
+        },
+        {
+          "completed": true,
+          "seconds": 137.04,
+          "peak_error": 0.0736696672155337,
+          "minimum_center_clearance": 0.3681393230082555,
+          "hypothetical_actuator_lag": 0.15,
+          "official_result": false
+        },
+        {
+          "completed": true,
+          "seconds": 168.76,
+          "peak_error": 0.07367153000552486,
+          "minimum_center_clearance": 0.3731022351080468,
+          "hypothetical_actuator_lag": 0.25,
+          "official_result": false
+        }
+      ]
+    },
+    "refined": {
+      "selection": {
+        "estimated_lap_seconds": 24.633532922917347,
+        "smoothing_width": 0.45999999999999985,
+        "clearance_weight": 2.0,
+        "corner_offset": 0.0,
+        "scoring_response_delay": 0.25,
+        "scoring_model": "nominal_speed_response_preview_proxy",
+        "scoring_includes_startup": false,
+        "refinement_moves": 10,
+        "baseline_model_lap_seconds": 25.068703994413468,
+        "refinement_gain_seconds": 0.43517107149612144,
+        "route_changed": true,
+        "route_sha256": "9ce2a3ddcd3f164a53ced9d3e6b2fdaf00f69d01e54690548a11ad344f5fafb2"
+      },
+      "plan": {
+        "response_preview_proxy_five_seconds": 123.16766461458673,
+        "response_preview_proxy_includes_startup": false,
+        "response_preview_proxy_uses_nominal_speed": true,
+        "length": 44.69884628103951,
+        "model_lap_seconds": 23.2996709461155,
+        "model_five_seconds": 116.4983547305775,
+        "model_includes_startup": false,
+        "required_mean_speed_for_60s": 3.724903856753292,
+        "response_delay_seconds": 0.25,
+        "response_delay_is_measured": false,
+        "model_includes_response_preview": false,
+        "lateral_control": "pursuit",
+        "startup_limits": {
+          "speed": 1.2,
+          "acceleration": 1.5,
+          "acceleration_guard_distance": 5.0
+        },
+        "peak_planned_speed": 2.2,
+        "speed_ceiling_binding": true,
+        "same_route_parameter_sensitivity": {
+          "max_speed_plus_1": {
+            "parameter": "max_speed",
+            "value": 3.2,
+            "model_five_seconds": 110.09018280397603,
+            "model_seconds_saved": 6.408171926601469
+          },
+          "lateral_plus_10_percent": {
+            "parameter": "lateral_accel",
+            "value": 3.5200000000000005,
+            "model_five_seconds": 113.5224196649149,
+            "model_seconds_saved": 2.975935065662597
+          },
+          "acceleration_plus_20_percent": {
+            "parameter": "acceleration",
+            "value": 1.7999999999999998,
+            "model_five_seconds": 116.08498362948438,
+            "model_seconds_saved": 0.41337110109311936
+          },
+          "braking_plus_20_percent": {
+            "parameter": "braking",
+            "value": 2.4,
+            "model_five_seconds": 116.24807502463614,
+            "model_seconds_saved": 0.2502797059413666
+          }
+        },
+        "sensitivity_is_physical_validation": false,
+        "limits": {
+          "max_speed": 2.2,
+          "lateral_accel": 3.2,
+          "acceleration": 1.5,
+          "braking": 2.0,
+          "steering_rate": 2.0,
+          "yaw_rate": 2.5
+        },
+        "time_fraction_by_limit": {
+          "straight": 0.3603495775422504,
+          "lateral": 0.3435816385120098,
+          "yaw_rate": 0.0,
+          "steering_rate": 0.0,
+          "acceleration_braking": 0.29606878394573966
+        }
+      },
+      "minimum_center_route_clearance": 0.3412199448813512,
+      "route_margin": 0.34,
+      "wall_stop_clearance": 0.23,
+      "hypothetical_tracking": [
+        {
+          "completed": true,
+          "seconds": 123.78,
+          "peak_error": 0.07365906491447763,
+          "minimum_center_clearance": 0.3316587394656595,
+          "hypothetical_actuator_lag": 0.08,
+          "official_result": false
+        },
+        {
+          "completed": true,
+          "seconds": 133.8,
+          "peak_error": 0.07366120866560338,
+          "minimum_center_clearance": 0.35173170294548434,
+          "hypothetical_actuator_lag": 0.15,
+          "official_result": false
+        },
+        {
+          "completed": true,
+          "seconds": 164.26,
+          "peak_error": 0.0748543390908269,
+          "minimum_center_clearance": 0.339603472704463,
+          "hypothetical_actuator_lag": 0.25,
+          "official_result": false
+        }
+      ]
+    }
+  },
+  "validation": {
+    "base_commit": "fe738e2135836fa6cc4fb1a04a5b478a6e7480ae",
+    "non_ros_tests_passed": 172,
+    "ros_test_not_run": "test_waypoint_laps.py",
+    "catkin_build_run": false,
+    "gazebo_run": false,
+    "logged_center_clearance_m": 0.22762009,
+    "unchanged_wall_stop_clearance_m": 0.23,
+    "logged_fault_reproduced": true,
+    "wall_perturbation_regression": {
+      "lateral_offsets_m": [
+        -0.08,
+        0.08
+      ],
+      "heading_offsets_rad": [
+        -0.08,
+        0.08
+      ],
+      "all_samples_above_wall_stop_threshold": true
+    }
+  }
+}

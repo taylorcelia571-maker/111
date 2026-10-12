@@ -199,8 +199,8 @@ class ContinuousRace:
         """Pre-position steering while stopped; does not drive or start timing."""
         with self.lock:
             if self.active:return TriggerResponse(False,'Already active; stop before preparing')
-            if not self.generated or self.follower.lateral_control!='smooth_pursuit':
-                return TriggerResponse(False,'prepare requires smooth_pursuit')
+            if not self.generated or self.follower.lateral_control not in ('smooth_pursuit','curvature_feedback'):
+                return TriggerResponse(False,'prepare requires smooth_pursuit or curvature_feedback')
             try:
                 publishers,_,_=rosgraph.Master(rospy.get_name()).getSystemState()
                 topic=rospy.resolve_name('cmd_vel')
@@ -235,6 +235,7 @@ class ContinuousRace:
                 if others: raise ValueError('Other cmd_vel publishers active: ' + ', '.join(others))
                 pose = self.sensors()
                 if abs(pose[3]) > 0.05: raise ValueError('Vehicle must be stationary')
+                if self.clearance_guard is not None:self.clearance_guard(pose)
                 prepared_used=self.prepared_steer is not None
                 self.follower.start(*pose[:3])
                 self.follower.stop()

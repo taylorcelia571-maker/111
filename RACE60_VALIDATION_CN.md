@@ -1,3 +1,5 @@
+> 第二圈靠墙停车已修正：请优先按 [SECOND_LAP_WALL_FIX_CN.md](SECOND_LAP_WALL_FIX_CN.md) 更新和重测。optimized_race 现默认 route_margin=0.34；下文 43.07m 路线及性能表是上一版 0.26m 余量的历史模型结果，不代表本次新路线。
+
 # 111 优化版：五圈 60 秒目标与完整验证流程
 
 本轮以你提供的中途停车日志和 `finish_race` 配置为起点。**已完成代码优化和离线回归；尚未实现或验证官方五圈小于 60 秒。** 云环境没有 ROS Noetic/Gazebo，也未连接你的比赛设备，无法代替 ROS2GO 上的官方实测。
@@ -116,14 +118,13 @@ rosparam get /tianracer/continuous_race/lateral_control
 rosparam get /tianracer/continuous_race/max_speed
 rosparam get /tianracer/continuous_race/response_delay
 rostopic echo -n 1 /clock
-rostopic echo -n 1 /gazebo/model_states/name
 rostopic echo -n 1 /tianracer/scan/header
 rostopic echo -n 1 /tianracer/odom/twist/twist
 rostopic echo -n 1 /tianracer/joint_states
 rostopic info /tianracer/cmd_vel
 ```
 
-预期 sim_time=true、控制方式 curvature_feedback、速度 2.2、预留 0.25；模型列表含官方赛道和车辆；雷达、里程计和转向关节有连续数据。cmd_vel 只能有本次控制器这个运动来源，不能同时运行 waypoint_laps、rapid_race、旧 move_base、遥控等。转向关节必须包含左右 steering_hinge_joint 并有位置；数据失效不能通过取消关节检查解决。
+预期 sim_time=true、控制方式 curvature_feedback、速度 2.2、预留 0.25；从裁判 GUI 确认官方赛道和车辆；雷达、里程计和转向关节有连续数据。cmd_vel 只能有本次控制器这个运动来源，不能同时运行 waypoint_laps、rapid_race、旧 move_base、遥控等。转向关节必须包含左右 steering_hinge_joint 并有位置；数据失效不能通过取消关节检查解决。
 
 ## 4. 准备、发车、官方完赛与停车
 
@@ -159,12 +160,12 @@ rostopic pub -1 /tianracer/ackermann_cmd_stamped ackermann_msgs/AckermannDriveSt
 
 ## 5. 留证与基线比较
 
-准备发车前在额外终端录制；每轮使用独立目录，避免覆盖控制报告：
+不要额外订阅 /gazebo/model_states；你的模型会对非裁判真值订阅发出禁止提示。准备发车前在额外终端录制下列传感器与控制数据；每轮使用独立目录，避免覆盖控制报告：
 
 ```bash
 mkdir -p ~/ican_race_logs/run01
 cd ~/ican_race_logs/run01
-rosbag record -O telemetry.bag /clock /gazebo/model_states /tf /tf_static /tianracer/cmd_vel /tianracer/ackermann_cmd_stamped /tianracer/odom /tianracer/scan /tianracer/amcl_pose /tianracer/joint_states /rosout_agg
+rosbag record -O telemetry.bag /clock /tf /tf_static /tianracer/cmd_vel /tianracer/ackermann_cmd_stamped /tianracer/odom /tianracer/scan /tianracer/amcl_pose /tianracer/joint_states /rosout_agg
 ```
 
 cmd_vel.angular.z 在本仓库是转角指令，不能当作实测偏航角速度。记录关节实际转角和里程计角速度，才能区分速度/转向滞后、侧滑与定位误差。新控制启动也可指定 `run_report:=/绝对路径/run01/control_run_report.json`。
