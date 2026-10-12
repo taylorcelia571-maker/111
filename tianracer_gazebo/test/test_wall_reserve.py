@@ -27,6 +27,18 @@ class WallReserveTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError,'center_clearance=0.2276m stop_limit=0.2300m'):
             self.planner.check_vehicle_clearance(pose)
 
+    def test_rapid_log_pose_reproduces_wall_stop_not_stale_tf(self):
+        pose=(-1.8800011666554266,-.16872605762874826,-.5347856781980944,2.0)
+        with self.assertRaisesRegex(ValueError,'center_clearance=0.2288m stop_limit=0.2300m'):
+            self.planner.check_vehicle_clearance(pose)
+
+    def test_rapid_entry_forwards_the_same_wall_reserve(self):
+        launch=ET.parse(PACKAGE/'launch/rapid_race.launch').getroot()
+        args={x.get('name'):x.get('default') for x in launch.findall('arg')}
+        forwarded={x.get('name'):x.get('value') for x in launch.find('include').findall('arg')}
+        self.assertEqual(args['route_margin'],'0.34')
+        self.assertEqual(forwarded['route_margin'],'$(arg route_margin)')
+
     def test_route_has_tracking_reserve_for_eight_centimeters_and_heading_error(self):
         path=rear_path(self.center)
         tangent=np.roll(path.points,-1,axis=0)-np.roll(path.points,1,axis=0)

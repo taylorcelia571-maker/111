@@ -1,3 +1,5 @@
+> rapid_race 第二圈靠墙停车入口遗漏已修正：[RAPID_WALL_FIX_CN.md](RAPID_WALL_FIX_CN.md)。路线净空默认 0.34 m，保留原保护阈值；需要重新启动场景并实际验证。
+
 > 当前 82 秒成绩的完整启动、留证、瓶颈检查与严格 60 秒验收流程：[RACE60_CURRENT_VALIDATION_CN.md](RACE60_CURRENT_VALIDATION_CN.md)。一分钟目标尚未实测达成；2.2 m/s 恢复档不属于提速方案。
 
 > 最新第二圈靠墙停车修正：[SECOND_LAP_WALL_FIX_CN.md](SECOND_LAP_WALL_FIX_CN.md)。先确认稳定完赛，再继续 60 秒目标调参。
