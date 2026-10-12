@@ -11,12 +11,16 @@ class PredictiveFollower(LineFollower):
         super().__init__(path, max_speed, lateral_accel, acceleration, braking,
                          wheelbase, max_steer, max_error)
         self.steering_rate = positive('steering_rate', steering_rate)
-        positive('yaw_rate', yaw_rate)
+        self.yaw_rate = positive('yaw_rate', yaw_rate)
         curve = np.abs(path.curvature)
         delta = np.arctan(wheelbase*path.curvature)
         derivative = np.maximum(np.abs(np.roll(delta,-1)-delta), np.abs(delta-np.roll(delta,1)))/path.ds
-        path.speeds = np.minimum.reduce([path.speeds, yaw_rate/np.maximum(curve,1e-6),
-                                        steering_rate/np.maximum(derivative,1e-6)])
+        preview_curve = np.maximum.reduce([np.roll(curve,j) for j in range(-2,3)])
+        self.speed_caps = dict(straight=np.full(path.n,max_speed),
+                               lateral=np.sqrt(lateral_accel/np.maximum(preview_curve,1e-6)),
+                               yaw_rate=yaw_rate/np.maximum(curve,1e-6),
+                               steering_rate=steering_rate/np.maximum(derivative,1e-6))
+        path.speeds = np.minimum.reduce([path.speeds,self.speed_caps['yaw_rate'],self.speed_caps['steering_rate']])
         for _ in range(2):
             for i in range(path.n-1,-1,-1):
                 path.speeds[i] = min(path.speeds[i], math.sqrt(path.speeds[(i+1)%path.n]**2+2*braking*path.ds))
@@ -26,6 +30,23 @@ class PredictiveFollower(LineFollower):
         self.departure = True
         if not isinstance(fast_start,bool): raise ValueError('fast_start must be boolean')
         self.fast_start = fast_start
+        self.last_report = {}
+
+    def plan_report(self):
+        names=list(self.speed_caps)
+        caps=np.vstack([self.speed_caps[name] for name in names])
+        reason=np.argmin(caps,axis=0)
+        envelope=self.path.speeds < caps.min(axis=0)-1e-6
+        weights=self.path.ds/self.path.speeds
+        fractions={name:float(weights[(reason==i)&~envelope].sum()/weights.sum()) for i,name in enumerate(names)}
+        fractions['acceleration_braking']=float(weights[envelope].sum()/weights.sum())
+        return dict(length=self.path.length,model_lap_seconds=float(weights.sum()),
+                    model_five_seconds=float(5*weights.sum()),model_includes_startup=False,
+                    required_mean_speed_for_60s=self.path.length/12,
+                    limits=dict(max_speed=self.max_speed,lateral_accel=self.lateral_accel,
+                                acceleration=self.acceleration,braking=self.braking,
+                                steering_rate=self.steering_rate,yaw_rate=self.yaw_rate),
+                    time_fraction_by_limit=fractions)
 
     def start(self, x, y, yaw):
         super().start(x, y, yaw)
@@ -65,9 +86,17 @@ class PredictiveFollower(LineFollower):
         k = 2*(-math.sin(yaw)*dx+math.cos(yaw)*dy)/max(dx*dx+dy*dy,1e-6)
         desired_steer = float(np.clip(math.atan(self.wheelbase*k),-self.max_steer,self.max_steer))
         self.steer += float(np.clip(desired_steer-self.steer,-self.steering_rate*dt,self.steering_rate*dt))
-        desired = min(float(self.path.speeds[i]), math.sqrt(self.lateral_accel/max(abs(k),1e-6)))
+        live_lateral = math.sqrt(self.lateral_accel/max(abs(k),1e-6))
+        live_yaw = self.yaw_rate/max(abs(k),1e-6)
+        desired = min(float(self.path.speeds[i]),live_lateral,live_yaw)
+        reason = 'planned_envelope'
+        if live_lateral < self.path.speeds[i]: reason='tracking_lateral'
+        if live_yaw < min(self.path.speeds[i],live_lateral): reason='tracking_yaw'
+
         # Small localization corrections should not cause repeated strong braking.
-        desired *= max(0.4, 1-0.6*(max(0,self.error-0.05)/max(0.01,self.max_error-0.05))**2)
+        error_factor = max(0.4, 1-0.6*(max(0,self.error-0.05)/max(0.01,self.max_error-0.05))**2)
+        desired *= error_factor
+        if error_factor < 0.99: reason='tracking_error'
         if self.departure:
             tangent = self.path.sample(self.progress+0.08)-self.path.sample(self.progress)
             heading = math.atan2(tangent[1],tangent[0])
@@ -84,8 +113,14 @@ class PredictiveFollower(LineFollower):
                     lateral_quality = float(np.clip((0.10-self.error)/0.065,0,1))
                     heading_quality = float(np.clip((0.35-abs(heading_error))/0.20,0,1))
                     departure_limit += 0.65*min(lateral_quality,heading_quality)
+                if departure_limit < desired: reason='departure'
                 desired = min(desired,departure_limit)
-        self.speed = min(desired,self.speed+self.acceleration*dt)
+        acceleration_limit=self.speed+self.acceleration*dt
+        if acceleration_limit < desired: reason='acceleration'
+        self.speed = min(desired,acceleration_limit)
+        self.last_report=dict(reason=reason,planned_speed=float(self.path.speeds[i]),
+                              live_curvature=float(k),measured_speed=measured_speed,
+                              command_speed=self.speed,steer=self.steer,tracking_error=self.error)
         return self.speed,self.steer
 
 

@@ -1,0 +1,20 @@
+<launch>
+  <!-- Controller only: use planned_race_demo for official scene and raw bridge.
+       These are tuning budgets, not certified physical vehicle limits. -->
+  <arg name="max_speed" default="5.0"/>
+  <arg name="lateral_accel" default="6.0"/>
+  <arg name="acceleration" default="3.0"/>
+  <arg name="braking" default="3.0"/>
+  <arg name="yaw_rate" default="4.0"/>
+  <arg name="steering_rate" default="2.0"/>
+  <include file="$(find tianracer_gazebo)/launch/planned_race.launch">
+    <arg name="max_speed" value="$(arg max_speed)"/>
+    <arg name="lateral_accel" value="$(arg lateral_accel)"/>
+    <arg name="acceleration" value="$(arg acceleration)"/>
+    <arg name="braking" value="$(arg braking)"/>
+    <arg name="yaw_rate" value="$(arg yaw_rate)"/>
+    <arg name="steering_rate" value="$(arg steering_rate)"/>
+    <arg name="optimize_time" value="true"/>
+    <arg name="fast_start" value="true"/>
+  </include>
+</launch>

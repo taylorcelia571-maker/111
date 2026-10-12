@@ -239,5 +239,16 @@ class RuntimeTests(unittest.TestCase):
         Stamp.now_value=0
         self.assertIn('Waiting for initialized ROS clock',self.node.status(None).message)
 
+    def test_generated_budget_parameters_reach_controller_and_status(self):
+        self.params.update({'~max_speed':5.0,'~lateral_accel':6.0,'~acceleration':3.0,
+                            '~yaw_rate':4.0,'~steering_rate':2.5})
+        self.generated_node()
+        report=self.node.follower.plan_report()
+        self.assertEqual(report['limits']['yaw_rate'],4.0)
+        self.assertEqual(report['limits']['steering_rate'],2.5)
+        self.tick()
+        self.assertIn('measured_speed',self.node.status(None).message)
+        self.assertIn('planned_speed',self.node.status(None).message)
+
 
 if __name__ == '__main__': unittest.main()

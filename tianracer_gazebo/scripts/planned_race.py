@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Generate a collision-checked closed course once; track it without move_base."""
+import json
 import math
 import os
 import numpy as np
@@ -34,7 +35,8 @@ def main():
     optimize = rospy.get_param('~optimize_time',False)
     center = planner.build(anchors,optimize_time=optimize,
                            **{k:rospy.get_param('~'+k,v) for k,v in (
-                               ('max_speed',2.0),('lateral_accel',5.0),('acceleration',2.0),('braking',3.0))})
+                               ('max_speed',2.0),('lateral_accel',5.0),('acceleration',2.0),('braking',3.0),
+                               ('steering_rate',2.0),('yaw_rate',3.2))})
     if optimize:
         rospy.loginfo('Time-based route selection (model only): %s',planner.selection)
     tangent = np.roll(center.points,-1,axis=0)-np.roll(center.points,1,axis=0)
@@ -52,6 +54,11 @@ def main():
     os.makedirs(os.path.dirname(os.path.abspath(output)),exist_ok=True)
     np.savetxt(output,np.column_stack([path.points,path.curvature,path.speeds]),delimiter=',',
                header='rear_axle_x,rear_axle_y,curvature,speed_limit')
+    report=controller.follower.plan_report()
+    report.update(route_selection=planner.selection,official_lap_validation_required=True)
+    report_file=os.path.splitext(output)[0]+'_report.json'
+    with open(report_file,'w') as stream: json.dump(report,stream,indent=2,sort_keys=True)
+    rospy.loginfo('Speed budget report (model, not result): %s; saved %s',json.dumps(report,sort_keys=True),report_file)
     preview = Path(); preview.header.frame_id=grid.header.frame_id
     preview.header.stamp=rospy.Time.now()
     for i,p in enumerate(path.points):

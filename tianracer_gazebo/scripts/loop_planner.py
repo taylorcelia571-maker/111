@@ -62,12 +62,38 @@ class LoopPlanner:
                     heapq.heappush(queue, (new+math.hypot(b[0]-goal[0], b[1]-goal[1]), new, b))
         raise ValueError('No connected collision-free route between waypoints')
 
+    def feasible(self, points, anchors, max_steer=0.48, wheelbase=0.26):
+        if self.segment_check(points) < self.margin: return None
+        trial=ClosedPath(np.vstack([points,points[0]]),spacing=0.04)
+        if self.segment_check(trial.points) < self.margin: return None
+        d=np.roll(trial.points,-1,axis=0)-trial.points
+        yaw=np.arctan2(d[:,1],d[:,0])
+        turns=np.arctan2(np.sin(np.roll(yaw,-1)-yaw),np.cos(np.roll(yaw,-1)-yaw))/trial.ds
+        if np.max(np.abs(turns)) > math.tan(max_steer)/wheelbase*.95: return None
+        projected=[trial.project(*p) for p in anchors]
+        if any(error>.4 for _,error in projected): return None
+        positions=[distance for distance,_ in projected]
+        increments=np.diff(np.r_[positions,positions[0]+trial.length])%trial.length
+        if not math.isclose(float(increments.sum()),trial.length,rel_tol=1e-6): return None
+        return trial
+
+    @staticmethod
+    def estimate(trial, max_speed, lateral_accel, acceleration, braking, steering_rate, yaw_rate):
+        from predictive_follower import PredictiveFollower
+        tangent=np.roll(trial.points,-1,axis=0)-np.roll(trial.points,1,axis=0)
+        tangent/=np.linalg.norm(tangent,axis=1)[:,None]
+        rear=trial.points-.13*tangent
+        reference=ClosedPath(np.vstack([rear,rear[0]]),spacing=.04)
+        PredictiveFollower(reference,max_speed=max_speed,lateral_accel=lateral_accel,
+                           acceleration=acceleration,braking=braking,steering_rate=steering_rate,yaw_rate=yaw_rate)
+        return float(np.sum(reference.ds/reference.speeds))
+
     def build(self, waypoints, max_steer=0.48, wheelbase=0.26, optimize_time=False,
               max_speed=4.0, lateral_accel=5.0, acceleration=2.0, braking=3.0,
-              clearance_weight=None):
+              clearance_weight=None, steering_rate=2.0, yaw_rate=3.2):
         if optimize_time:
             for name,value in (('max_speed',max_speed),('lateral_accel',lateral_accel),
-                               ('acceleration',acceleration),('braking',braking)):
+                               ('acceleration',acceleration),('braking',braking),('steering_rate',steering_rate),('yaw_rate',yaw_rate)):
                 positive(name,value)
         if optimize_time and clearance_weight is None:
             best = None
@@ -75,13 +101,28 @@ class LoopPlanner:
             for weight in (2.0,4.0,8.0,16.0):
                 try:
                     trial = self.build(waypoints,max_steer,wheelbase,True,max_speed,
-                                       lateral_accel,acceleration,braking,weight)
+                                       lateral_accel,acceleration,braking,weight,steering_rate,yaw_rate)
                 except ValueError:
                     continue  # infeasible alternatives never become motion plans
                 selection = dict(self.selection,clearance_weight=weight)
                 if best_selection is None or selection['estimated_lap_seconds'] < best_selection['estimated_lap_seconds']:
                     best,best_selection = trial,selection
             if best is None: raise ValueError('No time-optimized route meets geometry/clearance constraints')
+            # Explore modest inward/outward corner offsets in the same corridor.
+            # No new topology or checkpoint bypass is introduced.
+            seed=best
+            tangent=np.roll(seed.points,-1,axis=0)-np.roll(seed.points,1,axis=0)
+            tangent/=np.linalg.norm(tangent,axis=1)[:,None]
+            normal=np.column_stack([-tangent[:,1],tangent[:,0]])
+            shape=gaussian_filter1d(np.tanh(seed.curvature/.5),.35/seed.ds,mode='wrap')
+            best_selection['corner_offset']=0.0
+            for offset in (-.12,-.08,-.04,.04,.08,.12):
+                candidate=self.feasible(seed.points+offset*shape[:,None]*normal,np.asarray(waypoints),max_steer,wheelbase)
+                if candidate is None: continue
+                estimated=self.estimate(candidate,max_speed,lateral_accel,acceleration,braking,steering_rate,yaw_rate)
+                if estimated < best_selection['estimated_lap_seconds']:
+                    best=candidate
+                    best_selection.update(estimated_lap_seconds=estimated,corner_offset=offset)
             self.selection = best_selection
             return best
         weight = 8.0 if clearance_weight is None else positive('clearance_weight',clearance_weight)
@@ -96,31 +137,13 @@ class LoopPlanner:
         chosen = None
         best_time = float('inf')
         self.selection = {}
-        limit = math.tan(max_steer)/wheelbase
         for width in np.arange(0.12, 0.71, 0.02):
             candidate = gaussian_filter1d(original, width/path.ds, axis=0, mode='wrap')
             if np.max(np.linalg.norm(candidate-original, axis=1)) > 0.40: continue
-            if self.segment_check(candidate) < self.margin: continue
-            trial = ClosedPath(np.vstack([candidate, candidate[0]]), spacing=0.04)
-            # Check unsmoothed adjacent-point curvature as well as the tracking window.
-            d = np.roll(trial.points, -1, axis=0)-trial.points
-            yaw = np.unwrap(np.arctan2(d[:,1], d[:,0]))
-            turns = np.arctan2(np.sin(np.roll(yaw,-1)-yaw), np.cos(np.roll(yaw,-1)-yaw))/trial.ds
-            if np.max(np.abs(turns)) > limit*0.95: continue
-            projected = [trial.project(*p) for p in anchors]
-            if any(error > 0.4 for _,error in projected): continue
-            positions = [distance for distance,_ in projected]
-            increments = np.diff(np.r_[positions,positions[0]+trial.length]) % trial.length
-            if not math.isclose(float(increments.sum()),trial.length,rel_tol=1e-6): continue
+            trial=self.feasible(candidate,anchors,max_steer,wheelbase)
+            if trial is None: continue
             if optimize_time:
-                from predictive_follower import PredictiveFollower
-                tangent = np.roll(trial.points,-1,axis=0)-np.roll(trial.points,1,axis=0)
-                tangent /= np.linalg.norm(tangent,axis=1)[:,None]
-                rear = trial.points-0.13*tangent
-                reference = ClosedPath(np.vstack([rear,rear[0]]),spacing=0.04)
-                PredictiveFollower(reference,max_speed=max_speed,lateral_accel=lateral_accel,
-                                   acceleration=acceleration,braking=braking)
-                estimated = float(np.sum(reference.ds/reference.speeds))
+                estimated=self.estimate(trial,max_speed,lateral_accel,acceleration,braking,steering_rate,yaw_rate)
                 if estimated >= best_time: continue
                 best_time = estimated
                 self.selection = dict(estimated_lap_seconds=estimated,smoothing_width=float(width))

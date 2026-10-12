@@ -8,12 +8,16 @@
   <arg name="optimize_time" default="false"/>
   <arg name="acceleration" default="2.0"/>
   <arg name="braking" default="3.0"/>
+  <arg name="steering_rate" default="2.0"/>
+  <arg name="yaw_rate" default="3.2"/>
   <node pkg="tianracer_gazebo" type="planned_race.py" name="continuous_race"
         ns="tianracer" output="screen" required="true">
     <param name="max_speed" value="$(arg max_speed)" type="double"/>
     <param name="lateral_accel" value="$(arg lateral_accel)" type="double"/>
     <param name="acceleration" value="$(arg acceleration)" type="double"/>
     <param name="braking" value="$(arg braking)" type="double"/>
+    <param name="steering_rate" value="$(arg steering_rate)" type="double"/>
+    <param name="yaw_rate" value="$(arg yaw_rate)" type="double"/>
     <param name="fast_start" value="$(arg fast_start)" type="bool"/>
     <param name="optimize_time" value="$(arg optimize_time)" type="bool"/>
     <param name="max_error" value="0.15"/>

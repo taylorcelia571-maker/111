@@ -32,7 +32,10 @@ class ContinuousRace:
                     ('max_speed', 3.0), ('lateral_accel', 3.0), ('acceleration', 2.5),
                     ('braking', 3.5), ('max_error', 0.6))
         options = {k: rospy.get_param('~' + k, v) for k,v in defaults}
-        if self.generated: options['fast_start'] = rospy.get_param('~fast_start',False)
+        if self.generated:
+            options.update(fast_start=rospy.get_param('~fast_start',False),
+                           steering_rate=rospy.get_param('~steering_rate',2.0),
+                           yaw_rate=rospy.get_param('~yaw_rate',3.2))
         self.follower = follower_type(self.path, **options)
         self.laps = rospy.get_param('~laps', 5)
         if isinstance(self.laps, bool) or not isinstance(self.laps, int) or self.laps < 1:
@@ -95,6 +98,7 @@ class ContinuousRace:
             try:
                 pose = self.sensors()
                 return TriggerResponse(True,json.dumps(dict(active=self.active,pose=pose,
+                                                            control=getattr(self.follower,'last_report',{}),
                                                             message='Feedback ready; start still checks controller conflicts and pose')))
             except (ValueError,tf.Exception) as error:
                 return TriggerResponse(False,str(error))
@@ -209,6 +213,10 @@ class ContinuousRace:
                 raise ValueError('Obstacle/invalid scan: stopped; inspect then call start again')
         speed = min(speed, obstacle_limit)
         self.follower.speed = speed
+        if self.generated:
+            self.follower.last_report['output_speed']=speed
+            if obstacle_limit < self.follower.last_report['command_speed']:
+                self.follower.last_report['reason']='laser'
         progress = self.follower.progress - self.follower.origin
         if progress >= self.laps * self.path.length:
             self.stop(None)
@@ -217,8 +225,9 @@ class ContinuousRace:
             msg = Twist()
             msg.linear.x, msg.angular.z = speed, steer
             self.pub.publish(msg)
-            rospy.loginfo_throttle(2, 'Reference %.2f/%d loops, v=%.2f, error=%.2fm',
-                                  progress / self.path.length, self.laps, speed, self.follower.error)
+            rospy.loginfo_throttle(2, 'Reference %.2f/%d loops, v=%.2f measured=%.2f error=%.2fm limit=%s',
+                                  progress / self.path.length,self.laps,speed,pose[3],self.follower.error,
+                                  getattr(self.follower,'last_report',{}).get('reason','legacy'))
 
 if __name__ == '__main__':
     rospy.init_node('continuous_race')

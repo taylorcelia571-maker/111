@@ -115,6 +115,31 @@ class PlannedLoopTests(unittest.TestCase):
             v,_=f.step(x,y,yaw,0,.02)
             self.assertLessEqual(v,.35)
 
+    def test_rapid_profile_limits_report_and_five_ideal_laps(self):
+        budgets=dict(max_speed=5.0,lateral_accel=6.0,acceleration=3.0,braking=3.0,yaw_rate=4.0,steering_rate=2.0)
+        center=self.planner.build(self.anchors,optimize_time=True,**budgets)
+        p=rear_path(center);f=PredictiveFollower(p,fast_start=True,**budgets)
+        report=f.plan_report()
+        self.assertEqual(report['limits'],budgets)
+        self.assertAlmostEqual(sum(report['time_fraction_by_limit'].values()),1)
+        self.assertGreater(report['model_five_seconds'],60)  # do not claim the minute target
+        delta=np.arctan(.26*p.curvature)
+        derivative=np.maximum(abs(np.roll(delta,-1)-delta),abs(delta-np.roll(delta,1)))/p.ds
+        self.assertTrue(np.all(p.speeds*abs(p.curvature)<=4+1e-8))
+        self.assertTrue(np.all(p.speeds**2*abs(p.curvature)<=6+1e-8))
+        self.assertTrue(np.all(p.speeds*derivative<=2+1e-8))
+        x,y,yaw=.0081,-.1494,1.5709;f.start(x,y,yaw);speed=steer=0
+        for _ in range(8000):
+            v,d=f.step(x,y,yaw,speed,.02)
+            self.assertLessEqual(v*abs(f.last_report['live_curvature']),4+1e-8)
+            self.assertLessEqual(v*v*abs(f.last_report['live_curvature']),6+1e-8)
+            speed+=(v-speed)*.02/.08;steer+=(d-steer)*.02/.08
+            x+=speed*math.cos(yaw)*.02;y+=speed*math.sin(yaw)*.02;yaw+=speed*math.tan(steer)/.26*.02
+            self.assertLess(f.error,.15)
+            self.assertGreater(self.planner.clearance_at([[x+.13*math.cos(yaw),y+.13*math.sin(yaw)]])[0],.23)
+            if f.progress-f.origin>=5*p.length:break
+        self.assertGreaterEqual(f.progress-f.origin,5*p.length)
+
     def test_departure_aligns_at_low_speed_without_relaxing_error_limit(self):
         p=rear_path(self.center); f=PredictiveFollower(p,max_speed=1.8)
         yaw=1.3; x,y=.04-.13*math.cos(yaw),-.13*math.sin(yaw)
