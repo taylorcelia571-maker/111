@@ -13,6 +13,7 @@
     <arg name="straight_speed" default="2.0"/>
     <arg name="corner_speed" default="1.8"/>
     <arg name="corner_tuning" default="false"/>
+    <arg name="flow_tuning" default="false"/>
     <arg name="path_bias" default="false"/>
     <arg name="planner_max_speed" default="2.6"/>
 
@@ -51,6 +52,7 @@
             <arg name="planner_max_speed" value="$(arg planner_max_speed)"/>
                     <arg name="corner_tuning" value="$(arg corner_tuning)"/>
             <arg name="path_bias" value="$(arg path_bias)"/>
+                    <arg name="flow_tuning" value="$(arg flow_tuning)"/>
         </include>
 
         <!-- AMCL -->
@@ -98,6 +100,7 @@
             <arg name="planner_max_speed" value="$(arg planner_max_speed)"/>
                     <arg name="corner_tuning" value="$(arg corner_tuning)"/>
             <arg name="path_bias" value="$(arg path_bias)"/>
+                    <arg name="flow_tuning" value="$(arg flow_tuning)"/>
         </include>
 
         <!-- AMCL -->

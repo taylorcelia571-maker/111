@@ -5,13 +5,14 @@ import numpy as np
 
 class CornerSpeed:
     def __init__(self, straight_speed=2.0, corner_speed=1.8, acceleration=1.8,
-                 braking=1.5, reaction_time=0.25, wheelbase=0.26):
+                 braking=1.5, reaction_time=0.25, wheelbase=0.26, acceleration_ramp=False):
         values = (straight_speed, corner_speed, acceleration, braking, reaction_time, wheelbase)
         if not all(math.isfinite(v) and v > 0 for v in values) or corner_speed > straight_speed:
             raise ValueError('Invalid straight/corner speed or motion limits')
         self.straight_speed, self.corner_speed = straight_speed, corner_speed
         self.acceleration, self.braking = acceleration, braking
         self.reaction_time, self.wheelbase = reaction_time, wheelbase
+        self.acceleration_ramp = acceleration_ramp
         self.speed = 0.0
         self.last_limit = 0.0
         self.reason = 'idle'
@@ -60,7 +61,7 @@ class CornerSpeed:
         # Direction changes must first stop; never inject speed above TEB command.
         if self.speed*target < 0:
             self.speed = 0.0
-        elif abs(target) > abs(self.speed):
+        elif self.acceleration_ramp and abs(target) > abs(self.speed):
             self.speed = math.copysign(min(abs(target), abs(self.speed)+self.acceleration*dt), target)
         else:
             self.speed = target

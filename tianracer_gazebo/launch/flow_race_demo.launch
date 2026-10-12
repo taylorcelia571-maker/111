@@ -1,0 +1,17 @@
+<launch>
+  <arg name="max_speed" default="1.8"/>
+  <arg name="flow_tuning" default="true"/>
+  <include file="$(find tianracer_gazebo)/launch/demo_tianracer_teb_nav.launch">
+    <arg name="world" value="tianracer_racetrack"/>
+    <arg name="robot_name" value="tianracer"/>
+    <arg name="planner_profile" value="true"/>
+    <arg name="planner_max_speed" value="$(arg max_speed)"/>
+    <arg name="race_profile" value="false"/>
+    <arg name="command_watchdog" value="true"/>
+    <arg name="wheel_feedforward" value="true"/>
+    <arg name="corner_speed_control" value="false"/>
+    <arg name="corner_tuning" value="false"/>
+    <arg name="path_bias" value="false"/>
+    <arg name="flow_tuning" value="$(arg flow_tuning)"/>
+  </include>
+</launch>

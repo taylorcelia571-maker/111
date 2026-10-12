@@ -52,13 +52,18 @@ class CornerSpeedTests(unittest.TestCase):
         self.assertLessEqual(v,1.6)
         self.assertEqual(c.reason,'feedback_fallback')
 
-    def test_acceleration_is_bounded_and_steering_is_not_filtered(self):
-        c=CornerSpeed(2.2,1.6)
+    def test_optional_acceleration_ramp_is_bounded(self):
+        c=CornerSpeed(2.2,1.6,acceleration_ramp=True)
         previous=0
         for _ in range(50):
             v=c.step(2.2,0,0,1,[(0,0)],.02)
             self.assertLessEqual(v-previous,.02*c.acceleration+1e-9)
             previous=v
+
+    def test_default_does_not_reramp_after_planner_zero(self):
+        c=CornerSpeed(2.2,1.6)
+        c.step(0,0,0,0,[(0,0)],.02)
+        self.assertAlmostEqual(c.step(1.2,0,0,0,[(0,0)],.02),1.2)
 
     def test_preview_geometry(self):
         t=np.linspace(0,math.pi/2,100)

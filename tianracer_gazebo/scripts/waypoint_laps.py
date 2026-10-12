@@ -15,10 +15,11 @@ from move_base_msgs.msg import MoveBaseAction
 from visualization_msgs.msg import MarkerArray
 
 from waypoint_race import utils
+from goal_heading import arrival_yaw
 
 
 class WaypointLaps:
-    def __init__(self, filename, laps=5, switch_distance=0.5, goal_timeout=120.0):
+    def __init__(self, filename, laps=5, switch_distance=0.5, goal_timeout=120.0, align_goal_yaw=False):
         if isinstance(laps, bool) or not isinstance(laps, int) or laps < 1:
             raise ValueError('laps must be a positive integer')
         if not math.isfinite(switch_distance) or switch_distance < 0:
@@ -38,6 +39,12 @@ class WaypointLaps:
         self.switch_distance = switch_distance
         self.goal_timeout = goal_timeout
         self.completed_laps = 0
+        self.align_goal_yaw = align_goal_yaw
+        self._arrival_headings = {}
+        self._make_plan = None
+        if align_goal_yaw:
+            from nav_msgs.srv import GetPlan
+            self._make_plan = rospy.ServiceProxy('move_base/make_plan', GetPlan)
         self._goal_active = False
         self._stopped = False
         self._client = actionlib.SimpleActionClient('move_base', MoveBaseAction)
@@ -48,9 +55,32 @@ class WaypointLaps:
         rospy.loginfo('Waiting for %s', rospy.resolve_name('move_base'))
         self._client.wait_for_server()
 
+    def _prepare_headings(self):
+        """Noetic make_plan requires an inactive action: query before first goal."""
+        for index, waypoint in enumerate(self.waypoints):
+            start = utils.create_move_base_goal(self.waypoints[(index-1)%len(self.waypoints)]).target_pose
+            goal = utils.create_move_base_goal(waypoint).target_pose
+            try:
+                response = self._make_plan(start, goal, 0.05)
+                if response.plan.header.frame_id.lstrip('/') != goal.header.frame_id.lstrip('/'):
+                    raise ValueError('Plan and goal frames differ')
+                points = [(p.pose.position.x, p.pose.position.y) for p in response.plan.poses]
+                yaw = arrival_yaw(points, (goal.pose.position.x, goal.pose.position.y))
+                if yaw is None: raise ValueError('Empty/invalid arrival path')
+                self._arrival_headings[index] = yaw
+            except (rospy.ServiceException, ValueError, OSError) as error:
+                rospy.logwarn('Waypoint %d arrival heading unavailable; keeping original: %s', index+1, error)
+
     def _visit(self, index, allow_early):
         allow_early = allow_early and self.switch_distance > 0
         goal = utils.create_move_base_goal(self.waypoints[index])
+        if self.align_goal_yaw:
+            yaw = self._arrival_headings.get(index)
+            if yaw is not None:
+                goal.target_pose.pose.orientation.x = goal.target_pose.pose.orientation.y = 0.0
+                goal.target_pose.pose.orientation.z = math.sin(yaw/2)
+                goal.target_pose.pose.orientation.w = math.cos(yaw/2)
+                rospy.loginfo('Waypoint %d uses global-path arrival heading %.3f rad', index+1, yaw)
         near_goal = threading.Event()
 
         def feedback_callback(feedback):
@@ -61,7 +91,8 @@ class WaypointLaps:
                 return
             current = pose.pose.position
             target = goal.target_pose.pose.position
-            if math.hypot(current.x - target.x, current.y - target.y) <= self.switch_distance:
+            distance = math.hypot(current.x-target.x, current.y-target.y)
+            if distance <= self.switch_distance:
                 near_goal.set()
 
         rospy.loginfo('Lap %d/%d, waypoint %d/%d: %s',
@@ -91,6 +122,7 @@ class WaypointLaps:
 
     def spin(self):
         try:
+            if self.align_goal_yaw: self._prepare_headings()
             self._marker_pub.publish(utils.create_viz_markers(self.waypoints))
             # Establish the lap origin. Merely sending the first goal is not a lap.
             if not self._visit(0, allow_early=False):
@@ -136,7 +168,8 @@ def main():
                                 'scripts', 'waypoint_race', world + '_points.yaml')
     race = WaypointLaps(filename, rospy.get_param('~laps', 5),
                         rospy.get_param('~switch_distance', 0.5),
-                        rospy.get_param('~goal_timeout', 120.0))
+                        rospy.get_param('~goal_timeout', 120.0),
+                        rospy.get_param('~align_goal_yaw', False))
     if race.spin():
         rospy.loginfo('Finished all %d laps', race.completed_laps)
         return 0

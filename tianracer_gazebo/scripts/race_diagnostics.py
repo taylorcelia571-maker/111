@@ -10,6 +10,7 @@ from ackermann_msgs.msg import AckermannDriveStamped
 from nav_msgs.msg import Odometry
 from actionlib_msgs.msg import GoalStatusArray
 from sensor_msgs.msg import JointState
+from rosgraph_msgs.msg import Log
 from motion_metrics import summarize
 
 
@@ -39,7 +40,11 @@ def main():
         right = positions.get('right_steering_hinge_joint')
         if left is not None and right is not None: save('joints', {'left': left, 'right': right})
 
-    subs = [rospy.Subscriber('joint_states', JointState, joint_sample, queue_size=10),
+    def planner_log(msg):
+        if msg.name.rstrip('/') == rospy.get_namespace().rstrip('/')+'/move_base' and 'trajectory is not feasible' in msg.msg:
+            save('teb_resets', {'kind': 'trajectory_infeasible'})
+
+    subs = [rospy.Subscriber('/rosout_agg', Log, planner_log, queue_size=100), rospy.Subscriber('joint_states', JointState, joint_sample, queue_size=10),
         rospy.Subscriber('cmd_vel', Twist, lambda m: save('cmd_vel',
             {'speed': m.linear.x, 'steer': m.angular.z}), queue_size=10),
         rospy.Subscriber('ackermann_cmd_stamped', AckermannDriveStamped, lambda m: save('ackermann',

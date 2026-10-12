@@ -1,3 +1,5 @@
+> 根据 160.474 秒运行日志修正的局部规划与到点朝向方案见 [FLOW_RACING_CN.md](FLOW_RACING_CN.md)。
+
 > 最新直线/弯道速度调度与转向反馈保护见 [ADAPTIVE_SPEED_CN.md](ADAPTIVE_SPEED_CN.md)。
 
 > 最新弯道轮速前馈、可选 TEB 调优与瓶颈诊断见 [SMOOTH_RACING_CN.md](SMOOTH_RACING_CN.md)。

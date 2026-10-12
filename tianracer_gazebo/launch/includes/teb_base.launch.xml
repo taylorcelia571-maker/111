@@ -6,6 +6,7 @@
   <arg name="race_max_speed" default="2.4"/>
   <arg name="planner_profile" default="false"/>
   <arg name="corner_tuning" default="false"/>
+  <arg name="flow_tuning" default="false"/>
   <arg name="path_bias" default="false"/>
   <arg name="planner_max_speed" default="2.6"/>
   
@@ -26,6 +27,7 @@
     
       <!-- Set the base local planner to "teb_local_planner/TebLocalPlannerROS" -->
       <param name="base_local_planner" value="teb_local_planner/TebLocalPlannerROS" />
+      <param name="make_plan_clear_costmap" value="false"/>
       
       
       <!-- Load common costmap parameters for the global and local costmaps -->
@@ -57,6 +59,8 @@
 
       <rosparam if="$(arg corner_tuning)" file="$(find tianracer_gazebo)/config/teb/corner_tuning.yaml" command="load"/>
       <rosparam if="$(arg path_bias)" file="$(find tianracer_gazebo)/config/teb/path_bias.yaml" command="load"/>
+
+      <rosparam if="$(arg flow_tuning)" file="$(find tianracer_gazebo)/config/teb/flow_tuning.yaml" command="load"/>
 
       <!-- Reset frame_id parameters using user input data -->
       <param unless="$(eval robot_name=='/')" name="local_costmap/robot_base_frame" value="$(arg robot_name)/$(arg base_frame_id)"/>
