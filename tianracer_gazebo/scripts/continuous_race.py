@@ -11,7 +11,7 @@ import rosgraph
 import tf
 from geometry_msgs.msg import Twist
 from nav_msgs.msg import Odometry
-from sensor_msgs.msg import LaserScan
+from sensor_msgs.msg import LaserScan, JointState
 from std_srvs.srv import Trigger, TriggerResponse
 from race_line import ClosedPath, LineFollower, clearance_speed
 
@@ -40,9 +40,11 @@ class ContinuousRace:
             options.update(fast_start=rospy.get_param('~fast_start',False),
                            start_blend=rospy.get_param('~start_blend',False),
                            response_delay=rospy.get_param('~response_delay',0.0),
+                           lateral_control=rospy.get_param('~lateral_control','pursuit'),
                            steering_rate=rospy.get_param('~steering_rate',2.0),
                            yaw_rate=rospy.get_param('~yaw_rate',3.2))
         self.follower = follower_type(self.path, **options)
+        self.require_joint_feedback=self.generated and self.follower.lateral_control=='curvature_feedback'
         self.laps = rospy.get_param('~laps', 5)
         if isinstance(self.laps, bool) or not isinstance(self.laps, int) or self.laps < 1:
             raise ValueError('laps must be a positive integer')
@@ -53,6 +55,7 @@ class ContinuousRace:
         self.pub = rospy.Publisher('cmd_vel', Twist, queue_size=1)
         self.lock = threading.RLock()
         self.scan = self.odom = None
+        self.joints = self.joints_time = None
         self.laser_cache = None
         self.scan_history = deque(maxlen=16)
         self.scan_time = self.odom_time = None
@@ -62,11 +65,20 @@ class ContinuousRace:
         self.previous = rospy.Time.now()
         self.scan_sub = rospy.Subscriber('scan', LaserScan, self.on_scan, queue_size=1)
         self.odom_sub = rospy.Subscriber('odom', Odometry, self.on_odom, queue_size=1)
+        if self.require_joint_feedback:
+            self.joint_sub=rospy.Subscriber('joint_states',JointState,self.on_joints,queue_size=1)
         self.start_service = rospy.Service('~start', Trigger, self.start)
         self.stop_service = rospy.Service('~stop', Trigger, self.stop)
         self.status_service = rospy.Service('~status', Trigger, self.status)
         rospy.on_shutdown(lambda: self.stop(None))
         rospy.loginfo('Loaded %.1fm closed path. Idle; prepare referee then call ~start.', self.path.length)
+        if self.generated:
+            rospy.loginfo('Controller: %s; speed budget %.2fm/s; steering joint feedback required=%s',
+                          self.follower.lateral_control,self.follower.max_speed,self.require_joint_feedback)
+
+    def on_joints(self,msg):
+        with self.lock:
+            self.joints,self.joints_time=msg,rospy.Time.now()
 
     def on_scan(self, msg):
         with self.lock:
@@ -81,6 +93,22 @@ class ContinuousRace:
         now = rospy.Time.now()
         if now.to_sec() <= 0:
             raise ValueError('Waiting for initialized ROS clock; start/unpause simulation')
+        if self.require_joint_feedback:
+            msg=self.joints
+            if msg is None or self.joints_time is None:
+                raise ValueError('Steering joint feedback missing on joint_states')
+            age=(now-msg.header.stamp).to_sec()
+            if msg.header.stamp.to_sec()<=0 or not -.02<=age<=.3 or not -.02<=(now-self.joints_time).to_sec()<=.3:
+                raise ValueError('Steering joint feedback stale: age=%.6fs' % age)
+            positions=dict(zip(msg.name,msg.position))
+            try:
+                left=positions['left_steering_hinge_joint'];right=positions['right_steering_hinge_joint']
+                if not all(math.isfinite(v) and abs(v)<=.65 for v in (left,right)):
+                    raise ValueError('Invalid steering hinge position')
+                from wheel_kinematics import equivalent_steer
+                self.follower.measured_steer=equivalent_steer(left,right)
+            except KeyError:
+                raise ValueError('Steering hinges absent from joint_states')
         for label,msg,received in (('scan',self.scan,self.scan_time),('odom',self.odom,self.odom_time)):
             if msg is None or received is None:
                 raise ValueError('%s missing on %s' % (label,rospy.resolve_name(label)))

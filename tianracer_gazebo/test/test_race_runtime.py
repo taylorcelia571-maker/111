@@ -41,7 +41,7 @@ class RuntimeTests(unittest.TestCase):
         self.transform.transformations.euler_from_quaternion.side_effect = lambda q: (0, 0, q[2])
         modules = {'rospy': self.ros, 'rosgraph': self.graph, 'tf': self.transform,
                    'geometry_msgs.msg': NS(Twist=twist), 'nav_msgs.msg': NS(Odometry=object),
-                   'sensor_msgs.msg': NS(LaserScan=object),
+                   'sensor_msgs.msg': NS(LaserScan=object,JointState=object),
                    'std_srvs.srv': NS(Trigger=object, TriggerResponse=lambda s,m:NS(success=s,message=m))}
         with patch.dict(sys.modules, modules):
             spec = importlib.util.spec_from_file_location('continuous_runtime_test', SCRIPTS/'continuous_race.py')
@@ -106,6 +106,44 @@ class RuntimeTests(unittest.TestCase):
         self.assertTrue(self.node.stop(None).success)
         self.assertFalse(self.node.active)
         self.assertEqual(self.node.pub.publish.call_args.args[0].linear.x, 0)
+
+    def feedback_node(self):
+        old=self.node
+        self.params['~lateral_control']='curvature_feedback'
+        self.node=self.module.ContinuousRace(old.path)
+        self.node.on_scan(old.scan);self.node.on_odom(old.odom)
+
+    def joints(self,positions=(0,0),stamp=1):
+        return NS(header=NS(stamp=Stamp(stamp)),
+                  name=['left_steering_hinge_joint','right_steering_hinge_joint'],position=positions)
+
+    def test_feedback_mode_blocks_start_with_missing_or_stale_joints(self):
+        self.feedback_node()
+        self.assertFalse(self.node.start(None).success)
+        self.node.on_joints(self.joints(stamp=.5))
+        self.assertFalse(self.node.start(None).success)
+
+    def test_feedback_mode_reads_actual_ackermann_angle(self):
+        from wheel_kinematics import wheel_commands
+        self.feedback_node();w=wheel_commands(0,.2,True)
+        self.node.on_joints(self.joints((w['left'],w['right'])))
+        self.assertTrue(self.node.start(None).success)
+        self.assertAlmostEqual(self.node.follower.measured_steer,.2)
+
+    def test_invalid_joints_latch_stop_without_old_feedback(self):
+        self.feedback_node();self.node.on_joints(self.joints())
+        self.assertTrue(self.node.start(None).success)
+        self.node.on_joints(self.joints((float('nan'),0)))
+        self.tick()
+        self.assertFalse(self.node.active)
+        self.assertEqual(self.node.pub.publish.call_args.args[0].linear.x,0)
+
+    def test_joint_dropout_latches_stop_with_other_sensors_fresh(self):
+        self.feedback_node();self.node.on_joints(self.joints())
+        self.assertTrue(self.node.start(None).success)
+        self.refresh_at(1.4);self.tick()
+        self.assertFalse(self.node.active)
+        self.assertEqual(self.node.pub.publish.call_args.args[0].linear.x,0)
 
     def test_generated_path_uses_rear_axle_and_waits_for_start(self):
         old = self.node

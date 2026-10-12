@@ -8,7 +8,7 @@ class PredictiveFollower(LineFollower):
     def __init__(self, path, max_speed=2.0, lateral_accel=5.0, acceleration=2.0,
                  braking=3.0, max_error=0.15, wheelbase=0.26, max_steer=0.48,
                  steering_rate=2.0, yaw_rate=3.2, fast_start=False, start_blend=False,
-                 response_delay=0.0):
+                 response_delay=0.0, lateral_control='pursuit'):
         super().__init__(path, max_speed, lateral_accel, acceleration, braking,
                          wheelbase, max_steer, max_error)
         self.steering_rate = positive('steering_rate', steering_rate)
@@ -16,6 +16,12 @@ class PredictiveFollower(LineFollower):
         if not math.isfinite(response_delay) or not 0 <= response_delay <= 0.5:
             raise ValueError('response_delay must be between 0 and 0.5 seconds')
         self.response_delay = float(response_delay)
+        if lateral_control not in ('pursuit','curvature_feedback'):
+            raise ValueError('Unknown lateral_control: '+str(lateral_control))
+        if lateral_control == 'curvature_feedback' and start_blend:
+            raise ValueError('curvature_feedback requires the unmodified reference path')
+        self.lateral_control = lateral_control
+        self.measured_steer = None
         curve = np.abs(path.curvature)
         delta = np.arctan(wheelbase*path.curvature)
         derivative = np.maximum(np.abs(np.roll(delta,-1)-delta), np.abs(delta-np.roll(delta,1)))/path.ds
@@ -54,6 +60,7 @@ class PredictiveFollower(LineFollower):
                     response_delay_seconds=self.response_delay,
                     response_delay_is_measured=False,
                     model_includes_response_preview=False,
+                    lateral_control=self.lateral_control,
                     limits=dict(max_speed=self.max_speed,lateral_accel=self.lateral_accel,
                                 acceleration=self.acceleration,braking=self.braking,
                                 steering_rate=self.steering_rate,yaw_rate=self.yaw_rate),
@@ -129,6 +136,20 @@ class PredictiveFollower(LineFollower):
         if forward <= 0: self.stop(); raise ValueError('Reference behind vehicle; reposition instead of reversing')
         k = 2*(-math.sin(yaw)*dx+math.cos(yaw)*dy)/max(dx*dx+dy*dy,1e-6)
         desired_steer = float(np.clip(math.atan(self.wheelbase*k),-self.max_steer,self.max_steer))
+        feedforward=None
+        if self.lateral_control == 'curvature_feedback':
+            # Curvature feedforward plus continuous heading/cross-track feedback.
+            # Avoid switching to a short pursuit target during an outward drift:
+            # that switch amplifies tiny pose errors into large alternating turns.
+            advance=min(.25,max(0,measured_speed)*.10)
+            index=(self.progress+advance)/self.path.ds
+            a=int(math.floor(index)); fraction=index-a
+            feedforward=float((1-fraction)*self.path.curvature[a%self.path.n]+
+                              fraction*self.path.curvature[(a+1)%self.path.n])
+            correction=-.8*heading_error-math.atan(.8*signed_error/(max(0,measured_speed)+.5))
+            desired_steer=float(np.clip(math.atan(self.wheelbase*feedforward)+correction,
+                                        -self.max_steer,self.max_steer))
+            k=math.tan(desired_steer)/self.wheelbase
         self.steer += float(np.clip(desired_steer-self.steer,-self.steering_rate*dt,self.steering_rate*dt))
         live_lateral = math.sqrt(self.lateral_accel/max(abs(k),1e-6))
         live_yaw = self.yaw_rate/max(abs(k),1e-6)
@@ -149,8 +170,28 @@ class PredictiveFollower(LineFollower):
         error_factor = max(0.4, 1-0.6*(max(0,self.error-0.05)/max(0.01,self.max_error-0.05))**2)
         desired *= error_factor
         if error_factor < 0.99: reason='tracking_error'
+        steering_mismatch=None
+        if self.lateral_control == 'curvature_feedback':
+            # Include command slew even if an offline model has no joint feedback.
+            actual=self.steer if self.measured_steer is None else self.measured_steer
+            if not math.isfinite(actual):
+                self.stop();raise ValueError('Nonfinite measured steering')
+            steering_mismatch=abs(desired_steer-actual)
+            steering_cap=max(.35,self.max_speed/(1+(max(0,steering_mismatch-.04)/.08)**2))
+            heading_cap=max(.35,self.max_speed/(1+(heading_error/.25)**2))
+            if min(steering_cap,heading_cap)<desired:
+                desired=min(steering_cap,heading_cap)
+                reason='steering_alignment'
         recovery_cap=None
-        if recovering:
+        if self.lateral_control == 'curvature_feedback':
+            # Continuous time-to-boundary cap, without the old on/off recovery
+            # switch. Preserve the same corridor and reaction allowance.
+            remaining=max(0,self.max_error-self.error-.025)
+            recovery_cap=max(.2,min(self.max_speed,remaining/(.30*max(outward,1e-6))))
+            if recovery_cap<desired:
+                desired=recovery_cap
+                reason='outward_error_recovery'
+        elif recovering:
             remaining=max(0,self.max_error-self.error-.025)
             recovery_cap=max(.2,min(1.0,remaining/(.30*max(outward,.05))))
             if recovery_cap<desired:
@@ -184,7 +225,10 @@ class PredictiveFollower(LineFollower):
                               outward_heading=outward,heading_error=recovery_heading_error,recovery_speed_cap=recovery_cap)
         self.last_report.update(response_delay=self.response_delay,
                                 preview_distance=preview_distance,preview_speed=envelope,
-                                speed_excess=max(0,measured_speed-self.speed))
+                                speed_excess=max(0,measured_speed-self.speed),
+                                lateral_control=self.lateral_control,desired_steer=desired_steer,
+                                measured_steer=self.measured_steer,steering_mismatch=steering_mismatch,
+                                feedforward_curvature=feedforward)
         return self.speed,self.steer
 
 

@@ -1,9 +1,9 @@
 <launch>
   <!-- Finish-first controller: use planned_race_demo for the official scene.
        These allowances require local Gazebo validation, not certified limits. -->
-  <arg name="max_speed" default="2.0"/>
-  <arg name="lateral_accel" default="3.0"/>
-  <arg name="acceleration" default="1.0"/>
+  <arg name="max_speed" default="2.2"/>
+  <arg name="lateral_accel" default="3.2"/>
+  <arg name="acceleration" default="1.5"/>
   <arg name="braking" default="2.0"/>
   <arg name="response_delay" default="0.25"/>
   <include file="$(find tianracer_gazebo)/launch/planned_race.launch">
@@ -12,6 +12,7 @@
     <arg name="acceleration" value="$(arg acceleration)"/>
     <arg name="braking" value="$(arg braking)"/>
     <arg name="response_delay" value="$(arg response_delay)"/>
+    <arg name="lateral_control" value="curvature_feedback"/>
     <arg name="yaw_rate" value="2.5"/>
     <arg name="steering_rate" value="2.0"/>
     <arg name="fast_start" value="true"/>
