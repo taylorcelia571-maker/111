@@ -1,3 +1,5 @@
+> 当前 82 秒成绩的完整启动、留证、瓶颈检查与严格 60 秒验收流程：[RACE60_CURRENT_VALIDATION_CN.md](RACE60_CURRENT_VALIDATION_CN.md)。一分钟目标尚未实测达成；2.2 m/s 恢复档不属于提速方案。
+
 > 最新第二圈靠墙停车修正：[SECOND_LAP_WALL_FIX_CN.md](SECOND_LAP_WALL_FIX_CN.md)。先确认稳定完赛，再继续 60 秒目标调参。
 
 > 最新 60 秒目标优化与完整验证流程：[RACE60_VALIDATION_CN.md](RACE60_VALIDATION_CN.md)。已完成离线回归，官方亚 60 秒仍待实测。

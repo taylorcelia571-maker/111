@@ -96,6 +96,7 @@ class PredictiveFollower(LineFollower):
         return dict(response_preview_proxy_five_seconds=preview_seconds,
                     response_preview_proxy_includes_startup=False,
                     response_preview_proxy_uses_nominal_speed=True,
+                    reference_sha256=self.path.fingerprint(),
                     length=self.path.length,model_lap_seconds=float(weights.sum()),
                     model_five_seconds=float(5*weights.sum()),model_includes_startup=False,
                     required_mean_speed_for_60s=self.path.length/12,

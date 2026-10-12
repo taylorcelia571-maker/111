@@ -29,6 +29,7 @@ class ContinuousRace:
             filename = os.path.expanduser(rospy.get_param('~path_file'))
             path = ClosedPath(np.loadtxt(filename, delimiter=',', comments='#'))
         self.path = path
+        self.reference_sha256 = path.fingerprint()
         follower_type = LineFollower
         if self.generated:
             from predictive_follower import PredictiveFollower
@@ -279,10 +280,12 @@ class ContinuousRace:
     def save_run_report(self,background=False):
         if not self.run_report_file or self.run_metrics is None:return
         report=self.run_metrics.report()
-        report.update(controller=getattr(self.follower,'lateral_control','legacy'),
+        report.update(reference_sha256=self.reference_sha256,
+                      controller=getattr(self.follower,'lateral_control','legacy'),
                       startup=self.start_metrics,last_fault=self.last_fault,
                       limits={name:getattr(self.follower,name) for name in
-                              ('max_speed','lateral_accel','acceleration','braking','max_error')})
+                              ('max_speed','lateral_accel','acceleration','braking','max_error',
+                               'yaw_rate','steering_rate','response_delay') if hasattr(self.follower,name)})
         report=copy.deepcopy(report)
         if background:
             # Never wait for storage in the 50Hz control loop. Skip a periodic

@@ -1,5 +1,6 @@
 """Closed-path pure pursuit and cyclic braking envelope; no ROS dependency."""
 import math
+import hashlib
 import numpy as np
 
 
@@ -10,6 +11,10 @@ def positive(name, value):
 
 
 class ClosedPath:
+    def fingerprint(self):
+        """Identify reference geometry independently of mutable speed limits."""
+        return hashlib.sha256(np.round(self.points, 4).astype('<f8').tobytes()).hexdigest()
+
     def __init__(self, points, spacing=0.08, closure_limit=0.6, max_gap=0.6):
         spacing = positive('spacing', spacing)
         positive('closure_limit', closure_limit)
