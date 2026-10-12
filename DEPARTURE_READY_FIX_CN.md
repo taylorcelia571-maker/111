@@ -1,5 +1,7 @@
 # 启动检查与首圈低速对线修正
 
+> 最新发车后偏差停车修正见 [PREPARED_START_FIX_CN.md](PREPARED_START_FIX_CN.md)。prepare True 只表示目标已发出；需等 status 的 steering_ready=true 再准备裁判并 start。
+
 用户补充的是场景终端 A 日志：模型成功生成，雷达插件、底盘及转向控制器都已加载。早期没有雷达的警告发生在插件生成前；停止/卸载的错误出现在 Ctrl+C 关闭之后。没有终端 C 的 Ready、start 服务返回或运行 ERROR，因此这份日志不能确定新版无法启动的原因，也不能证明控制程序已经运行。
 
 ## 已修正的起步逻辑

@@ -186,7 +186,11 @@ class ContinuousRace:
             if self.run_metrics is not None:state['run_metrics']=self.run_metrics.report()
             try:
                 pose = self.sensors()
+                actual=getattr(self.follower,'measured_steer',None)
+                alignment=None if self.prepared_steer is None or actual is None else abs(self.prepared_steer-actual)
                 state.update(pose=pose,feedback=self.feedback_pose,
+                             prepared_steering_error=alignment,
+                             steering_ready=self.prepared_steer is not None and alignment is not None and alignment<=.04,
                              message='Feedback ready; start still checks controller conflicts and pose')
                 return TriggerResponse(True,json.dumps(state))
             except (ValueError,tf.Exception) as error:
@@ -222,7 +226,7 @@ class ContinuousRace:
                 self.prepared_steer=probe.last_report['desired_steer']
                 msg=Twist();msg.angular.z=self.prepared_steer
                 self.pub.publish(msg)  # linear.x remains zero throughout preparation
-                return TriggerResponse(True,'Steering prepared with zero speed; arm referee, then call start')
+                return TriggerResponse(True,'Zero-speed steering target issued; wait for status steering_ready=true, arm referee, then start')
             except (ValueError,tf.Exception,rosgraph.MasterError,rosgraph.MasterFailure,OSError) as error:
                 if self.prepared_steer is not None:self.stop(None)
                 return TriggerResponse(False,str(error))
@@ -240,6 +244,13 @@ class ContinuousRace:
                 if abs(pose[3]) > 0.05: raise ValueError('Vehicle must be stationary')
                 if self.clearance_guard is not None:self.clearance_guard(pose)
                 prepared_used=self.prepared_steer is not None
+                if prepared_used:
+                    actual=getattr(self.follower,'measured_steer',None)
+                    if actual is None:
+                        raise ValueError('Fresh steering feedback required to verify stationary preparation')
+                    mismatch=abs(actual-self.prepared_steer)
+                    if mismatch>.04:
+                        raise ValueError('Steering still aligning: error=%.4frad; remain stationary, check status steering_ready, retry start when ready' % mismatch)
                 self.follower.start(*pose[:3])
                 self.follower.stop()
                 if self.prepared_steer is not None:

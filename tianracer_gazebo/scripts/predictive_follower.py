@@ -193,7 +193,9 @@ class PredictiveFollower(LineFollower):
             severity=float(np.clip(max(0,control_error-.02)/.04*max(0,outward)/.12,0,1))
             preview+=(min(preview,.30)-preview)*severity
             if self.departure:
-                preview=max(preview,.55)
+                # Long preview helps initial straight alignment, but forcing
+                # .55m through a tight bend cuts inside the curved reference.
+                preview=max(preview,.55/(1+.55*curve))
         elif recovering:
             # A long preview can let an outward heading consume the remaining
             # corridor before steering catches up. Tighten only during drift.

@@ -1,3 +1,5 @@
+> 最新发车后起步偏差停车修正：[PREPARED_START_FIX_CN.md](PREPARED_START_FIX_CN.md)。prepare 后先等 status.steering_ready=true，再准备裁判并发车；同时修正起步弯道前视。
+
 > 最新起步低速退出条件及控制服务检查：[DEPARTURE_READY_FIX_CN.md](DEPARTURE_READY_FIX_CN.md)。弯道对齐不再要求转角接近零，实际首圈收益仍待本机验证。
 
 > rapid_race 第二圈靠墙停车入口遗漏已修正：[RAPID_WALL_FIX_CN.md](RAPID_WALL_FIX_CN.md)。路线净空默认 0.34 m，保留原保护阈值；需要重新启动场景并实际验证。

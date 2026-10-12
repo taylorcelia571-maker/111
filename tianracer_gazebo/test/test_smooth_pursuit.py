@@ -8,6 +8,20 @@ from race_line import ClosedPath
 
 
 class SmoothPursuitTests(unittest.TestCase):
+    def test_departure_preview_follows_curve_instead_of_forcing_straight_preview(self):
+        angles=np.linspace(0,2*math.pi,1000)
+        path=ClosedPath(1.8*np.column_stack([np.cos(angles),np.sin(angles)]),spacing=.02)
+        f=PredictiveFollower(path,lateral_control='smooth_pursuit')
+        f.start(1.8,0.,math.pi/2)
+        f.step(1.8,0.,math.pi/2,0.,.02)
+        self.assertTrue(f.departure)
+        self.assertLess(f.last_report['preview_length'],.5)
+
+    def test_departure_keeps_long_preview_on_initial_straight(self):
+        f=self.follower();f.start(.0081,-.1494,1.5709)
+        f.step(.0081,-.1494,1.5709,0.,.02)
+        self.assertGreater(f.last_report['preview_length'],.54)
+
     def test_aligned_curved_departure_can_release_without_straightening_wheels(self):
         angles=np.linspace(0,2*math.pi,1000)
         path=ClosedPath(1.8*np.column_stack([np.cos(angles),np.sin(angles)]),spacing=.02)

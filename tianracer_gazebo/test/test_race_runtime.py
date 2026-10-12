@@ -188,8 +188,9 @@ class RuntimeTests(unittest.TestCase):
         msg=self.node.pub.publish.call_args.args[0]
         self.assertEqual(msg.linear.x,0)
         self.assertEqual(msg.angular.z,initial)
+        self.node.on_joints(self.joints((initial,initial)))
         self.assertTrue(self.node.start(None).success)
-        self.assertAlmostEqual(self.node.follower.steer,initial)
+        self.assertLess(abs(self.node.follower.steer-initial),.04)
         self.assertIsNone(self.node.prepared_steer)
 
     def test_curvature_feedback_prepare_is_stationary_and_keeps_joint_checks(self):
@@ -201,6 +202,21 @@ class RuntimeTests(unittest.TestCase):
         self.assertEqual(self.node.pub.publish.call_args.args[0].linear.x,0)
         self.tick()
         self.assertEqual(self.node.pub.publish.call_args.args[0].linear.x,0)
+        initial=self.node.prepared_steer
+        self.node.on_joints(self.joints((initial,initial)))
+        self.assertTrue(self.node.start(None).success)
+
+    def test_prepared_start_waits_for_fresh_actual_joint_alignment(self):
+        self.smooth_node();self.assertTrue(self.node.prepare(None).success)
+        self.assertFalse(self.node.start(None).success)
+        self.node.prepared_steer=.3
+        self.node.on_joints(self.joints())
+        self.assertIn('still aligning',self.node.start(None).message)
+        self.assertFalse(self.node.active)
+        state=json.loads(self.node.status(None).message)
+        self.assertFalse(state['steering_ready'])
+        self.node.on_joints(self.joints((.3,.3)))
+        self.assertTrue(json.loads(self.node.status(None).message)['steering_ready'])
         self.assertTrue(self.node.start(None).success)
 
     def test_wall_guard_rejects_start_before_any_motion(self):

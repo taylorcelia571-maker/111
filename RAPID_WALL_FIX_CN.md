@@ -1,5 +1,7 @@
 # rapid_race 第二圈靠墙停车修正
 
+> 最新启动流程见 [PREPARED_START_FIX_CN.md](PREPARED_START_FIX_CN.md)：预转向后需确认 status.steering_ready=true，再准备裁判并发车。
+
 本次用户日志在仿真时间 132.242 秒、约 1.36 个参考闭环后停止：`Localized vehicle too close to static wall`。实际车辆中心净空 0.2288 m，小于原 0.2300 m 阈值；TF 年龄仅 0.019 秒。本次是主动墙距保护停车，不是日志证明的计算卡死。里程计还有 -0.131 m/s 横向速度、转向关节跟踪误差和实测速度高于指令的现象，不能仅凭文本判断侧滑/定位/执行器各自影响。
 
 此前墙距修正只给 optimized_race 加了 0.34 m 路线净空，rapid_race 未声明和转发 route_margin，仍采用 0.26 m，仅比停车阈值多 3 cm。这个入口遗漏已修复：rapid_race 默认 route_margin=0.34，并传给实际规划器。保留 0.23 m 墙距停车、0.15 m 跟踪偏差、激光及时间戳保护。没有修改官方地图、模型、裁判或 PID。
