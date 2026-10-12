@@ -129,5 +129,24 @@ class RuntimeTests(unittest.TestCase):
         self.assertFalse(self.node.active)
         self.assertEqual(self.node.pub.publish.call_args.args[0].linear.x, 0)
 
+    def test_generated_scan_transform_uses_acquisition_timestamp(self):
+        old = self.node
+        self.node = self.module.ContinuousRace(old.path)
+        self.node.on_scan(old.scan)
+        self.node.scan.header.stamp = Stamp(0.9)
+        self.node.on_odom(old.odom)
+        listener = self.node.listener
+        listener.lookupTransform.side_effect = lambda target,source,stamp: (
+            ([3.1,0,0],[0,0,math.pi/2+0.1,1]) if source == 'laser'
+            else ([3,0,0],[0,0,math.pi/2,1]))
+        self.assertTrue(self.node.start(None).success)
+        with patch('predictive_follower.reference_clearance',return_value=float('inf')) as guard:
+            self.tick()
+            relative = guard.call_args.args[4]
+        self.assertAlmostEqual(relative[0],0.13)
+        self.assertAlmostEqual(relative[1],-0.1)
+        self.assertAlmostEqual(relative[2],0.1)
+        listener.lookupTransform.assert_any_call('map','laser',self.node.scan.header.stamp)
+
 
 if __name__ == '__main__': unittest.main()

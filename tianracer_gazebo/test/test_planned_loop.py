@@ -107,6 +107,24 @@ class PlannedLoopTests(unittest.TestCase):
             limit=reference_clearance(p,progress,(*rear,yaw,2),scan,(.13,0,0),2)
             self.assertGreaterEqual(limit,2.0)
 
+    def test_side_clearance_uses_body_shape_and_front_obstacle_stops(self):
+        p=rear_path(self.center); q=p.sample(0)
+        d=p.sample(.04)-p.sample(-.04); yaw=math.atan2(d[1],d[0])
+        scan=NS(ranges=[float('inf'),float('inf'),.19],angle_min=-math.pi/2,
+                angle_increment=math.pi/2,range_min=.05,range_max=10)
+        report={}
+        # 19cm to the side is outside the padded .16m body half-width;
+        # the former .22m disk would classify it as an immediate collision.
+        limit=reference_clearance(p,0,(*q,yaw,1),scan,(.13,0,0),1,diagnostics=report)
+        self.assertGreaterEqual(limit,1)
+        self.assertEqual(report['reason'],'clear')
+        scan.ranges=[float('inf'),.19,float('inf')]
+        self.assertEqual(reference_clearance(p,0,(*q,yaw,1),scan,(.13,0,0),1,diagnostics=report),0)
+        self.assertEqual(report['reason'],'obstacle_in_corridor')
+        scan.ranges=[0,0,0]
+        self.assertEqual(reference_clearance(p,0,(*q,yaw,1),scan,(.13,0,0),1,diagnostics=report),0)
+        self.assertEqual(report['reason'],'invalid_scan_coverage')
+
     def test_obstacle_invalid_scan_and_disconnected_map_stop(self):
         p=rear_path(self.center);q=p.sample(0);d=p.sample(.04)-p.sample(-.04);yaw=math.atan2(d[1],d[0])
         scan=NS(ranges=[0,0,0],angle_min=-.1,angle_increment=.1,range_min=.05,range_max=10)

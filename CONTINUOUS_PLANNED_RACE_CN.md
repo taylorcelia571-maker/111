@@ -97,3 +97,15 @@ rosbag record -O ~/ican_race_logs/planned_test.bag /clock /tf /tf_static /tianra
 已在仓库赛道地图完成整圈几何检查、周期速度约束、官方初始位置的理想自行车模型五圈连续跟踪、地图模拟激光检查和 ROS 假传输的启动/停止检查。理想模型不包含轮胎侧滑、真实转向延迟、车身倾斜或 AMCL 定位噪声，不能证明实际不撞墙、不翻车或两分钟内完赛。
 
 云端无 ROS/Gazebo，不能执行正式仿真或裁判判圈。官方赛道、地图、航点坐标、车辆模型、底盘 PID 和裁判没有修改。路线平滑能否通过所有官方检测线仍需实际裁判确认。
+
+## 弯道激光锁定停车修正
+
+若旧版出现笼统的 `Obstacle/invalid scan`，更新后保护使用扫描采集时刻的 map→laser TF，避免把过去的扫描套在当前转弯车姿上。障碍走廊改为随方向旋转的矩形，半长 0.23 米、半宽 0.16 米，覆盖原 costmap 半边 0.15 米正方形及 TEB 半长 0.18 米、半宽 0.10 米的轮廓。与原圆形比较，修正侧向误判并增加纵向覆盖；不关闭激光、定位或超时保护。
+
+新日志 `Laser speed restriction` / `Laser protection` 包含具体原因：
+
+- `invalid_scan_metadata`：扫描参数无效。
+- `invalid_scan_coverage`：前方有效/无回波光束不足 90%；附无效值数量。
+- `obstacle_in_corridor`：保护轮廓中有实际激光点；附预测路径上的命中距离 `hit_arc`。
+
+同时记录 `scan_age`、`speed_limit` 和 `tracking_error`。若更新后仍停车，请提供完整的这条 JSON 日志；不要关闭保护或反复启动来强行通过。时间配准修正及侧向误判已离线验证，但尚不能确认之前那次停车属于哪一种，也未在 Gazebo 实测通过该弯道。
