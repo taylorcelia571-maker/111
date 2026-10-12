@@ -4,9 +4,37 @@ import unittest
 import numpy as np
 import test_planned_loop as course
 from predictive_follower import PredictiveFollower
+from race_line import ClosedPath
 
 
 class SmoothPursuitTests(unittest.TestCase):
+    def test_aligned_curved_departure_can_release_without_straightening_wheels(self):
+        angles=np.linspace(0,2*math.pi,1000)
+        path=ClosedPath(1.8*np.column_stack([np.cos(angles),np.sin(angles)]),spacing=.02)
+        f=PredictiveFollower(path,max_speed=2,lateral_accel=3,acceleration=2,braking=3,
+                             lateral_control='smooth_pursuit')
+        x,y,yaw=1.8,0.,math.pi/2
+        f.start(x,y,yaw)
+        speed=.35;steer=math.atan(.26/1.8)
+        f.steer=steer
+        for _ in range(40):
+            f.measured_steer=steer
+            v,d=f.step(x,y,yaw,speed,.02)
+            speed+=(v-speed)*.02/.08;steer+=(d-steer)*.02/.08
+            x+=speed*math.cos(yaw)*.02;y+=speed*math.sin(yaw)*.02
+            yaw+=speed*math.tan(steer)/.26*.02
+        self.assertFalse(f.departure)
+        self.assertGreater(abs(steer),.12)
+        self.assertLess(f.error,.025)
+
+    def test_curved_departure_waits_for_actual_steering_alignment(self):
+        angles=np.linspace(0,2*math.pi,1000)
+        path=ClosedPath(1.8*np.column_stack([np.cos(angles),np.sin(angles)]),spacing=.02)
+        f=PredictiveFollower(path,lateral_control='smooth_pursuit')
+        f.start(1.8,0.,math.pi/2);f.steer=math.atan(.26/1.8);f.measured_steer=0.
+        for _ in range(20):f.step(1.8,0.,math.pi/2,0.,.02)
+        self.assertTrue(f.departure)
+
     @classmethod
     def setUpClass(cls):
         course.PlannedLoopTests.setUpClass()

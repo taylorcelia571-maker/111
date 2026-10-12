@@ -306,8 +306,14 @@ class PredictiveFollower(LineFollower):
             heading_error = math.atan2(math.sin(heading-yaw),math.cos(heading-yaw))
             ready=self.error<.035 and abs(heading_error)<.15
             if self.lateral_control=='smooth_pursuit':
+                # A valid curved reference requires nonzero steering. Requiring
+                # near-straight wheels can keep departure capped until the car
+                # exits a bend even when lateral/heading tracking is established.
+                reference_steer=math.atan(self.wheelbase*self.path.curvature[i])
+                actual=self.steer if self.measured_steer is None else self.measured_steer
                 ready=(self.error<.025 and abs(heading_error)<.05 and
-                       abs(desired_steer)<.12 and abs(desired_steer-self.steer)<.04)
+                       abs(desired_steer-reference_steer)<.12 and
+                       abs(desired_steer-self.steer)<.04 and abs(desired_steer-actual)<.04)
                 self.alignment_ready=self.alignment_ready+dt if ready else 0.0
                 ready=self.alignment_ready>=.20
             if ready:

@@ -66,6 +66,7 @@ class ContinuousRace:
         self.scan_time = self.odom_time = None
         self.active = False
         self.prepared_steer = None
+        self.last_start_rejection = None
         self.last_fault = None
         self.start_metrics = {}
         self.started_at = None
@@ -180,7 +181,8 @@ class ContinuousRace:
     def status(self, request):
         with self.lock:
             state=dict(active=self.active,prepared_steer=self.prepared_steer,control=getattr(self.follower,'last_report',{}),
-                       startup=self.start_metrics,feedback=self.feedback_pose,last_fault=self.last_fault)
+                       startup=self.start_metrics,feedback=self.feedback_pose,last_fault=self.last_fault,
+                       last_start_rejection=self.last_start_rejection)
             if self.run_metrics is not None:state['run_metrics']=self.run_metrics.report()
             try:
                 pose = self.sensors()
@@ -251,6 +253,7 @@ class ContinuousRace:
                         self.follower.start_diagnostics=dict(mode='alignment',reason='connector_map_clearance_failed')
                 self.previous = rospy.Time.now() - rospy.Duration(0.02)
                 self.active = True
+                self.last_start_rejection = None
                 self.prepared_steer = None
                 self.last_fault = None
                 self.started_at=rospy.Time.now()
@@ -266,6 +269,8 @@ class ContinuousRace:
                               *pose, self.follower.progress)
                 return TriggerResponse(True, 'Started; official referee determines valid laps')
             except (ValueError, tf.Exception, rosgraph.MasterError, rosgraph.MasterFailure, OSError) as error:
+                self.last_start_rejection=str(error)
+                rospy.logwarn('Race start rejected: %s',error)
                 return TriggerResponse(False, str(error))
 
     def stop(self, request):

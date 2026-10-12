@@ -1,3 +1,5 @@
+> 最新起步低速退出条件及控制服务检查：[DEPARTURE_READY_FIX_CN.md](DEPARTURE_READY_FIX_CN.md)。弯道对齐不再要求转角接近零，实际首圈收益仍待本机验证。
+
 > rapid_race 第二圈靠墙停车入口遗漏已修正：[RAPID_WALL_FIX_CN.md](RAPID_WALL_FIX_CN.md)。路线净空默认 0.34 m，保留原保护阈值；需要重新启动场景并实际验证。
 
 > 当前 82 秒成绩的完整启动、留证、瓶颈检查与严格 60 秒验收流程：[RACE60_CURRENT_VALIDATION_CN.md](RACE60_CURRENT_VALIDATION_CN.md)。一分钟目标尚未实测达成；2.2 m/s 恢复档不属于提速方案。

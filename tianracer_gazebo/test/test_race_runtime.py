@@ -62,6 +62,15 @@ class RuntimeTests(unittest.TestCase):
         self.assertTrue(self.node.start(None).success)
         self.assertFalse(self.node.start(None).success)
 
+    def test_start_rejection_is_available_in_status_and_cleared_on_success(self):
+        self.node.odom.twist.twist.linear.x=1.
+        self.assertFalse(self.node.start(None).success)
+        self.node.odom.twist.twist.linear.x=0.
+        state=json.loads(self.node.status(None).message)
+        self.assertIn('stationary',state['last_start_rejection'])
+        self.assertTrue(self.node.start(None).success)
+        self.assertIsNone(self.node.last_start_rejection)
+
     def test_missing_stale_and_moving_inputs_block_start(self):
         self.node.scan_time = None
         self.assertFalse(self.node.start(None).success)
