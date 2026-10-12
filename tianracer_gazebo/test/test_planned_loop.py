@@ -140,6 +140,68 @@ class PlannedLoopTests(unittest.TestCase):
             if f.progress-f.origin>=5*p.length:break
         self.assertGreaterEqual(f.progress-f.origin,5*p.length)
 
+    def test_refined_route_and_connector_under_actual_user_budgets(self):
+        budgets=dict(max_speed=8.0,lateral_accel=6.5,acceleration=5.0,braking=3.0,yaw_rate=3.8)
+        center=self.planner.build(self.anchors,optimize_time=True,refine_line=True,**budgets)
+        selection=self.planner.selection
+        self.assertTrue(selection['route_changed'])
+        self.assertGreater(selection['refinement_moves'],0)
+        self.assertGreater(selection['refinement_gain_seconds'],0)
+        self.assertGreaterEqual(self.planner.segment_check(center.points),.26)
+        positions=[center.project(*p)[0] for p in self.anchors]
+        self.assertAlmostEqual(float((np.diff(np.r_[positions,positions[0]+center.length])%center.length).sum()),center.length)
+        p=rear_path(center)
+        def simulate(blend):
+            f=PredictiveFollower(p,fast_start=True,start_blend=blend,**budgets)
+            x,y,yaw=.0081,-.1494,1.5709;f.start(x,y,yaw)
+            if blend:
+                self.assertIsNotNone(f.connector_offset)
+                self.assertLess(np.linalg.norm(f.sample_tracking(f.origin)-[x,y]),1e-8)
+                self.assertLess(np.linalg.norm(f.sample_tracking(f.origin+2.5)-p.sample(f.origin+2.5)),1e-8)
+                self.assertLess(np.linalg.norm(f.sample_tracking(f.origin+p.length)-p.sample(f.origin+p.length)),1e-8)
+            speed=steer=0;first=None
+            for tick in range(8000):
+                v,d=f.step(x,y,yaw,speed,.02)
+                speed+=(v-speed)*.02/.08;steer+=(d-steer)*.02/.08
+                x+=speed*math.cos(yaw)*.02;y+=speed*math.sin(yaw)*.02;yaw+=speed*math.tan(steer)/.26*.02
+                self.assertLess(f.error,.15)
+                self.assertGreater(self.planner.clearance_at([[x+.13*math.cos(yaw),y+.13*math.sin(yaw)]])[0],.23)
+                if first is None and f.progress-f.origin>=p.length:first=(tick+1)*.02
+                if f.progress-f.origin>=5*p.length:return first
+            self.fail('Reference loops incomplete')
+        self.assertLess(simulate(True),simulate(False))
+
+    def test_start_connector_falls_back_for_curve_or_wrong_heading(self):
+        p=rear_path(self.center);f=PredictiveFollower(p,start_blend=True,fast_start=True)
+        i=int(np.argmax(abs(p.curvature)));x,y=p.points[i]
+        d=p.sample(i*p.ds+.08)-p.sample(i*p.ds);yaw=math.atan2(d[1],d[0])
+        f.start(x,y,yaw)
+        self.assertIsNone(f.connector_offset)
+        self.assertTrue(f.departure)
+
+    def test_sprint_trial_with_delayed_feedback_prediction(self):
+        from motion_prediction import predict_rear_pose
+        budgets=dict(max_speed=8.0,lateral_accel=9.0,acceleration=6.0,braking=6.0,yaw_rate=5.5)
+        center=self.planner.build(self.anchors,optimize_time=True,refine_line=True,**budgets)
+        p=rear_path(center);f=PredictiveFollower(p,fast_start=True,start_blend=True,**budgets)
+        x,y,yaw=.0081,-.1494,1.5709;f.start(x,y,yaw);speed=steer=0
+        history=[(x,y,yaw,0,0)]*3
+        for tick in range(8000):
+            old_x,old_y,old_yaw,old_speed,omega=history[-3]
+            predicted=predict_rear_pose(old_x,old_y,old_yaw,old_speed,omega,.04)
+            v,d=f.step(*predicted,old_speed,.02)
+            self.assertGreaterEqual(v,0)
+            self.assertLessEqual(v*v*abs(f.last_report['live_curvature']),9+1e-8)
+            self.assertLessEqual(v*abs(f.last_report['live_curvature']),5.5+1e-8)
+            speed+=(v-speed)*.02/.08;steer+=(d-steer)*.02/.08
+            x+=speed*math.cos(yaw)*.02;y+=speed*math.sin(yaw)*.02;yaw+=speed*math.tan(steer)/.26*.02
+            history.append((x,y,yaw,speed,speed*math.tan(steer)/.26))
+            self.assertLess(f.error,.15)
+            self.assertGreater(self.planner.clearance_at([[x+.13*math.cos(yaw),y+.13*math.sin(yaw)]])[0],.23)
+            if f.progress-f.origin>=5*p.length:break
+        self.assertGreaterEqual(f.progress-f.origin,5*p.length)
+        self.assertLess((tick+1)*.02,65)  # ideal-model regression bound, not an official result
+
     def test_departure_aligns_at_low_speed_without_relaxing_error_limit(self):
         p=rear_path(self.center); f=PredictiveFollower(p,max_speed=1.8)
         yaw=1.3; x,y=.04-.13*math.cos(yaw),-.13*math.sin(yaw)

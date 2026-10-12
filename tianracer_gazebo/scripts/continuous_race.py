@@ -16,9 +16,11 @@ from race_line import ClosedPath, LineFollower, clearance_speed
 
 
 class ContinuousRace:
-    def __init__(self, path=None, clearance_guard=None):
+    def __init__(self, path=None, clearance_guard=None, start_path_guard=None):
+        self.start_path_guard = start_path_guard
         self.clearance_guard = clearance_guard
         self.generated = path is not None
+        self.predict_pose=rospy.get_param('~predict_pose',False) if self.generated else False
         if path is None:
             filename = os.path.expanduser(rospy.get_param('~path_file'))
             path = ClosedPath(np.loadtxt(filename, delimiter=',', comments='#'))
@@ -34,6 +36,7 @@ class ContinuousRace:
         options = {k: rospy.get_param('~' + k, v) for k,v in defaults}
         if self.generated:
             options.update(fast_start=rospy.get_param('~fast_start',False),
+                           start_blend=rospy.get_param('~start_blend',False),
                            steering_rate=rospy.get_param('~steering_rate',2.0),
                            yaw_rate=rospy.get_param('~yaw_rate',3.2))
         self.follower = follower_type(self.path, **options)
@@ -47,8 +50,11 @@ class ContinuousRace:
         self.pub = rospy.Publisher('cmd_vel', Twist, queue_size=1)
         self.lock = threading.RLock()
         self.scan = self.odom = None
+        self.laser_cache = None
         self.scan_time = self.odom_time = None
         self.active = False
+        self.start_metrics = {}
+        self.started_at = None
         self.previous = rospy.Time.now()
         self.scan_sub = rospy.Subscriber('scan', LaserScan, self.on_scan, queue_size=1)
         self.odom_sub = rospy.Subscriber('odom', Odometry, self.on_odom, queue_size=1)
@@ -90,8 +96,20 @@ class ContinuousRace:
         if not all(math.isfinite(v) for v in (*position[:2], yaw, self.odom.twist.twist.linear.x)):
             raise ValueError('Nonfinite localization or odometry')
         offset = 0.13 if self.generated else 0.0
-        return (position[0]-offset*math.cos(yaw), position[1]-offset*math.sin(yaw),
-                yaw, self.odom.twist.twist.linear.x)
+        x,y=position[0]-offset*math.cos(yaw),position[1]-offset*math.sin(yaw)
+        speed=self.odom.twist.twist.linear.x
+        angular=getattr(self.odom.twist.twist,'angular',None)
+        omega=getattr(angular,'z',None)
+        # Official odometry publishes at 20Hz. Compensate only a short,
+        # timestamp-matched acquisition delay using public odometry feedback.
+        if self.predict_pose and omega is not None:
+            if not math.isfinite(omega): raise ValueError('Nonfinite odometry yaw rate')
+            if 0<age<=.08 and abs((self.odom.header.stamp-stamp).to_sec())<=.02:
+                from motion_prediction import predict_rear_pose
+                base_lateral=getattr(self.odom.twist.twist.linear,'y',None)
+                rear_lateral=0 if base_lateral is None else base_lateral-omega*offset
+                x,y,yaw=predict_rear_pose(x,y,yaw,speed,omega,age,rear_lateral)
+        return x,y,yaw,speed
 
     def status(self, request):
         with self.lock:
@@ -99,6 +117,7 @@ class ContinuousRace:
                 pose = self.sensors()
                 return TriggerResponse(True,json.dumps(dict(active=self.active,pose=pose,
                                                             control=getattr(self.follower,'last_report',{}),
+                                                            startup=self.start_metrics,
                                                             message='Feedback ready; start still checks controller conflicts and pose')))
             except (ValueError,tf.Exception) as error:
                 return TriggerResponse(False,str(error))
@@ -116,8 +135,16 @@ class ContinuousRace:
                 if abs(pose[3]) > 0.05: raise ValueError('Vehicle must be stationary')
                 self.follower.start(*pose[:3])
                 self.follower.stop()
+                if self.start_path_guard is not None and self.follower.connector_offset is not None:
+                    if not self.start_path_guard(self.follower):
+                        self.follower.connector_offset=None
+                        self.follower.departure=True
+                        self.follower.start_diagnostics=dict(mode='alignment',reason='connector_map_clearance_failed')
                 self.previous = rospy.Time.now() - rospy.Duration(0.02)
                 self.active = True
+                self.started_at=rospy.Time.now()
+                self.start_metrics={}
+                rospy.loginfo('Race start mode: %s',json.dumps(getattr(self.follower,'start_diagnostics',{})))
                 rospy.loginfo('Race start: rear_pose=(%.4f,%.4f,%.4f) measured_v=%.4f progress=%.4fm',
                               *pose, self.follower.progress)
                 return TriggerResponse(True, 'Started; official referee determines valid laps')
@@ -175,14 +202,22 @@ class ContinuousRace:
             from predictive_follower import reference_clearance
             # A scan is already allowed to be up to 300ms old. Transform
             # its points at acquisition time, not at the latest car pose.
-            if not self.listener.canTransform(self.frame, self.scan.header.frame_id,
-                                              self.scan.header.stamp):
-                # Allow bounded transport skew between scan and odometry TF.
-                self.listener.waitForTransform(self.frame, self.scan.header.frame_id,
-                                               self.scan.header.stamp, rospy.Duration(0.05),
-                                               rospy.Duration(0.005))
-            laser_pos, laser_rot = self.listener.lookupTransform(
-                self.frame, self.scan.header.frame_id, self.scan.header.stamp)
+            scan=self.scan
+            if self.listener.canTransform(self.frame,scan.header.frame_id,scan.header.stamp):
+                laser_pos,laser_rot=self.listener.lookupTransform(self.frame,scan.header.frame_id,scan.header.stamp)
+                self.laser_cache=(scan,laser_pos,laser_rot)
+            elif self.laser_cache is not None:
+                scan,laser_pos,laser_rot=self.laser_cache
+                if not 0<=(now-scan.header.stamp).to_sec()<=.1:
+                    raise ValueError('Timestamp-aligned laser cache stale; TF acquisition cannot be verified')
+            else:
+                # Only the first frame may wait briefly, while departure speed is
+                # near zero. Subsequent cycles use a verified <=100ms scan instead
+                # of repeatedly blocking control for the newest scan's TF.
+                self.listener.waitForTransform(self.frame,scan.header.frame_id,scan.header.stamp,
+                                               rospy.Duration(.05),rospy.Duration(.005))
+                laser_pos,laser_rot=self.listener.lookupTransform(self.frame,scan.header.frame_id,scan.header.stamp)
+                self.laser_cache=(scan,laser_pos,laser_rot)
             laser_yaw = tf.transformations.euler_from_quaternion(laser_rot)[2]
             dx,dy = laser_pos[0]-pose[0],laser_pos[1]-pose[1]
             relative_laser = (math.cos(pose[2])*dx+math.sin(pose[2])*dy,
@@ -190,10 +225,10 @@ class ContinuousRace:
                               laser_yaw-pose[2])
             report = {}
             obstacle_limit = reference_clearance(
-                self.path, self.follower.progress, pose, self.scan,
+                self.path, self.follower.progress, pose, scan,
                 relative_laser, max(speed, abs(pose[3])),
-                self.follower.braking, diagnostics=report)
-            report.update(scan_age=(now-self.scan.header.stamp).to_sec(),
+                self.follower.braking, diagnostics=report, sample=self.follower.sample_tracking)
+            report.update(scan_age=(now-scan.header.stamp).to_sec(),
                           speed_limit=obstacle_limit if math.isfinite(obstacle_limit) else None,
                           tracking_error=self.follower.error)
             if obstacle_limit < speed:
@@ -218,6 +253,15 @@ class ContinuousRace:
             if obstacle_limit < self.follower.last_report['command_speed']:
                 self.follower.last_report['reason']='laser'
         progress = self.follower.progress - self.follower.origin
+        elapsed=(now-self.started_at).to_sec() if self.started_at is not None else 0
+        if pose[3]>.05 and 'first_measured_motion_seconds' not in self.start_metrics:
+            self.start_metrics['first_measured_motion_seconds']=elapsed
+            rospy.loginfo('Startup: measured motion after %.3fs',elapsed)
+        if self.generated and not self.follower.departure and 'alignment_released_seconds' not in self.start_metrics:
+            self.start_metrics['alignment_released_seconds']=elapsed
+        if progress>=self.path.length and 'first_reference_loop_seconds' not in self.start_metrics:
+            self.start_metrics['first_reference_loop_seconds']=elapsed
+            rospy.loginfo('First reference loop: %.3fs (official referee time is separate)',elapsed)
         if progress >= self.laps * self.path.length:
             self.stop(None)
             rospy.loginfo('Reference loops complete; check OFFICIAL referee laps separately')

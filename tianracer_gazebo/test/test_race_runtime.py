@@ -250,5 +250,63 @@ class RuntimeTests(unittest.TestCase):
         self.assertIn('measured_speed',self.node.status(None).message)
         self.assertIn('planned_speed',self.node.status(None).message)
 
+    def test_start_connector_map_rejection_falls_back_before_motion(self):
+        self.params['~start_blend']=True
+        old=self.node
+        self.node=self.module.ContinuousRace(old.path,start_path_guard=lambda f:False)
+        self.node.on_scan(old.scan);self.node.on_odom(old.odom)
+        original=self.node.follower.start
+        def connector_start(x,y,yaw):
+            original(x,y,yaw)
+            self.node.follower.connector_offset=np.array([.01,0])
+            self.node.follower.departure=False
+        with patch.object(self.node.follower,'start',side_effect=connector_start):
+            self.assertTrue(self.node.start(None).success)
+        self.assertIsNone(self.node.follower.connector_offset)
+        self.assertTrue(self.node.follower.departure)
+        self.node.pub.publish.assert_not_called()
+
+    def test_pose_prediction_is_short_and_timestamp_matched(self):
+        self.params['~predict_pose']=True
+        old=self.node
+        self.node=self.module.ContinuousRace(old.path)
+        self.node.on_scan(old.scan);self.node.on_odom(old.odom)
+        self.node.odom.header.stamp=Stamp(.95)
+        self.node.odom.twist.twist.linear.x=2
+        self.node.odom.twist.twist.angular=NS(z=0)
+        self.node.listener.getLatestCommonTime.return_value=Stamp(.95)
+        pose=self.node.sensors()
+        self.assertAlmostEqual(pose[0],3)
+        self.assertAlmostEqual(pose[1],-.13+.1)
+        self.node.odom.header.stamp=Stamp(.85)
+        self.node.listener.getLatestCommonTime.return_value=Stamp(.85)
+        self.assertAlmostEqual(self.node.sensors()[1],-.13)
+        self.node.listener.getLatestCommonTime.return_value=Stamp(.95)
+        self.assertAlmostEqual(self.node.sensors()[1],-.13)  # stamp mismatch: no extrapolation
+
+    def test_pose_prediction_rejects_invalid_yaw_rate(self):
+        self.params['~predict_pose']=True
+        old=self.node;self.node=self.module.ContinuousRace(old.path)
+        self.node.on_scan(old.scan);self.node.on_odom(old.odom)
+        self.node.odom.twist.twist.angular=NS(z=float('nan'))
+        self.assertFalse(self.node.start(None).success)
+
+    def test_verified_laser_cache_avoids_blocking_and_rejects_expiry(self):
+        self.generated_node()
+        self.tick()
+        self.assertIsNotNone(self.node.laser_cache)
+        self.node.listener.canTransform.return_value=False
+        self.node.listener.waitForTransform.reset_mock()
+        import copy
+        self.node.scan=copy.deepcopy(self.node.scan)
+        self.refresh_at(1.04)
+        self.tick()
+        self.assertTrue(self.node.active)
+        self.node.listener.waitForTransform.assert_not_called()
+        self.refresh_at(1.15)
+        self.tick()
+        self.assertFalse(self.node.active)
+        self.assertEqual(self.node.pub.publish.call_args.args[0].linear.x,0)
+
 
 if __name__ == '__main__': unittest.main()

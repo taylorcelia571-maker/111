@@ -7,7 +7,7 @@ from race_line import LineFollower, positive
 class PredictiveFollower(LineFollower):
     def __init__(self, path, max_speed=2.0, lateral_accel=5.0, acceleration=2.0,
                  braking=3.0, max_error=0.15, wheelbase=0.26, max_steer=0.48,
-                 steering_rate=2.0, yaw_rate=3.2, fast_start=False):
+                 steering_rate=2.0, yaw_rate=3.2, fast_start=False, start_blend=False):
         super().__init__(path, max_speed, lateral_accel, acceleration, braking,
                          wheelbase, max_steer, max_error)
         self.steering_rate = positive('steering_rate', steering_rate)
@@ -30,6 +30,10 @@ class PredictiveFollower(LineFollower):
         self.departure = True
         if not isinstance(fast_start,bool): raise ValueError('fast_start must be boolean')
         self.fast_start = fast_start
+        self.start_blend = start_blend
+        if not isinstance(start_blend,bool): raise ValueError('start_blend must be boolean')
+        self.connector_offset = None
+        self.connector_length = 2.5
         self.last_report = {}
 
     def plan_report(self):
@@ -51,6 +55,26 @@ class PredictiveFollower(LineFollower):
     def start(self, x, y, yaw):
         super().start(x, y, yaw)
         self.departure = True
+        self.connector_offset = None
+        self.start_diagnostics = dict(mode='alignment',reason='connector_disabled_or_geometry_not_eligible')
+        self.last_report = {}
+        tangent=self.path.sample(self.origin+.08)-self.path.sample(self.origin)
+        difference=math.atan2(math.sin(math.atan2(tangent[1],tangent[0])-yaw),
+                              math.cos(math.atan2(tangent[1],tangent[0])-yaw))
+        initial_error=math.hypot(*(np.array([x,y])-self.path.sample(self.origin)))
+        ids=np.arange(int(self.origin/self.path.ds),int((self.origin+self.connector_length)/self.path.ds)+1)%self.path.n
+        if self.start_blend and initial_error<=.10 and abs(difference)<=.15 and np.max(abs(self.path.curvature[ids]))<.20:
+            self.connector_offset=np.array([x,y])-self.path.sample(self.origin)
+            self.departure=False
+            self.start_diagnostics=dict(mode='connector',length=self.connector_length,initial_error=initial_error)
+
+    def sample_tracking(self, distance):
+        point=self.path.sample(distance)
+        if self.connector_offset is not None:
+            u=float(np.clip((distance-self.origin)/self.connector_length,0,1))
+            blend=1-10*u**3+15*u**4-6*u**5
+            point=point+blend*self.connector_offset
+        return point
 
     def stop(self):
         super().stop()
@@ -79,7 +103,7 @@ class PredictiveFollower(LineFollower):
         # Velocity-scaled preview is short in tight turns, longer on straights.
         curve = abs(self.path.curvature[i])
         preview = min(0.80, max(0.28, (0.35+0.18*max(0,measured_speed))/(1+0.55*curve)))
-        target = self.path.sample(self.progress+preview)
+        target = self.sample_tracking(self.progress+preview)
         dx,dy = target-[x,y]
         forward = math.cos(yaw)*dx+math.sin(yaw)*dy
         if forward <= 0: self.stop(); raise ValueError('Reference behind vehicle; reposition instead of reversing')
@@ -120,12 +144,13 @@ class PredictiveFollower(LineFollower):
         self.speed = min(desired,acceleration_limit)
         self.last_report=dict(reason=reason,planned_speed=float(self.path.speeds[i]),
                               live_curvature=float(k),measured_speed=measured_speed,
-                              command_speed=self.speed,steer=self.steer,tracking_error=self.error)
+                              command_speed=self.speed,steer=self.steer,tracking_error=self.error,
+                              start_connector=self.connector_offset is not None and self.progress-self.origin<self.connector_length)
         return self.speed,self.steer
 
 
 def reference_clearance(path, progress, pose, scan, laser_pose, speed, braking=3.0,
-                        half_width=0.16, reaction=0.15, diagnostics=None, half_length=0.23):
+                        half_width=0.16, reaction=0.15, diagnostics=None, half_length=0.23, sample=None):
     """Check laser hits along the *planned* turn, rather than extrapolating one steer."""
     report = diagnostics if diagnostics is not None else {}
     report.clear()
@@ -154,8 +179,9 @@ def reference_clearance(path, progress, pose, scan, laser_pose, speed, braking=3
                                  y+math.sin(yaw)*bx+math.cos(yaw)*by])
     horizon = max(0.6,speed*reaction+speed**2/(2*braking)+0.35)
     arcs = np.linspace(0,horizon,int(math.ceil(horizon/0.04))+1)
-    rear = np.array([path.sample(progress+d) for d in arcs])
-    tangents = np.array([path.sample(progress+d+0.04)-path.sample(progress+d-0.04) for d in arcs])
+    sample = path.sample if sample is None else sample
+    rear = np.array([sample(progress+d) for d in arcs])
+    tangents = np.array([sample(progress+d+0.04)-sample(progress+d-0.04) for d in arcs])
     tangents /= np.maximum(np.linalg.norm(tangents,axis=1)[:,None],1e-9)
     centers = rear+0.13*tangents  # base center lies ahead of rear axle
     actual_center = np.array([x+0.13*math.cos(yaw),y+0.13*math.sin(yaw)])

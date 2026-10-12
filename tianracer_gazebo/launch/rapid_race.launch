@@ -16,5 +16,8 @@
     <arg name="steering_rate" value="$(arg steering_rate)"/>
     <arg name="optimize_time" value="true"/>
     <arg name="fast_start" value="true"/>
+    <arg name="predict_pose" value="true"/>
+    <arg name="start_blend" value="true"/>
+    <arg name="refine_line" value="true"/>
   </include>
 </launch>

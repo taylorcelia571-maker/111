@@ -33,7 +33,7 @@ def main():
                           [grid.info.origin.position.x,grid.info.origin.position.y])
     rospy.loginfo('Planning full course while stationary; no motion until start service')
     optimize = rospy.get_param('~optimize_time',False)
-    center = planner.build(anchors,optimize_time=optimize,
+    center = planner.build(anchors,optimize_time=optimize,refine_line=rospy.get_param('~refine_line',False),
                            **{k:rospy.get_param('~'+k,v) for k,v in (
                                ('max_speed',2.0),('lateral_accel',5.0),('acceleration',2.0),('braking',3.0),
                                ('steering_rate',2.0),('yaw_rate',3.2))})
@@ -48,7 +48,15 @@ def main():
         base=[[x+0.13*math.cos(yaw),y+0.13*math.sin(yaw)]]
         if planner.clearance_at(base)[0] < 0.23:
             raise ValueError('Localized vehicle too close to static wall')
-    controller = ContinuousRace(path, clearance_guard=guard)
+    def start_guard(follower):
+        arcs=np.linspace(0,follower.connector_length,100)+follower.origin
+        centers=[]
+        for distance in arcs:
+            tangent=follower.sample_tracking(distance+.02)-follower.sample_tracking(distance-.02)
+            tangent/=np.linalg.norm(tangent)
+            centers.append(follower.sample_tracking(distance)+.13*tangent)
+        return bool(np.min(planner.clearance_at(np.asarray(centers)))>=planner.margin)
+    controller = ContinuousRace(path, clearance_guard=guard,start_path_guard=start_guard)
     # Persist the plan for inspection, never as an official result.
     output = os.path.expanduser(rospy.get_param('~output','~/ican_race_logs/planned_course.csv'))
     os.makedirs(os.path.dirname(os.path.abspath(output)),exist_ok=True)
@@ -69,6 +77,16 @@ def main():
         preview.poses.append(msg)
     publisher=rospy.Publisher('race_path',Path,queue_size=1,latch=True)
     publisher.publish(preview)
+    baseline=Path();baseline.header=preview.header
+    points=getattr(planner,'baseline_points',center.points)
+    tangent=np.roll(points,-1,axis=0)-np.roll(points,1,axis=0)
+    tangent/=np.linalg.norm(tangent,axis=1)[:,None]
+    for p in points-.13*tangent:
+        msg=PoseStamped();msg.header=baseline.header
+        msg.pose.position.x,msg.pose.position.y=p;msg.pose.orientation.w=1
+        baseline.poses.append(msg)
+    baseline_publisher=rospy.Publisher('race_baseline',Path,queue_size=1,latch=True)
+    baseline_publisher.publish(baseline)
     rospy.loginfo('Ready: %.2fm, center clearance >=%.3fm, max curvature %.3f/m; plan: %s',
                   path.length,planner.segment_check(center.points),np.max(np.abs(path.curvature)),output)
     controller.run()

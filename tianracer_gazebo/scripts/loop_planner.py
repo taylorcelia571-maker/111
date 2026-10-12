@@ -1,4 +1,5 @@
 """Stationary full-loop planning against an occupancy grid; no ROS dependency."""
+import hashlib
 import heapq
 import math
 import numpy as np
@@ -90,7 +91,7 @@ class LoopPlanner:
 
     def build(self, waypoints, max_steer=0.48, wheelbase=0.26, optimize_time=False,
               max_speed=4.0, lateral_accel=5.0, acceleration=2.0, braking=3.0,
-              clearance_weight=None, steering_rate=2.0, yaw_rate=3.2):
+              clearance_weight=None, steering_rate=2.0, yaw_rate=3.2, refine_line=False):
         if optimize_time:
             for name,value in (('max_speed',max_speed),('lateral_accel',lateral_accel),
                                ('acceleration',acceleration),('braking',braking),('steering_rate',steering_rate),('yaw_rate',yaw_rate)):
@@ -123,6 +124,42 @@ class LoopPlanner:
                 if estimated < best_selection['estimated_lap_seconds']:
                     best=candidate
                     best_selection.update(estimated_lap_seconds=estimated,corner_offset=offset)
+            self.baseline_points=best.points.copy()
+            baseline_time=best_selection['estimated_lap_seconds']
+            accepted=0
+            if refine_line:
+                # Coordinate descent on separate corner regions, not one shared
+                # offset for all bends. Geometry is checked for every trial.
+                peaks=[]
+                for index in np.argsort(-np.abs(best.curvature)):
+                    distance=index*best.ds
+                    if abs(best.curvature[index])<.35: break
+                    if all(min(abs(distance-p),best.length-abs(distance-p))>1.2 for p in peaks):
+                        peaks.append(distance)
+                    if len(peaks)>=12: break
+                seed_length=best.length
+                for _ in range(2):
+                    for peak in peaks:
+                        current=best
+                        tangent=np.roll(current.points,-1,axis=0)-np.roll(current.points,1,axis=0)
+                        tangent/=np.linalg.norm(tangent,axis=1)[:,None]
+                        normal=np.column_stack([-tangent[:,1],tangent[:,0]])
+                        arc=np.arange(current.n)*current.ds
+                        distance=np.abs(arc-peak/seed_length*current.length)
+                        distance=np.minimum(distance,current.length-distance)
+                        bump=np.exp(-.5*(distance/.6)**2)
+                        for offset in (-.06,-.03,.03,.06):
+                            candidate=self.feasible(current.points+offset*bump[:,None]*normal,np.asarray(waypoints),max_steer,wheelbase)
+                            if candidate is None: continue
+                            estimated=self.estimate(candidate,max_speed,lateral_accel,acceleration,braking,steering_rate,yaw_rate)
+                            if estimated < best_selection['estimated_lap_seconds']-1e-4:
+                                best=candidate
+                                best_selection['estimated_lap_seconds']=estimated
+                                accepted+=1
+            best_selection.update(refinement_moves=accepted,baseline_model_lap_seconds=baseline_time,
+                                  refinement_gain_seconds=baseline_time-best_selection['estimated_lap_seconds'],
+                                  route_changed=accepted>0,
+                                  route_sha256=hashlib.sha256(np.round(best.points,4).tobytes()).hexdigest())
             self.selection = best_selection
             return best
         weight = 8.0 if clearance_weight is None else positive('clearance_weight',clearance_weight)
