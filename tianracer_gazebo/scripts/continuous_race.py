@@ -41,7 +41,9 @@ class ContinuousRace:
                     ('braking', 3.5), ('max_error', 0.6))
         options = {k: rospy.get_param('~' + k, v) for k,v in defaults}
         if self.generated:
-            options.update(fast_start=rospy.get_param('~fast_start',False),
+            options.update(speed_planning=rospy.get_param('~speed_planning','legacy'),
+                           startup_release_early=rospy.get_param('~startup_release_early',False),
+                           fast_start=rospy.get_param('~fast_start',False),
                            start_blend=rospy.get_param('~start_blend',False),
                            response_delay=rospy.get_param('~response_delay',0.0),
                            steering_feedback_gain=rospy.get_param('~steering_feedback_gain',0.0),
@@ -52,7 +54,7 @@ class ContinuousRace:
                            yaw_rate=rospy.get_param('~yaw_rate',3.2))
         self.follower = follower_type(self.path, **options)
         self.require_joint_feedback=self.generated and (
-            self.follower.lateral_control=='curvature_feedback' or self.follower.steering_feedback_gain>0)
+            self.follower.lateral_control in ('curvature_feedback','race_feedback') or self.follower.steering_feedback_gain>0)
         self.laps = rospy.get_param('~laps', 5)
         if isinstance(self.laps, bool) or not isinstance(self.laps, int) or self.laps < 1:
             raise ValueError('laps must be a positive integer')
@@ -80,7 +82,7 @@ class ContinuousRace:
         self.previous = rospy.Time.now()
         self.scan_sub = rospy.Subscriber('scan', LaserScan, self.on_scan, queue_size=1)
         self.odom_sub = rospy.Subscriber('odom', Odometry, self.on_odom, queue_size=1)
-        if self.require_joint_feedback or (self.generated and self.follower.lateral_control=='smooth_pursuit'):
+        if self.require_joint_feedback or (self.generated and self.follower.lateral_control in ('smooth_pursuit','race_feedback')):
             self.joint_sub=rospy.Subscriber('joint_states',JointState,self.on_joints,queue_size=1)
         self.start_service = rospy.Service('~start', Trigger, self.start)
         self.prepare_service = rospy.Service('~prepare',Trigger,self.prepare)
@@ -109,7 +111,7 @@ class ContinuousRace:
         now = rospy.Time.now()
         if now.to_sec() <= 0:
             raise ValueError('Waiting for initialized ROS clock; start/unpause simulation')
-        if self.generated and self.follower.lateral_control=='smooth_pursuit':
+        if self.generated and self.follower.lateral_control in ('smooth_pursuit','race_feedback'):
             # Optional enhancement to the already-working pursuit adapter.
             # Never retain expired steering, and do not require an extra stream
             # to run the command-slew fallback. Scan/odom/TF guards remain mandatory.
@@ -214,8 +216,8 @@ class ContinuousRace:
         """Pre-position steering while stopped; does not drive or start timing."""
         with self.lock:
             if self.active:return TriggerResponse(False,'Already active; stop before preparing')
-            if not self.generated or self.follower.lateral_control not in ('smooth_pursuit','curvature_feedback'):
-                return TriggerResponse(False,'prepare requires smooth_pursuit or curvature_feedback')
+            if not self.generated or self.follower.lateral_control not in ('smooth_pursuit','curvature_feedback','race_feedback'):
+                return TriggerResponse(False,'prepare requires smooth_pursuit, curvature_feedback or race_feedback')
             try:
                 publishers,_,_=rosgraph.Master(rospy.get_name()).getSystemState()
                 topic=rospy.resolve_name('cmd_vel')

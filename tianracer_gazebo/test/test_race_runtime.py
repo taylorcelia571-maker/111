@@ -168,6 +168,22 @@ class RuntimeTests(unittest.TestCase):
         return NS(header=NS(stamp=Stamp(stamp)),
                   name=['left_steering_hinge_joint','right_steering_hinge_joint'],position=positions)
 
+    def test_race_feedback_requires_joints_and_prepares_without_motion(self):
+        old=self.node
+        self.params['~lateral_control']='race_feedback'
+        self.node=self.module.ContinuousRace(old.path)
+        self.node.on_scan(old.scan);self.node.on_odom(old.odom)
+        self.assertTrue(self.node.require_joint_feedback)
+        self.assertFalse(self.node.prepare(None).success)
+        self.assertFalse(self.node.start(None).success)
+        self.node.on_joints(self.joints())
+        self.assertTrue(self.node.prepare(None).success)
+        self.assertFalse(self.node.active)
+        self.assertEqual(self.node.pub.publish.call_args.args[0].linear.x,0)
+        self.assertFalse(self.node.start(None).success)  # steering not yet settled
+        self.node.on_joints(self.joints((self.node.prepared_steer,)*2))
+        self.assertTrue(self.node.start(None).success)
+
     def test_feedback_mode_blocks_start_with_missing_or_stale_joints(self):
         self.feedback_node()
         self.assertFalse(self.node.start(None).success)

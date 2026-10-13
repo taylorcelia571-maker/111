@@ -1,3 +1,5 @@
+> 最新 87.546 秒实测后的控制和规划优化：[TIME_ATTACK_VALIDATION_CN.md](TIME_ATTACK_VALIDATION_CN.md)。官方五圈 <60 秒仍未达标，先按同预算入口验证再试提高预算。
+
 > 最新计算精简、运动指令延迟修正及提速对照：[SLIM_MOTION_VALIDATION_CN.md](SLIM_MOTION_VALIDATION_CN.md)。实际测量和完整复验步骤；一分钟目标尚未达成。
 
 > 最新实际 Gazebo 起步验证与里程计并发修复：[STARTUP_GAZEBO_VALIDATION_CN.md](STARTUP_GAZEBO_VALIDATION_CN.md)。新增快速并线起步入口；一分钟目标尚未达成。
