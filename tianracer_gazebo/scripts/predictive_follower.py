@@ -11,7 +11,8 @@ class PredictiveFollower(LineFollower):
                  steering_rate=2.0, yaw_rate=3.2, fast_start=False, start_blend=False,
                  response_delay=0.0, lateral_control='pursuit',
                  startup_speed=1.2, startup_acceleration=1.5, steering_feedback_gain=0.0,
-                 speed_planning="legacy", startup_release_early=False):
+                 speed_planning="legacy", startup_release_early=False,
+                 steering_preview_time=.10):
         super().__init__(path, max_speed, lateral_accel, acceleration, braking,
                          wheelbase, max_steer, max_error)
         self.steering_rate = positive('steering_rate', steering_rate)
@@ -19,6 +20,9 @@ class PredictiveFollower(LineFollower):
         if not math.isfinite(response_delay) or not 0 <= response_delay <= 0.5:
             raise ValueError('response_delay must be between 0 and 0.5 seconds')
         self.response_delay = float(response_delay)
+        if not math.isfinite(steering_preview_time) or not .05 <= steering_preview_time <= .25:
+            raise ValueError('steering_preview_time must be between .05 and .25 seconds')
+        self.steering_preview_time = float(steering_preview_time)
         if speed_planning not in ('legacy','delayed_braking'):
             raise ValueError('Invalid speed_planning')
         if not isinstance(startup_release_early,bool):raise ValueError('startup_release_early must be boolean')
@@ -114,6 +118,7 @@ class PredictiveFollower(LineFollower):
                     response_preview_proxy_uses_nominal_speed=True,
                     reference_sha256=self.path.fingerprint(),
                     steering_feedback_gain=self.steering_feedback_gain,
+                    steering_preview_time=self.steering_preview_time,
                     speed_planning=self.speed_planning,startup_release_early=self.startup_release_early,
                     length=self.path.length,model_lap_seconds=float(weights.sum()),
                     model_five_seconds=float(5*weights.sum()),model_includes_startup=False,
@@ -257,7 +262,7 @@ class PredictiveFollower(LineFollower):
         desired_steer = float(np.clip(math.atan(self.wheelbase*k),-self.max_steer,self.max_steer))
         feedforward=None
         if self.lateral_control=='smooth_pursuit':
-            advance=min(.25,max(0,measured_speed)*.10)
+            advance=min(2.5*self.steering_preview_time,max(0,measured_speed)*self.steering_preview_time)
             index=(tracking_s+advance)/self.path.ds
             a=int(math.floor(index));fraction=index-a
             ahead=float((1-fraction)*self.path.curvature[a%self.path.n]+
@@ -278,7 +283,7 @@ class PredictiveFollower(LineFollower):
             # Curvature feedforward plus continuous heading/cross-track feedback.
             # Avoid switching to a short pursuit target during an outward drift:
             # that switch amplifies tiny pose errors into large alternating turns.
-            advance=min(.25,max(0,measured_speed)*.10)
+            advance=min(2.5*self.steering_preview_time,max(0,measured_speed)*self.steering_preview_time)
             index=(tracking_s+advance)/self.path.ds
             a=int(math.floor(index)); fraction=index-a
             feedforward=float((1-fraction)*self.path.curvature[a%self.path.n]+
@@ -473,6 +478,7 @@ class PredictiveFollower(LineFollower):
                                 previous_progress=float(previous_progress),
                                 signed_tracking_error=signed_error,
                                 controller_revision='projection-consistency-v1')
+        self.last_report['steering_preview_time'] = self.steering_preview_time
         return self.speed,self.steer
 
 
