@@ -47,6 +47,7 @@ class ContinuousRace:
                            start_blend=rospy.get_param('~start_blend',False),
                            response_delay=rospy.get_param('~response_delay',0.0),
                            steering_feedback_gain=rospy.get_param('~steering_feedback_gain',0.0),
+                           steering_preview_time=rospy.get_param('~steering_preview_time',.10),
                            lateral_control=rospy.get_param('~lateral_control','pursuit'),
                            startup_speed=rospy.get_param('~startup_speed',1.2),
                            startup_acceleration=rospy.get_param('~startup_acceleration',1.5),
@@ -324,7 +325,8 @@ class ContinuousRace:
                       departure_trace=self.departure_trace,
                       limits={name:getattr(self.follower,name) for name in
                               ('max_speed','lateral_accel','acceleration','braking','max_error',
-                               'yaw_rate','steering_rate','response_delay','steering_feedback_gain') if hasattr(self.follower,name)})
+                                'yaw_rate','steering_rate','response_delay','steering_feedback_gain',
+                                'steering_preview_time') if hasattr(self.follower,name)})
         report=copy.deepcopy(report)
         if background:
             # Never wait for storage in the 50Hz control loop. Skip a periodic
