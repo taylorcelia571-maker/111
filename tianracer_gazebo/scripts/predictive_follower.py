@@ -210,20 +210,25 @@ class PredictiveFollower(LineFollower):
                        self.error,self.max_error,x,y,yaw,self.progress,s,global_s,global_error,
                        measured_speed,self.speed,self.steer,dt,elapsed)
             self.stop(); raise ValueError('Tracking error exceeds safe corridor: '+details)
+        previous_progress = self.progress
+        tracking_s = float(s)
         self.progress = max(s,self.progress)
         i = int(self.progress/self.path.ds)%self.path.n
         # Velocity-scaled preview is short in tight turns, longer on straights.
         curve = abs(self.path.curvature[i])
-        reference=self.path.sample(self.progress)
-        tangent=self.path.sample(self.progress+.08)-self.path.sample(self.progress-.08)
+        # Lap progress is monotonic; the local geometric projection need not be
+        # after a localization correction. Use the actual projection for feedback
+        # rather than turning a longitudinal correction into lateral error.
+        reference=self.path.sample(tracking_s)
+        tangent=self.path.sample(tracking_s+.08)-self.path.sample(tracking_s-.08)
         connector_active=(self.connector_offset is not None and
                           self.progress-self.origin<self.connector_length)
         control_error=self.error
         if connector_active and self.lateral_control in ('smooth_pursuit','race_feedback'):
             # Track the validated connector consistently, instead of treating
             # its intentional starting offset as an error to correct urgently.
-            reference=self.sample_tracking(self.progress)
-            tangent=self.sample_tracking(self.progress+.08)-self.sample_tracking(self.progress-.08)
+            reference=self.sample_tracking(tracking_s)
+            tangent=self.sample_tracking(tracking_s+.08)-self.sample_tracking(tracking_s-.08)
             control_error=math.hypot(x-reference[0],y-reference[1])
         tangent/=max(float(np.linalg.norm(tangent)),1e-9)
         heading=math.atan2(tangent[1],tangent[0])
@@ -244,7 +249,7 @@ class PredictiveFollower(LineFollower):
             # A long preview can let an outward heading consume the remaining
             # corridor before steering catches up. Tighten only during drift.
             preview=min(preview,.30)
-        target = self.sample_tracking(self.progress+preview)
+        target = self.sample_tracking(tracking_s+preview)
         dx,dy = target-[x,y]
         forward = math.cos(yaw)*dx+math.sin(yaw)*dy
         if forward <= 0: self.stop(); raise ValueError('Reference behind vehicle; reposition instead of reversing')
@@ -253,7 +258,7 @@ class PredictiveFollower(LineFollower):
         feedforward=None
         if self.lateral_control=='smooth_pursuit':
             advance=min(.25,max(0,measured_speed)*.10)
-            index=(self.progress+advance)/self.path.ds
+            index=(tracking_s+advance)/self.path.ds
             a=int(math.floor(index));fraction=index-a
             ahead=float((1-fraction)*self.path.curvature[a%self.path.n]+
                         fraction*self.path.curvature[(a+1)%self.path.n])
@@ -264,8 +269,8 @@ class PredictiveFollower(LineFollower):
                     b=self.sample_tracking(distance+.3)-self.sample_tracking(distance)
                     area=a[0]*b[1]-a[1]*b[0]
                     return 2*area/max(float(np.linalg.norm(a)*np.linalg.norm(b)*np.linalg.norm(a+b)),1e-9)
-                current=tracking_curvature(self.progress)
-                ahead=tracking_curvature(self.progress+advance)
+                current=tracking_curvature(tracking_s)
+                ahead=tracking_curvature(tracking_s+advance)
             feedforward=.4*(ahead-current)
             k+=feedforward
             desired_steer=float(np.clip(math.atan(self.wheelbase*k),-self.max_steer,self.max_steer))
@@ -274,12 +279,12 @@ class PredictiveFollower(LineFollower):
             # Avoid switching to a short pursuit target during an outward drift:
             # that switch amplifies tiny pose errors into large alternating turns.
             advance=min(.25,max(0,measured_speed)*.10)
-            index=(self.progress+advance)/self.path.ds
+            index=(tracking_s+advance)/self.path.ds
             a=int(math.floor(index)); fraction=index-a
             feedforward=float((1-fraction)*self.path.curvature[a%self.path.n]+
                               fraction*self.path.curvature[(a+1)%self.path.n])
             if connector_active and self.lateral_control=='race_feedback':
-                distance=self.progress+advance
+                distance=tracking_s+advance
                 left=self.sample_tracking(distance)-self.sample_tracking(distance-.3)
                 right=self.sample_tracking(distance+.3)-self.sample_tracking(distance)
                 feedforward=2*(left[0]*right[1]-left[1]*right[0])/max(
@@ -461,6 +466,13 @@ class PredictiveFollower(LineFollower):
                                 steering_feedback_gain=self.steering_feedback_gain,
                                 effective_steering_feedback_gain=effective_gain,
                                 steering_feedback_age=self.measured_steer_age)
+        self.last_report.update(control_pose=[float(x),float(y),float(yaw)],
+                                tracking_reference=reference.tolist(),
+                                tracking_tangent=tangent.tolist(),
+                                projected_progress=tracking_s,
+                                previous_progress=float(previous_progress),
+                                signed_tracking_error=signed_error,
+                                controller_revision='projection-consistency-v1')
         return self.speed,self.steer
 
 
