@@ -80,6 +80,8 @@ class ContinuousRace:
         self.started_at = None
         self.run_metrics=None
         self.cycle_timing=CycleTiming()
+        from acceleration_recovery import AccelerationRecovery
+        self.acceleration_recovery=AccelerationRecovery(rospy.get_param('~speed_recovery_hold',0.0))
         self.run_report_file=os.path.expanduser(rospy.get_param('~run_report',''))
         self.report_lock=threading.Lock()
         self.previous = rospy.Time.now()
@@ -292,6 +294,7 @@ class ContinuousRace:
                         np.asarray(pose[:2])-self.path.sample(self.follower.origin))))
                 self.departure_trace=[]
                 self.departure_trace_at=-1.0
+                self.acceleration_recovery.reset()
                 self.run_metrics=RunMetrics()
                 self.cycle_timing=CycleTiming()
                 i=int(self.follower.progress/self.path.ds)%self.path.n
@@ -504,6 +507,14 @@ class ContinuousRace:
                                  compute_to_command=wall_laser-wall_start,
                                  simulation_interval=dt)
         speed = min(speed, obstacle_limit)
+        if self.generated:
+            upstream_reason=('laser' if obstacle_limit < self.follower.last_report['command_speed']
+                             else self.follower.last_report['reason'])
+            requested_speed=speed
+            speed=self.acceleration_recovery.step(speed,upstream_reason,dt)
+            self.follower.last_report.update(upstream_reason=upstream_reason,
+                recovery_hold_remaining=self.acceleration_recovery.remaining,
+                speed_recovery_hold=self.acceleration_recovery.hold_seconds)
         self.follower.speed = speed
         if self.generated and pose[3] > speed + 0.5:
             rospy.logwarn_throttle(1, 'Vehicle above requested speed: measured=%.3f command=%.3f; control=%s',
@@ -512,6 +523,8 @@ class ContinuousRace:
             self.follower.last_report['output_speed']=speed
             if obstacle_limit < self.follower.last_report['command_speed']:
                 self.follower.last_report['reason']='laser'
+            if speed < requested_speed-1e-9:
+                self.follower.last_report['reason']='recovery_hold'
         progress = self.follower.progress - self.follower.origin
         elapsed=(now-self.started_at).to_sec() if self.started_at is not None else 0
         if pose[3]>.05 and 'first_measured_motion_seconds' not in self.start_metrics:
