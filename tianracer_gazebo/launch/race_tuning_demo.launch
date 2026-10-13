@@ -1,0 +1,30 @@
+<launch>
+  <arg name="lateral_accel" default="6.5"/>
+  <arg name="acceleration" default="6.6"/>
+  <arg name="braking" default="3.6"/>
+  <arg name="yaw_rate" default="3.8"/>
+  <arg name="steering_feedback_gain" default="0.25"/>
+  <arg name="steering_preview_time" default="0.10"/>
+  <arg name="startup_speed" default="1.8"/>
+  <arg name="run_report" default="~/ican_race_logs/race_tuning.json"/>
+  <arg name="with_referee" default="true"/>
+  <arg name="gui" default="true"/>
+  <arg name="use_rviz" default="true"/>
+  <include file="$(find tianracer_gazebo)/launch/planned_race_demo.launch">
+    <arg name="gui" value="$(arg gui)"/>
+    <arg name="use_rviz" value="$(arg use_rviz)"/>
+  </include>
+  <group if="$(arg with_referee)">
+    <include file="$(find tianracer_sim_referee)/launch/referee.launch"/>
+  </group>
+  <include file="$(find tianracer_gazebo)/launch/race_tuning.launch">
+    <arg name="lateral_accel" value="$(arg lateral_accel)"/>
+    <arg name="acceleration" value="$(arg acceleration)"/>
+    <arg name="braking" value="$(arg braking)"/>
+    <arg name="yaw_rate" value="$(arg yaw_rate)"/>
+    <arg name="steering_feedback_gain" value="$(arg steering_feedback_gain)"/>
+    <arg name="steering_preview_time" value="$(arg steering_preview_time)"/>
+    <arg name="startup_speed" value="$(arg startup_speed)"/>
+    <arg name="run_report" value="$(arg run_report)"/>
+  </include>
+</launch>
