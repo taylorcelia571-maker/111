@@ -1,3 +1,5 @@
+> 最新实际 Gazebo 起步验证与里程计并发修复：[STARTUP_GAZEBO_VALIDATION_CN.md](STARTUP_GAZEBO_VALIDATION_CN.md)。新增快速并线起步入口；一分钟目标尚未达成。
+
 > 最新转向跟踪与圈速试验：[STEERING_FEEDBACK_CN.md](STEERING_FEEDBACK_CN.md)。新增默认关闭的受限转向反馈补偿；模型有条件改善，官方一分钟目标尚未达成。
 
 > 最新发车后起步偏差停车修正：[PREPARED_START_FIX_CN.md](PREPARED_START_FIX_CN.md)。prepare 后先等 status.steering_ready=true，再准备裁判并发车；同时修正起步弯道前视。

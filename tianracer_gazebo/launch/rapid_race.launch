@@ -3,6 +3,8 @@
        These are tuning budgets, not certified physical vehicle limits. -->
   <!-- Share the wall reserve fix with optimized_race; do not lower the stop threshold. -->
   <arg name="route_margin" default="0.34"/>
+  <arg name="laps" default="6"/>
+  <arg name="run_report" default="~/ican_race_logs/control_run_report.json"/>
   <arg name="max_speed" default="5.0"/>
   <arg name="lateral_accel" default="6.0"/>
   <arg name="acceleration" default="3.0"/>
@@ -20,6 +22,8 @@
   <arg name="refine_line" default="false"/>
   <include file="$(find tianracer_gazebo)/launch/planned_race.launch">
     <arg name="route_margin" value="$(arg route_margin)"/>
+    <arg name="laps" value="$(arg laps)"/>
+    <arg name="run_report" value="$(arg run_report)"/>
     <arg name="max_speed" value="$(arg max_speed)"/>
     <arg name="lateral_accel" value="$(arg lateral_accel)"/>
     <arg name="acceleration" value="$(arg acceleration)"/>

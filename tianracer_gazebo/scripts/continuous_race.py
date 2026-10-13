@@ -181,6 +181,7 @@ class ContinuousRace:
                 x,y,yaw=predict_rear_pose(x,y,yaw,speed,omega,age,rear_lateral)
                 self.feedback_pose['prediction_applied']=True
         self.feedback_pose['control_rear_pose']=[x,y,yaw]
+        self.feedback_pose['odometry_longitudinal_speed']=float(self.odom.twist.twist.linear.x)
         return x,y,yaw,speed
 
     def status(self, request):
@@ -275,7 +276,8 @@ class ContinuousRace:
                 self.started_at=rospy.Time.now()
                 self.start_metrics=dict(prepare_used=prepared_used,
                     start_mode=dict(getattr(self.follower,'start_diagnostics',{})),
-                    initial_reference_error=self.follower.error)
+                    initial_reference_error=float(np.linalg.norm(
+                        np.asarray(pose[:2])-self.path.sample(self.follower.origin))))
                 self.run_metrics=RunMetrics()
                 i=int(self.follower.progress/self.path.ds)%self.path.n
                 self.run_metrics.observe(0,pose[3],0,self.follower.error,'startup_wait',

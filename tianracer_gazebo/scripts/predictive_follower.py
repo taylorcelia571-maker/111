@@ -160,7 +160,7 @@ class PredictiveFollower(LineFollower):
         if not math.isfinite(elapsed) or not 0 < elapsed <= 0.3:
             self.stop(); raise ValueError('Invalid projection interval: %.6fs' % elapsed)
         if measured_speed < -0.1:
-            self.stop(); raise ValueError('Unexpected backward vehicle motion')
+            self.stop(); raise ValueError('Unexpected backward vehicle motion: measured_speed=%.4fm/s' % measured_speed)
         if self.progress is None: self.start(x,y,yaw)
         s,self.error = self.path.project(x,y,self.progress-0.1,self.progress+self.max_speed*elapsed*2+0.20)
         if self.error > self.max_error:

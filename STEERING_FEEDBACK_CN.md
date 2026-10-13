@@ -83,4 +83,4 @@ rosservice call /tianracer/continuous_race/stop '{}'
 
 ## 云端实际验证状态
 
-已准备 Ubuntu 20.04/ROS Noetic/Python 3.8.10 基础容器，但 Gazebo ROS 依赖未安装：官方 `snapshots.ros.org` 软件源请求返回 403，当前网络未放行该域名。没有绕过代理、关闭 TLS 或包签名校验。已保存仅添加此域名的云环境网络草稿；用户需在环境设置审核保存并发布后，才能继续安装与真实 Gazebo 验证。草稿保存不会立即改变当前网络。没有宣称完成实际 ROS/Gazebo 五圈验证。
+之前的 ROS 软件源访问与依赖缺失已解决，现已安装 ROS Noetic / Gazebo 11，并进行原版场景、车辆的实际动力学对照。最新结果与完整更新步骤见 [STARTUP_GAZEBO_VALIDATION_CN.md](STARTUP_GAZEBO_VALIDATION_CN.md)；旧的离线补偿结果不代表实际 Gazebo 或官方成绩。云环境安装与启动说明已保存为草稿，需要在环境设置保存、发布后才成为可复用配置。

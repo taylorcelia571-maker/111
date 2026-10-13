@@ -7,6 +7,8 @@ Winter Guerra
 '''
 
 import rospy
+import copy
+import threading
 from nav_msgs.msg import Odometry
 from geometry_msgs.msg import Pose, Twist, Transform, TransformStamped, Vector3Stamped
 from gazebo_msgs.msg import LinkStates
@@ -23,6 +25,7 @@ class OdometryNode:
     pub_odom = rospy.Publisher('odom', Odometry, queue_size=1)
 
     def __init__(self):
+        self.lock = threading.RLock()
         # init internals
         self.last_received_pose = Pose()
         self.last_received_pose.orientation.w = 1
@@ -38,54 +41,45 @@ class OdometryNode:
         rospy.Subscriber('/gazebo/link_states', LinkStates, self.sub_robot_pose_update)
 
     def sub_robot_pose_update(self, msg):
-        # Find the index of the racecar
         try:
-            arrayIndex = msg.name.index(f'{robot_name}::{robot_name}/base_footprint')
-        except ValueError as e:
-            # Wait for Gazebo to startup
-            pass
-        else:
-            # Extract our current position information
-            self.last_received_pose = msg.pose[arrayIndex]
-            self.last_received_twist = msg.twist[arrayIndex]
-            
-            # get a Vector3Stamped from the twist_in_gazebo
-            twist_linear = Vector3Stamped()
-            twist_linear.vector = self.last_received_twist.linear
-            
-            # get a TransformStamped from the last_received_pose
-            twist_transform = TransformStamped()
-            
-            # last received pose is base_footprint in gazebo. twist is in gazebo frame.
-            # we want to transform the twist into the base_footprint frame. requires a inverse
-            q=tf.transformations.quaternion_inverse([self.last_received_pose.orientation.x, self.last_received_pose.orientation.y, self.last_received_pose.orientation.z, self.last_received_pose.orientation.w])
-            
-            twist_transform.transform.rotation.x = q[0]
-            twist_transform.transform.rotation.y = q[1]
-            twist_transform.transform.rotation.z = q[2]
-            twist_transform.transform.rotation.w = q[3]
-                
-            # transform the Vector3Stamped into the child frame, base_link
-            twist_linear = tf2_geometry_msgs.do_transform_vector3(twist_linear, twist_transform)
-            
-            ######### the result is not proper ###########
-            #print(twist_linear)
-
-            self.last_received_twist.linear = twist_linear.vector
-        
-        self.last_recieved_stamp = rospy.Time.now()
-          
-            
-    def timer_callback(self, event):
-        if self.last_recieved_stamp is None:
+            index = msg.name.index(f'{robot_name}::{robot_name}/base_footprint')
+        except ValueError:
+            # Do not fabricate stamped identity odometry before the car exists.
             return
+        stamp = rospy.Time.now()
+        pose = copy.deepcopy(msg.pose[index])
+        twist = copy.deepcopy(msg.twist[index])
+        q = pose.orientation
+        inverse = tf.transformations.quaternion_inverse([q.x, q.y, q.z, q.w])
+        transform = TransformStamped()
+        transform.transform.rotation.x, transform.transform.rotation.y = inverse[:2]
+        transform.transform.rotation.z, transform.transform.rotation.w = inverse[2:]
+        # Both Twist vectors belong to child_frame_id, not the Gazebo world.
+        # Convert local copies before exposing a new snapshot to the timer.
+        for field in ('linear', 'angular'):
+            vector = Vector3Stamped()
+            vector.vector = getattr(twist, field)
+            converted = tf2_geometry_msgs.do_transform_vector3(vector, transform)
+            setattr(twist, field, converted.vector)
+        with self.lock:
+            self.last_received_pose = pose
+            self.last_received_twist = twist
+            self.last_recieved_stamp = stamp
+
+    def timer_callback(self, event):
+        with self.lock:
+            if self.last_recieved_stamp is None:
+                return
+            pose = copy.deepcopy(self.last_received_pose)
+            twist = copy.deepcopy(self.last_received_twist)
+            stamp = self.last_recieved_stamp
 
         odom = Odometry()
-        odom.header.stamp = self.last_recieved_stamp
+        odom.header.stamp = stamp
         odom.header.frame_id = f'{robot_name}/odom'
         odom.child_frame_id = f'{robot_name}/base_footprint'
-        odom.pose.pose = self.last_received_pose
-        odom.twist.twist = self.last_received_twist
+        odom.pose.pose = pose
+        odom.twist.twist = twist
         odom.pose.covariance =[1e-3, 0, 0, 0, 0, 0,
 						0, 1e-3, 0, 0, 0, 0,
 						0, 0, 1e6, 0, 0, 0,
