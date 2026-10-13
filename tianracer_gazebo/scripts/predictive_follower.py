@@ -150,10 +150,14 @@ class PredictiveFollower(LineFollower):
         initial_error=math.hypot(*(np.array([x,y])-self.path.sample(self.origin)))
         ids=np.arange(int(self.origin/self.path.ds),int((self.origin+self.connector_length)/self.path.ds)+1)%self.path.n
         heading_limit=.05 if self.lateral_control in ('smooth_pursuit','race_feedback') else .15
+        eligibility=dict(initial_error=initial_error,initial_heading_error=difference,
+                         heading_limit=heading_limit,start_blend_enabled=self.start_blend,
+                         maximum_connector_curvature=float(np.max(abs(self.path.curvature[ids]))))
+        self.start_diagnostics.update(eligibility)
         if self.start_blend and initial_error<=.10 and abs(difference)<=heading_limit and np.max(abs(self.path.curvature[ids]))<.20:
             self.connector_offset=np.array([x,y])-self.path.sample(self.origin)
             self.departure=False
-            self.start_diagnostics=dict(mode='connector',length=self.connector_length,initial_error=initial_error)
+            self.start_diagnostics=dict(mode='connector',length=self.connector_length,**eligibility)
             self.launch_limited=self.lateral_control in ('smooth_pursuit','race_feedback')
 
     def sample_tracking(self, distance):
@@ -402,13 +406,17 @@ class PredictiveFollower(LineFollower):
                     departure_limit += 0.65*min(lateral_quality,heading_quality)
                 if departure_limit < desired: reason='departure'
                 desired = min(desired,departure_limit)
+        startup_blockers=[]
         if self.launch_limited:
             actual=self.steer if self.measured_steer is None else self.measured_steer
             completed=not connector_active
             if self.startup_release_early and self.lateral_control=='race_feedback':
                 completed=self.progress-self.origin>=.6
-            ready=(completed and control_error<.025 and
-                   abs(recovery_heading_error)<.05 and abs(desired_steer-actual)<.05)
+            if not completed:startup_blockers.append('minimum_progress_or_connector_not_complete')
+            if control_error>=.025:startup_blockers.append('tracking_error')
+            if abs(recovery_heading_error)>=.05:startup_blockers.append('heading_alignment')
+            if abs(desired_steer-actual)>=.05:startup_blockers.append('steering_alignment')
+            ready=not startup_blockers
             self.launch_ready=self.launch_ready+dt if ready else 0.0
             if self.launch_ready>=.3:
                 self.launch_limited=False
@@ -421,6 +429,8 @@ class PredictiveFollower(LineFollower):
             active_acceleration=min(active_acceleration,self.startup_acceleration)
         if self.lateral_control in ('smooth_pursuit','race_feedback') and self.departure:
             active_acceleration=min(active_acceleration,2.0)
+        acceleration_guard_active=(active_acceleration<self.acceleration-1e-9)
+        if self.launch_limited and not startup_blockers:startup_blockers.append('sustained_readiness_pending')
         acceleration_limit=self.speed+active_acceleration*dt
         if acceleration_limit < desired: reason='acceleration'
         self.speed = min(desired,acceleration_limit)
@@ -441,7 +451,11 @@ class PredictiveFollower(LineFollower):
                                 launch_limited=self.launch_limited,launch_ready_seconds=self.launch_ready,
                                 startup_speed=self.startup_speed,startup_acceleration=self.startup_acceleration,
                                 alignment_ready_seconds=self.alignment_ready,
-                                active_acceleration=active_acceleration)
+                                active_acceleration=active_acceleration,
+                                startup_release_blockers=startup_blockers,
+                                acceleration_guard_active=acceleration_guard_active,
+                                progress_since_start=self.progress-self.origin,
+                                speed_planning=self.speed_planning)
         self.last_report.update(actuator_target_steer=actuator_target,
                                 constraint_curvature=constraint_curvature,
                                 steering_feedback_gain=self.steering_feedback_gain,

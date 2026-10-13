@@ -184,6 +184,22 @@ class RuntimeTests(unittest.TestCase):
         self.node.on_joints(self.joints((self.node.prepared_steer,)*2))
         self.assertTrue(self.node.start(None).success)
 
+    def test_first_turn_trace_records_and_survives_saved_report_then_resets(self):
+        self.feedback_node();self.node.on_joints(self.joints())
+        self.assertTrue(self.node.start(None).success)
+        self.tick()
+        self.assertEqual(len(self.node.departure_trace),1)
+        row=self.node.departure_trace[0]
+        self.assertIn('reason',row['control'])
+        self.assertIn('acceleration_guard_active',row['control'])
+        with tempfile.TemporaryDirectory() as folder:
+            self.node.run_report_file=str(Path(folder)/'run.json')
+            self.node.stop(None)
+            report=json.loads(Path(self.node.run_report_file).read_text())
+            self.assertEqual(report['departure_trace'],self.node.departure_trace)
+        self.assertTrue(self.node.start(None).success)
+        self.assertEqual(self.node.departure_trace,[])
+
     def test_feedback_mode_blocks_start_with_missing_or_stale_joints(self):
         self.feedback_node()
         self.assertFalse(self.node.start(None).success)

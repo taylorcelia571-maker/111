@@ -116,7 +116,7 @@ roslaunch tianracer_gazebo time_attack_race.launch run_report:=$HOME/ican_race_l
 这组参数不宣称可达到 60 秒。出现风险限速、速度大幅超出目标或控制停车时保留报告、status 和完整控制日志，停止本轮并重置场景；不要继续增加预算或在故障车姿重复 start。回退为你已获得 87.546 秒的配置：
 
 ```bash
-roslaunch tianracer_gazebo quick_start_race.launch steering_feedback_gain:=0.25 acceleration:=6.6 braking:=3.6 refine_line:=true run_report:=$HOME/ican_race_logs/slim_tuned.json
+roslaunch tianracer_gazebo quick_start_race.launch legacy_control:=true steering_feedback_gain:=0.25 acceleration:=6.6 braking:=3.6 refine_line:=true run_report:=$HOME/ican_race_logs/slim_tuned.json
 ```
 
 ## 留证与目标验收

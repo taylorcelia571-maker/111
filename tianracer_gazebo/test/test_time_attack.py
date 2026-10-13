@@ -80,6 +80,32 @@ class TimeAttackTests(unittest.TestCase):
         self.assertTrue(report['startup_release_early'])
         self.assertAlmostEqual(report['model_five_seconds'],report['response_preview_proxy_five_seconds'])
 
+    def test_startup_diagnostics_identify_why_acceleration_is_limited(self):
+        f=self.follower();f.start(.0081,-.1665,1.5707)
+        f.measured_steer=0
+        f.step(.0081,-.1665,1.5707,0,.02)
+        self.assertIn('minimum_progress_or_connector_not_complete',f.last_report['startup_release_blockers'])
+        self.assertTrue(f.last_report['acceleration_guard_active'])
+        self.assertEqual(f.last_report['active_acceleration'],2)
+        self.assertEqual(f.last_report['speed_planning'],'delayed_braking')
+
+    def test_new_controller_uses_requested_acceleration_before_five_meters(self):
+        import math
+        f=self.follower();x,y,yaw=.0081,-.1665,1.5707
+        f.start(x,y,yaw);speed=steer=0
+        for tick in range(200):
+            f.measured_steer=steer;f.measured_steer_age=0
+            v,d=f.step(x,y,yaw,speed,.02)
+            if not f.launch_limited:
+                self.assertFalse(f.last_report['acceleration_guard_active'])
+                self.assertEqual(f.last_report['active_acceleration'],BASE['acceleration'])
+                self.assertLess(f.last_report['progress_since_start'],5)
+                break
+            speed+=(v-speed)*.02/.15;steer+=(d-steer)*.02/.15
+            x+=speed*math.cos(yaw)*.02;y+=speed*math.sin(yaw)*.02
+            yaw+=speed*math.tan(steer)/.26*.02
+        else:self.fail('Measured readiness should release the startup acceleration guard')
+
     def test_corridor_guard_still_stops_new_controller(self):
         f=self.follower();f.start(.0081,-.1665,1.5707)
         f.measured_steer=0

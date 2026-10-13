@@ -74,6 +74,8 @@ class ContinuousRace:
         self.last_start_rejection = None
         self.last_fault = None
         self.start_metrics = {}
+        self.departure_trace=[]
+        self.departure_trace_at=-1.0
         self.started_at = None
         self.run_metrics=None
         self.cycle_timing=CycleTiming()
@@ -93,6 +95,11 @@ class ContinuousRace:
         if self.generated:
             rospy.loginfo('Controller: %s; speed budget %.2fm/s; steering joint feedback required=%s',
                           self.follower.lateral_control,self.follower.max_speed,self.require_joint_feedback)
+            rospy.loginfo('ACTIVE CONTROL: controller=%s speed_planning=%s early_start_release=%s '
+                          'startup_speed=%.2f startup_acceleration=%.2f normal_acceleration=%.2f; source=%s',
+                          self.follower.lateral_control,self.follower.speed_planning,
+                          self.follower.startup_release_early,self.follower.startup_speed,
+                          self.follower.startup_acceleration,self.follower.acceleration,os.path.realpath(__file__))
 
     def on_joints(self,msg):
         with self.lock:
@@ -282,6 +289,8 @@ class ContinuousRace:
                     start_mode=dict(getattr(self.follower,'start_diagnostics',{})),
                     initial_reference_error=float(np.linalg.norm(
                         np.asarray(pose[:2])-self.path.sample(self.follower.origin))))
+                self.departure_trace=[]
+                self.departure_trace_at=-1.0
                 self.run_metrics=RunMetrics()
                 self.cycle_timing=CycleTiming()
                 i=int(self.follower.progress/self.path.ds)%self.path.n
@@ -312,6 +321,7 @@ class ContinuousRace:
                       cycle_wall_timing=self.cycle_timing.report(),
                       controller=getattr(self.follower,'lateral_control','legacy'),
                       startup=self.start_metrics,last_fault=self.last_fault,
+                      departure_trace=self.departure_trace,
                       limits={name:getattr(self.follower,name) for name in
                               ('max_speed','lateral_accel','acceleration','braking','max_error',
                                'yaw_rate','steering_rate','response_delay','steering_feedback_gain') if hasattr(self.follower,name)})
@@ -510,6 +520,15 @@ class ContinuousRace:
         if progress>=self.path.length and 'first_reference_loop_seconds' not in self.start_metrics:
             self.start_metrics['first_reference_loop_seconds']=elapsed
             rospy.loginfo('First reference loop: %.3fs (official referee time is separate)',elapsed)
+        if self.generated and progress<=6 and elapsed-self.departure_trace_at>=.05 and len(self.departure_trace)<600:
+            self.departure_trace.append(dict(simulation_elapsed=elapsed,progress_m=progress,
+                measured_speed=pose[3],output_speed=speed,control=dict(self.follower.last_report)))
+            self.departure_trace_at=elapsed
+        if self.generated and (self.follower.launch_limited or self.follower.departure):
+            blockers=self.follower.last_report.get('startup_release_blockers',[])
+            if self.follower.departure:blockers=['departure_alignment']+blockers
+            rospy.loginfo_throttle(1,'Startup speed guard: progress=%.2fm ready=%.2fs blockers=%s',
+                progress,self.follower.launch_ready,','.join(blockers))
         if self.run_metrics is not None:
             i=int(self.follower.progress/self.path.ds)%self.path.n
             changed=self.run_metrics.observe(elapsed,pose[3],speed,self.follower.error,

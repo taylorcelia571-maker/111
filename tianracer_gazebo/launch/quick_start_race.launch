@@ -1,6 +1,11 @@
 <launch>
-  <!-- Bounded C2 merging, exercised with the original Gazebo vehicle.
-       Reference-loop tests are not certified official five-lap results. -->
+  <!-- Updated compatibility entry: modern controller by default.
+       Set legacy_control:=true to reproduce the previous smooth-pursuit run. -->
+  <arg name="legacy_control" default="false"/>
+  <arg name="startup_speed" default="1.8"/>
+  <arg name="startup_acceleration" default="2.0"/>
+  <arg name="response_delay" default="0.25"/>
+  <arg name="steering_rate" default="2.0"/>
   <arg name="laps" default="6"/>
   <arg name="run_report" default="~/ican_race_logs/control_run_report.json"/>
   <arg name="steering_feedback_gain" default="0.0"/>
@@ -10,7 +15,7 @@
   <arg name="braking" default="3.0"/>
   <arg name="yaw_rate" default="3.8"/>
   <arg name="refine_line" default="false"/>
-  <include file="$(find tianracer_gazebo)/launch/rapid_race.launch">
+  <include file="$(find tianracer_gazebo)/launch/planned_race.launch">
     <arg name="laps" value="$(arg laps)"/>
     <arg name="run_report" value="$(arg run_report)"/>
     <arg name="max_speed" value="$(arg max_speed)"/>
@@ -19,12 +24,17 @@
     <arg name="braking" value="$(arg braking)"/>
     <arg name="yaw_rate" value="$(arg yaw_rate)"/>
     <arg name="route_margin" value="0.34"/>
-    <arg name="lateral_control" value="smooth_pursuit"/>
+    <arg name="lateral_control" value="$(eval 'smooth_pursuit' if arg('legacy_control') else 'race_feedback')"/>
+    <arg name="speed_planning" value="$(eval 'legacy' if arg('legacy_control') else 'delayed_braking')"/>
+    <arg name="startup_release_early" value="$(eval not arg('legacy_control'))"/>
+    <arg name="fast_start" value="true"/>
+    <arg name="optimize_time" value="true"/>
     <arg name="start_blend" value="true"/>
-    <arg name="startup_speed" value="1.8"/>
-    <arg name="startup_acceleration" value="2.0"/>
+    <arg name="startup_speed" value="$(arg startup_speed)"/>
+    <arg name="startup_acceleration" value="$(arg startup_acceleration)"/>
     <arg name="steering_feedback_gain" value="$(arg steering_feedback_gain)"/>
-    <arg name="response_delay" value="0.25"/>
+    <arg name="response_delay" value="$(arg response_delay)"/>
+    <arg name="steering_rate" value="$(arg steering_rate)"/>
     <arg name="predict_pose" value="false"/>
     <arg name="refine_line" value="$(arg refine_line)"/>
   </include>
