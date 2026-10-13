@@ -1,5 +1,28 @@
 """Simulation-time summaries of controller behavior, not official race results."""
 import math
+from collections import deque
+
+
+class CycleTiming:
+    """Bounded wall-time diagnostics, separate from simulation race timing."""
+    def __init__(self):
+        self.rows = {}
+
+    def observe(self, **seconds):
+        for name, value in seconds.items():
+            if not math.isfinite(value) or value < 0:
+                continue
+            row = self.rows.setdefault(name, dict(count=0, total=0., peak=0., recent=deque(maxlen=256)))
+            row['count'] += 1
+            row['total'] += value
+            row['peak'] = max(row['peak'], value)
+            row['recent'].append(value)
+
+    def report(self):
+        return {name: dict(samples=row['count'], mean_ms=1000*row['total']/row['count'],
+                           peak_ms=1000*row['peak'],
+                           recent_p95_ms=1000*sorted(row['recent'])[int(.95*(len(row['recent'])-1))])
+                for name, row in self.rows.items()}
 
 
 class RunMetrics:

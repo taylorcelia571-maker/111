@@ -153,6 +153,15 @@ class PredictiveFollower(LineFollower):
         super().stop()
         self.steer = 0.0
 
+    def sample_tracking_many(self, distances):
+        distances=np.asarray(distances,dtype=float)
+        points=self.path.sample_many(distances)
+        if self.connector_offset is not None:
+            u=np.clip((distances-self.origin)/self.connector_length,0,1)
+            blend=1-10*u**3+15*u**4-6*u**5
+            points=points+blend[:,None]*self.connector_offset
+        return points
+
     def step(self, x, y, yaw, measured_speed, dt, projection_dt=None):
         if not all(math.isfinite(v) for v in (x,y,yaw,measured_speed,dt)) or not 0 < dt <= 0.2:
             self.stop(); raise ValueError('Invalid feedback/control step: dt=%.6fs, pose=(%s,%s,%s), speed=%s' % (dt,x,y,yaw,measured_speed))
@@ -401,7 +410,8 @@ class PredictiveFollower(LineFollower):
 
 
 def reference_clearance(path, progress, pose, scan, laser_pose, speed, braking=3.0,
-                        half_width=0.16, reaction=0.15, diagnostics=None, half_length=0.23, sample=None):
+                        half_width=0.16, reaction=0.15, diagnostics=None, half_length=0.23, sample=None,
+                        sample_many=None):
     """Check laser hits along the *planned* turn, rather than extrapolating one steer."""
     report = diagnostics if diagnostics is not None else {}
     report.clear()
@@ -428,15 +438,30 @@ def reference_clearance(path, progress, pose, scan, laser_pose, speed, braking=3
     bx = lx+r[select]*np.cos(angles[select]); by = ly+r[select]*np.sin(angles[select])
     obstacles = np.column_stack([x+math.cos(yaw)*bx-math.sin(yaw)*by,
                                  y+math.sin(yaw)*bx+math.cos(yaw)*by])
+    if not len(obstacles): return float('inf')
     horizon = max(0.6,speed*reaction+speed**2/(2*braking)+0.35)
     arcs = np.linspace(0,horizon,int(math.ceil(horizon/0.04))+1)
-    sample = path.sample if sample is None else sample
-    rear = np.array([sample(progress+d) for d in arcs])
-    tangents = np.array([sample(progress+d+0.04)-sample(progress+d-0.04) for d in arcs])
+    if sample is None:
+        sample=path.sample
+        sample_many=path.sample_many if sample_many is None else sample_many
+    if sample_many is None:
+        rear = np.array([sample(progress+d) for d in arcs])
+        tangents = np.array([sample(progress+d+0.04)-sample(progress+d-0.04) for d in arcs])
+    else:
+        distances=progress+arcs
+        rear=sample_many(distances)
+        tangents=sample_many(distances+.04)-sample_many(distances-.04)
     tangents /= np.maximum(np.linalg.norm(tangents,axis=1)[:,None],1e-9)
     centers = rear+0.13*tangents  # base center lies ahead of rear axle
     actual_center = np.array([x+0.13*math.cos(yaw),y+0.13*math.sin(yaw)])
     centers += (actual_center-centers[0])*np.maximum(0,1-arcs[:,None]/0.6)
+    # Every rotated footprint fits inside this bounding radius. Points outside
+    # the union's bounding box cannot hit any sampled footprint. Preserve all
+    # beams, metadata checks, horizon, spacing and rectangle dimensions.
+    radius=math.hypot(half_length,half_width)+1e-10  # retain boundary hits under roundoff
+    lower=np.min(centers,axis=0)-radius
+    upper=np.max(centers,axis=0)+radius
+    obstacles=obstacles[np.all((obstacles>=lower)&(obstacles<=upper),axis=1)]
     if not len(obstacles): return float('inf')
     # A disk overstates lateral width while understating front/rear extent.
     # Use an oriented rectangle enclosing the existing costmap (.15 square)

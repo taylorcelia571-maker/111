@@ -6,6 +6,7 @@ import json
 import math
 import os
 import threading
+import time
 import numpy as np
 import rospy
 import rosgraph
@@ -15,7 +16,7 @@ from nav_msgs.msg import Odometry
 from sensor_msgs.msg import LaserScan, JointState
 from std_srvs.srv import Trigger, TriggerResponse
 from race_line import ClosedPath, LineFollower, clearance_speed
-from run_metrics import RunMetrics
+from run_metrics import RunMetrics, CycleTiming
 
 
 class ContinuousRace:
@@ -73,6 +74,7 @@ class ContinuousRace:
         self.start_metrics = {}
         self.started_at = None
         self.run_metrics=None
+        self.cycle_timing=CycleTiming()
         self.run_report_file=os.path.expanduser(rospy.get_param('~run_report',''))
         self.report_lock=threading.Lock()
         self.previous = rospy.Time.now()
@@ -279,6 +281,7 @@ class ContinuousRace:
                     initial_reference_error=float(np.linalg.norm(
                         np.asarray(pose[:2])-self.path.sample(self.follower.origin))))
                 self.run_metrics=RunMetrics()
+                self.cycle_timing=CycleTiming()
                 i=int(self.follower.progress/self.path.ds)%self.path.n
                 self.run_metrics.observe(0,pose[3],0,self.follower.error,'startup_wait',
                     getattr(self.follower,'departure',False),float(self.path.curvature[i]),0)
@@ -304,6 +307,7 @@ class ContinuousRace:
         if not self.run_report_file or self.run_metrics is None:return
         report=self.run_metrics.report()
         report.update(reference_sha256=self.reference_sha256,
+                      cycle_wall_timing=self.cycle_timing.report(),
                       controller=getattr(self.follower,'lateral_control','legacy'),
                       startup=self.start_metrics,last_fault=self.last_fault,
                       limits={name:getattr(self.follower,name) for name in
@@ -368,16 +372,30 @@ class ContinuousRace:
                 self.stop(None)
                 rate = rospy.Rate(50)
 
-    def laser_feedback(self, now):
-        # Select the newest short-age scan whose acquisition transform exists.
+    def verified_laser_history(self, now):
+        # Select the newest scan whose acquisition transform exists, retaining
+        # the same 300ms sensor limit as the bounded latest-scan fallback.
         # A 40Hz scan and 20Hz odometry need not share the latest timestamp.
         for scan in reversed(self.scan_history):
+            if scan.header.stamp.to_sec()<=0:continue
             age=(now-scan.header.stamp).to_sec()
-            if not -.02<=age<=.1: continue
+            if not -.02<=age<=.3: continue
             if self.listener.canTransform(self.frame,scan.header.frame_id,scan.header.stamp):
-                position,rotation=self.listener.lookupTransform(self.frame,scan.header.frame_id,scan.header.stamp)
+                try:
+                    position,rotation=self.listener.lookupTransform(self.frame,scan.header.frame_id,scan.header.stamp)
+                except tf.Exception:
+                    # Availability can change between the two TF calls. Try
+                    # another timestamp instead of accepting an unverified pose.
+                    continue
+                if not -.02<=(rospy.Time.now()-scan.header.stamp).to_sec()<=.3:
+                    continue
                 self.laser_cache=(scan,position,rotation)
                 return self.laser_cache
+        return None
+
+    def laser_feedback(self, now):
+        verified=self.verified_laser_history(now)
+        if verified is not None:return verified
         if self.laser_cache is not None and -.02<=(now-self.laser_cache[0].header.stamp).to_sec()<=.1:
             return self.laser_cache
         scan=self.scan
@@ -387,9 +405,15 @@ class ContinuousRace:
             raise ValueError('Current laser scan stale: age=%.6fs' % age)
         # Cache expiry alone is not a sensor fault. Try bounded TF acquisition
         # before stopping; never return a scan with an unverified transform.
-        self.listener.waitForTransform(self.frame,scan.header.frame_id,scan.header.stamp,
-                                       rospy.Duration(.05),rospy.Duration(.005))
-        position,rotation=self.listener.lookupTransform(self.frame,scan.header.frame_id,scan.header.stamp)
+        try:
+            self.listener.waitForTransform(self.frame,scan.header.frame_id,scan.header.stamp,
+                                           rospy.Duration(.05),rospy.Duration(.005))
+            position,rotation=self.listener.lookupTransform(self.frame,scan.header.frame_id,scan.header.stamp)
+        except tf.Exception:
+            # TF may have caught up to an earlier scan during the bounded wait.
+            verified=self.verified_laser_history(rospy.Time.now())
+            if verified is not None:return verified
+            raise
         age=(rospy.Time.now()-scan.header.stamp).to_sec()
         if not -.02<=age<=.3:
             raise ValueError('Laser scan expired during TF acquisition: age=%.6fs' % age)
@@ -397,6 +421,7 @@ class ContinuousRace:
         return self.laser_cache
 
     def control_cycle(self, now, dt):
+        wall_start=time.perf_counter()
         pose = self.sensors()
         if self.generated:
             scan,laser_pos,laser_rot=self.laser_feedback(now)
@@ -413,6 +438,7 @@ class ContinuousRace:
         self.previous = now
         if self.clearance_guard is not None:
             self.clearance_guard(pose)
+        wall_sensors=time.perf_counter()
         if self.generated:
             # Fresh feedback is mandatory. Project over the actual
             # elapsed arc, but never catch up acceleration/steering
@@ -422,6 +448,7 @@ class ContinuousRace:
                 rospy.logwarn_throttle(1, 'Control scheduling delay: dt=%.6fs; fresh feedback accepted', dt)
         else:
             speed, steer = self.follower.step(*pose, dt)
+        wall_follower=time.perf_counter()
         if self.generated:
             from predictive_follower import reference_clearance
             # A scan is already allowed to be up to 300ms old. Transform
@@ -436,6 +463,7 @@ class ContinuousRace:
                 self.path, self.follower.progress, pose, scan,
                 relative_laser, max(speed, abs(pose[3])),
                 self.follower.braking, diagnostics=report, sample=self.follower.sample_tracking,
+                sample_many=self.follower.sample_tracking_many,
                 reaction=max(.15,self.follower.response_delay))
             report.update(scan_age=(now-scan.header.stamp).to_sec(),
                           speed_limit=obstacle_limit if math.isfinite(obstacle_limit) else None,
@@ -455,6 +483,12 @@ class ContinuousRace:
                 laser_x=laser_pos[0], laser_y=laser_pos[1], laser_yaw=laser_yaw)
             if obstacle_limit < 0.05:
                 raise ValueError('Obstacle/invalid scan: stopped; inspect then call start again')
+        wall_laser=time.perf_counter()
+        self.cycle_timing.observe(sensors_tf=wall_sensors-wall_start,
+                                 follower=wall_follower-wall_sensors,
+                                 laser=wall_laser-wall_follower,
+                                 compute_to_command=wall_laser-wall_start,
+                                 simulation_interval=dt)
         speed = min(speed, obstacle_limit)
         self.follower.speed = speed
         if self.generated and pose[3] > speed + 0.5:

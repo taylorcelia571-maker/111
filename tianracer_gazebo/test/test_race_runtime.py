@@ -517,6 +517,50 @@ class RuntimeTests(unittest.TestCase):
         self.assertFalse(self.node.active)
         self.assertEqual(self.node.pub.publish.call_args.args[0].linear.x,0)
 
+    def test_tf_availability_race_uses_verified_history_inside_original_sensor_limit(self):
+        import copy
+        self.generated_node()
+        old=copy.deepcopy(self.node.scan);old.header.stamp=Stamp(.83)
+        latest=copy.deepcopy(self.node.scan)
+        self.node.on_scan(old);self.node.on_scan(latest)
+        original=self.node.listener.lookupTransform.side_effect
+        def lookup(target,source,stamp):
+            if source=='laser' and stamp.to_sec()>.83:raise RuntimeError('TF temporarily ahead')
+            return original(target,source,stamp)
+        self.node.listener.lookupTransform.side_effect=lookup
+        self.tick()
+        self.assertTrue(self.node.active)
+        self.assertIs(self.node.laser_cache[0],old)
+        self.node.listener.waitForTransform.assert_not_called()
+
+    def test_transformable_history_older_than_300ms_is_rejected(self):
+        import copy
+        self.generated_node()
+        old=copy.deepcopy(self.node.scan);old.header.stamp=Stamp(.69)
+        self.node.on_scan(old)
+        self.node.listener.canTransform.side_effect=lambda target,source,stamp:stamp.to_sec()==.69
+        self.node.listener.waitForTransform.side_effect=RuntimeError('No fresh verified TF')
+        self.tick()
+        self.assertFalse(self.node.active)
+        self.assertEqual(self.node.pub.publish.call_args.args[0].linear.x,0)
+
+    def test_bounded_tf_wait_failure_rechecks_history_that_became_available(self):
+        import copy
+        self.generated_node()
+        recent=copy.deepcopy(self.node.scan);recent.header.stamp=Stamp(.97)
+        latest=copy.deepcopy(self.node.scan)
+        self.node.on_scan(recent);self.node.on_scan(latest)
+        ready=[False]
+        self.node.listener.canTransform.side_effect=lambda target,source,stamp:ready[0] and stamp.to_sec()==.97
+        def wait(*args):
+            ready[0]=True
+            raise RuntimeError('Latest scan still ahead of TF')
+        self.node.listener.waitForTransform.side_effect=wait
+        self.tick()
+        self.assertTrue(self.node.active)
+        self.assertIs(self.node.laser_cache[0],recent)
+        self.node.listener.waitForTransform.assert_called_once()
+
     def test_tf_wait_refreshes_control_time_before_integrating(self):
         self.generated_node()
         self.node.listener.canTransform.return_value=False

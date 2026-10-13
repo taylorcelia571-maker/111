@@ -4,7 +4,7 @@ from pathlib import Path
 import sys
 import unittest
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'scripts'))
-from run_metrics import RunMetrics
+from run_metrics import RunMetrics, CycleTiming
 
 
 class MetricsTests(unittest.TestCase):
@@ -34,6 +34,19 @@ class MetricsTests(unittest.TestCase):
         m=RunMetrics();m.observe(1,1,1,0,'tracking',False,0,0)
         with self.assertRaises(ValueError):m.observe(.5,1,1,0,'tracking',False,0,0)
         with self.assertRaises(ValueError):m.observe(2,math.nan,1,0,'tracking',False,0,0)
+
+
+class TimingTests(unittest.TestCase):
+    def test_history_is_bounded_but_peak_and_total_survive_rollover(self):
+        m=CycleTiming();m.observe(laser=.25)
+        for _ in range(400):m.observe(laser=.001)
+        m.observe(laser=math.nan)
+        r=m.report()['laser']
+        self.assertEqual(r['samples'],401)
+        self.assertEqual(r['peak_ms'],250)
+        self.assertAlmostEqual(r['mean_ms'],650/401)
+        self.assertEqual(r['recent_p95_ms'],1.)
+        self.assertEqual(len(m.rows['laser']['recent']),256)
 
 
 if __name__=='__main__':unittest.main()

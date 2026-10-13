@@ -1,0 +1,969 @@
+{
+  "official_result": false,
+  "official_five_laps_under_60_verified": false,
+  "environment": {
+    "ubuntu": "20.04",
+    "ros": "Noetic",
+    "python": "3.8.10",
+    "gazebo": "11.15.1",
+    "original_world_model_pid_unchanged": true
+  },
+  "user_latest_reported_official_seconds": 91.0,
+  "kernel_before": {
+    "unit": "microseconds",
+    "kind": "kernel benchmark, not Gazebo timing",
+    "cases": {
+      "four_wheel_feedforward": {
+        "median_us": 1.2601703499967698,
+        "min_us": 1.239754499965784
+      },
+      "laser_at_2.0": {
+        "median_us": 2973.266880003393,
+        "min_us": 2844.6408949957918
+      },
+      "laser_at_4.0": {
+        "median_us": 7311.098284999388,
+        "min_us": 6810.4460399990785
+      },
+      "laser_at_6.0": {
+        "median_us": 15443.530030001966,
+        "min_us": 15204.166925000209
+      }
+    }
+  },
+  "kernel_after": {
+    "unit": "microseconds",
+    "kind": "kernel benchmark, not Gazebo timing",
+    "cases": {
+      "four_wheel_feedforward": {
+        "median_us": 1.3297867999881419,
+        "min_us": 1.3285008999901038
+      },
+      "laser_at_2.0": {
+        "median_us": 368.770155000675,
+        "min_us": 328.15309499710565
+      },
+      "laser_at_4.0": {
+        "median_us": 374.67088000084914,
+        "min_us": 307.15953999788326
+      },
+      "laser_at_6.0": {
+        "median_us": 508.58720000178437,
+        "min_us": 441.9777100019928
+      }
+    }
+  },
+  "cases": {
+    "scalar_original_one_reference_loop": {
+      "controller": "smooth_pursuit",
+      "cycle_wall_timing": {
+        "compute_to_command": {
+          "mean_ms": 6.427021967863566,
+          "peak_ms": 56.829461000234005,
+          "recent_p95_ms": 13.56478599973343,
+          "samples": 1027
+        },
+        "follower": {
+          "mean_ms": 0.5431833778060228,
+          "peak_ms": 3.282958999989205,
+          "recent_p95_ms": 0.7752120000077412,
+          "samples": 1027
+        },
+        "laser": {
+          "mean_ms": 5.305344713715004,
+          "peak_ms": 17.7083019998463,
+          "recent_p95_ms": 11.901254000804329,
+          "samples": 1027
+        },
+        "sensors_tf": {
+          "mean_ms": 0.5784938763425385,
+          "peak_ms": 45.87081699992268,
+          "recent_p95_ms": 0.8702430004632333,
+          "samples": 1027
+        },
+        "simulation_interval": {
+          "mean_ms": 20.084712755598535,
+          "peak_ms": 119.0,
+          "recent_p95_ms": 21.0,
+          "samples": 1027
+        }
+      },
+      "interval_attribution": "previous command/reason; trapezoidal measured speed",
+      "last_fault": null,
+      "limits": {
+        "acceleration": 5.5,
+        "braking": 3.0,
+        "lateral_accel": 6.5,
+        "max_error": 0.15,
+        "max_speed": 10.0,
+        "response_delay": 0.25,
+        "steering_feedback_gain": 0.25,
+        "steering_rate": 2.0,
+        "yaw_rate": 3.8
+      },
+      "observed_simulation_seconds": 20.607,
+      "official_result": false,
+      "peak_measured_speed": 5.253125901270831,
+      "peak_reference_tracking_error": 0.11311509879844182,
+      "reference_loop_seconds": [
+        20.607
+      ],
+      "reference_sha256": "09fdda7fda67d2ad587e8a79013102406acb0bcab328e92fc0db9844aab6fd6c",
+      "startup": {
+        "alignment_released_seconds": 0.004,
+        "first_measured_motion_seconds": 0.117,
+        "first_reference_loop_seconds": 20.607,
+        "initial_reference_error": 0.0736231621333041,
+        "prepare_used": true,
+        "start_mode": {
+          "initial_error": 0.0736231621333041,
+          "length": 2.5,
+          "mode": "connector"
+        }
+      },
+      "time_by_state": {
+        "acceleration": {
+          "mean_command_speed": 2.0411529247161337,
+          "mean_measured_speed": 1.9191069294466856,
+          "seconds": 5.650000000000001
+        },
+        "lap:first_reference": {
+          "mean_command_speed": 2.1930186305759056,
+          "mean_measured_speed": 2.1948002323527165,
+          "seconds": 20.607
+        },
+        "outward_error_recovery": {
+          "mean_command_speed": 1.8852883489070082,
+          "mean_measured_speed": 2.169024796378432,
+          "seconds": 0.24100000000000277
+        },
+        "phase:tracking": {
+          "mean_command_speed": 2.1930186305759056,
+          "mean_measured_speed": 2.1948002323527165,
+          "seconds": 20.607
+        },
+        "planned_envelope": {
+          "mean_command_speed": 2.373331959820902,
+          "mean_measured_speed": 2.2831168425929063,
+          "seconds": 2.121999999999999
+        },
+        "response_preview": {
+          "mean_command_speed": 2.521675691798337,
+          "mean_measured_speed": 2.5926607214608843,
+          "seconds": 6.974000000000001
+        },
+        "road:curve": {
+          "mean_command_speed": 2.1258933147594687,
+          "mean_measured_speed": 2.1251920407243863,
+          "seconds": 14.167999999999996
+        },
+        "road:straight_or_gentle": {
+          "mean_command_speed": 2.3407172599418637,
+          "mean_measured_speed": 2.3479620368239353,
+          "seconds": 6.439000000000004
+        },
+        "startup_connector": {
+          "mean_command_speed": 1.8000000000000003,
+          "mean_measured_speed": 1.793443363817686,
+          "seconds": 2.28
+        },
+        "startup_wait": {
+          "mean_command_speed": 0.0,
+          "mean_measured_speed": 0.00027380190785542127,
+          "seconds": 0.004
+        },
+        "steering_slew": {
+          "mean_command_speed": 1.8929503857037004,
+          "mean_measured_speed": 2.16346637220241,
+          "seconds": 1.5959999999999956
+        },
+        "tracking_error": {
+          "mean_command_speed": 1.661420908138032,
+          "mean_measured_speed": 1.572782555719091,
+          "seconds": 0.059999999999999165
+        },
+        "tracking_lateral": {
+          "mean_command_speed": 2.0276489408873846,
+          "mean_measured_speed": 1.9999149508750813,
+          "seconds": 1.5979999999999999
+        },
+        "tracking_yaw": {
+          "mean_command_speed": 1.4301540560250703,
+          "mean_measured_speed": 1.2730988994214456,
+          "seconds": 0.08200000000000074
+        }
+      }
+    },
+    "batched_immediate_same_budget_one_reference_loop": {
+      "controller": "smooth_pursuit",
+      "cycle_wall_timing": {
+        "compute_to_command": {
+          "mean_ms": 2.4044182361599016,
+          "peak_ms": 11.838155999612354,
+          "recent_p95_ms": 4.578304999995453,
+          "samples": 995
+        },
+        "follower": {
+          "mean_ms": 0.5442231226226256,
+          "peak_ms": 3.6579970001184847,
+          "recent_p95_ms": 0.850379000439716,
+          "samples": 995
+        },
+        "laser": {
+          "mean_ms": 1.3362994572756421,
+          "peak_ms": 8.815788999527285,
+          "recent_p95_ms": 2.994630999637593,
+          "samples": 995
+        },
+        "sensors_tf": {
+          "mean_ms": 0.523895656261634,
+          "peak_ms": 3.394841000044835,
+          "recent_p95_ms": 0.8909449998100172,
+          "samples": 995
+        },
+        "simulation_interval": {
+          "mean_ms": 19.996984924622808,
+          "peak_ms": 33.0,
+          "recent_p95_ms": 20.0,
+          "samples": 995
+        }
+      },
+      "interval_attribution": "previous command/reason; trapezoidal measured speed",
+      "last_fault": null,
+      "limits": {
+        "acceleration": 5.5,
+        "braking": 3.0,
+        "lateral_accel": 6.5,
+        "max_error": 0.15,
+        "max_speed": 10.0,
+        "response_delay": 0.25,
+        "steering_feedback_gain": 0.25,
+        "steering_rate": 2.0,
+        "yaw_rate": 3.8
+      },
+      "observed_simulation_seconds": 19.877,
+      "official_result": false,
+      "peak_measured_speed": 5.479065393812916,
+      "peak_reference_tracking_error": 0.11167216448534871,
+      "reference_loop_seconds": [
+        19.877
+      ],
+      "reference_sha256": "09fdda7fda67d2ad587e8a79013102406acb0bcab328e92fc0db9844aab6fd6c",
+      "startup": {
+        "alignment_released_seconds": 0.005,
+        "first_measured_motion_seconds": 0.077,
+        "first_reference_loop_seconds": 19.877,
+        "initial_reference_error": 0.07362383605673109,
+        "prepare_used": true,
+        "start_mode": {
+          "initial_error": 0.07362383605673109,
+          "length": 2.5,
+          "mode": "connector"
+        }
+      },
+      "time_by_state": {
+        "acceleration": {
+          "mean_command_speed": 2.185464701108736,
+          "mean_measured_speed": 2.0625206389761983,
+          "seconds": 4.468
+        },
+        "lap:first_reference": {
+          "mean_command_speed": 2.2791707136239583,
+          "mean_measured_speed": 2.2659603734870477,
+          "seconds": 19.877
+        },
+        "outward_error_recovery": {
+          "mean_command_speed": 2.210860562966776,
+          "mean_measured_speed": 2.5385501881510466,
+          "seconds": 0.1800000000000015
+        },
+        "phase:tracking": {
+          "mean_command_speed": 2.2791707136239583,
+          "mean_measured_speed": 2.2659603734870477,
+          "seconds": 19.877
+        },
+        "planned_envelope": {
+          "mean_command_speed": 2.4566511341174504,
+          "mean_measured_speed": 2.3605662679256043,
+          "seconds": 2.041999999999999
+        },
+        "response_preview": {
+          "mean_command_speed": 2.5587337706690283,
+          "mean_measured_speed": 2.611763152365571,
+          "seconds": 7.283000000000003
+        },
+        "road:curve": {
+          "mean_command_speed": 2.2163083528050143,
+          "mean_measured_speed": 2.1883930279906694,
+          "seconds": 13.539000000000003
+        },
+        "road:straight_or_gentle": {
+          "mean_command_speed": 2.4134549520474025,
+          "mean_measured_speed": 2.431656853555752,
+          "seconds": 6.337999999999996
+        },
+        "startup_connector": {
+          "mean_command_speed": 1.7999999999999987,
+          "mean_measured_speed": 1.7961578398805707,
+          "seconds": 2.5999999999999996
+        },
+        "startup_wait": {
+          "mean_command_speed": 0.0,
+          "mean_measured_speed": -0.000987485143041273,
+          "seconds": 0.005
+        },
+        "steering_slew": {
+          "mean_command_speed": 1.9802628875273585,
+          "mean_measured_speed": 2.115770527976769,
+          "seconds": 1.2379999999999987
+        },
+        "tracking_lateral": {
+          "mean_command_speed": 2.1463765586472117,
+          "mean_measured_speed": 2.092457269414765,
+          "seconds": 1.9209999999999985
+        },
+        "tracking_yaw": {
+          "mean_command_speed": 1.6712185517506712,
+          "mean_measured_speed": 1.5537568768707057,
+          "seconds": 0.1399999999999988
+        }
+      }
+    },
+    "batched_refined_higher_accel_brake_five_reference_loops": {
+      "controller": "smooth_pursuit",
+      "cycle_wall_timing": {
+        "compute_to_command": {
+          "mean_ms": 2.3375562109806207,
+          "peak_ms": 31.17797300001257,
+          "recent_p95_ms": 4.048679000334232,
+          "samples": 4389
+        },
+        "follower": {
+          "mean_ms": 0.5009778448454701,
+          "peak_ms": 7.040936000521469,
+          "recent_p95_ms": 0.8505649993821862,
+          "samples": 4389
+        },
+        "laser": {
+          "mean_ms": 1.3451784185415192,
+          "peak_ms": 28.853597000306763,
+          "recent_p95_ms": 2.576951000264671,
+          "samples": 4389
+        },
+        "sensors_tf": {
+          "mean_ms": 0.49139994759363137,
+          "peak_ms": 5.9206220003034105,
+          "recent_p95_ms": 0.8413810001002275,
+          "samples": 4389
+        },
+        "simulation_interval": {
+          "mean_ms": 19.995443153337828,
+          "peak_ms": 31.0,
+          "recent_p95_ms": 20.0,
+          "samples": 4389
+        }
+      },
+      "interval_attribution": "previous command/reason; trapezoidal measured speed",
+      "last_fault": null,
+      "limits": {
+        "acceleration": 6.6,
+        "braking": 3.6,
+        "lateral_accel": 6.5,
+        "max_error": 0.15,
+        "max_speed": 10.0,
+        "response_delay": 0.25,
+        "steering_feedback_gain": 0.25,
+        "steering_rate": 2.0,
+        "yaw_rate": 3.8
+      },
+      "observed_simulation_seconds": 87.74,
+      "official_result": false,
+      "peak_measured_speed": 5.963327611937152,
+      "peak_reference_tracking_error": 0.12018172797846144,
+      "reference_loop_seconds": [
+        19.5,
+        16.86,
+        17.14,
+        17.060000000000002,
+        17.179999999999993
+      ],
+      "reference_sha256": "5a7957f169b9e84f1763863a894794f430d802519f808a0c3a54c4559a56f7a0",
+      "startup": {
+        "alignment_released_seconds": 0.004,
+        "first_measured_motion_seconds": 0.1,
+        "first_reference_loop_seconds": 19.5,
+        "initial_reference_error": 0.07608237614102287,
+        "prepare_used": true,
+        "start_mode": {
+          "initial_error": 0.07608237614102287,
+          "length": 2.5,
+          "mode": "connector"
+        }
+      },
+      "time_by_state": {
+        "acceleration": {
+          "mean_command_speed": 2.675039533505085,
+          "mean_measured_speed": 2.5281193267832993,
+          "seconds": 13.725000000000101
+        },
+        "lap:first_reference": {
+          "mean_command_speed": 2.305551242369693,
+          "mean_measured_speed": 2.2964183224316073,
+          "seconds": 19.5
+        },
+        "lap:subsequent_reference": {
+          "mean_command_speed": 2.608929740899904,
+          "mean_measured_speed": 2.6090677551107557,
+          "seconds": 68.24
+        },
+        "laser": {
+          "mean_command_speed": 1.5897017834301157,
+          "mean_measured_speed": 1.7106567786174849,
+          "seconds": 0.10000000000000009
+        },
+        "outward_error_recovery": {
+          "mean_command_speed": 1.918064192456622,
+          "mean_measured_speed": 2.1009897883905486,
+          "seconds": 0.5599999999999881
+        },
+        "phase:tracking": {
+          "mean_command_speed": 2.54150461300682,
+          "mean_measured_speed": 2.539582184820769,
+          "seconds": 87.74
+        },
+        "planned_envelope": {
+          "mean_command_speed": 2.5352366915973077,
+          "mean_measured_speed": 2.4457389159970617,
+          "seconds": 13.77499999999988
+        },
+        "response_preview": {
+          "mean_command_speed": 2.7312502853652925,
+          "mean_measured_speed": 2.792284801253092,
+          "seconds": 41.88600000000001
+        },
+        "road:curve": {
+          "mean_command_speed": 2.3493607403294483,
+          "mean_measured_speed": 2.3206138750741534,
+          "seconds": 65.61899999999997
+        },
+        "road:straight_or_gentle": {
+          "mean_command_speed": 3.1114738178898227,
+          "mean_measured_speed": 3.189122509275501,
+          "seconds": 22.121000000000024
+        },
+        "startup_connector": {
+          "mean_command_speed": 1.7999999999999978,
+          "mean_measured_speed": 1.7985507293092375,
+          "seconds": 3.04
+        },
+        "startup_wait": {
+          "mean_command_speed": 0.0,
+          "mean_measured_speed": 0.0002819959083015417,
+          "seconds": 0.004
+        },
+        "steering_slew": {
+          "mean_command_speed": 2.054568166071617,
+          "mean_measured_speed": 2.2013144370032336,
+          "seconds": 5.881000000000002
+        },
+        "tracking_error": {
+          "mean_command_speed": 2.1433595490003072,
+          "mean_measured_speed": 2.201481756287703,
+          "seconds": 0.1800000000000006
+        },
+        "tracking_lateral": {
+          "mean_command_speed": 2.0718868109262067,
+          "mean_measured_speed": 2.019294319307953,
+          "seconds": 8.54900000000002
+        },
+        "tracking_yaw": {
+          "mean_command_speed": 1.6573923020912549,
+          "mean_measured_speed": 1.4112255642807037,
+          "seconds": 0.03999999999999204
+        }
+      }
+    },
+    "experimental_no_extra_curvature_lead_stopped_on_tf": {
+      "controller": "smooth_pursuit",
+      "cycle_wall_timing": {
+        "compute_to_command": {
+          "mean_ms": 2.8190790087733437,
+          "peak_ms": 13.438621000204876,
+          "recent_p95_ms": 6.2368599992623786,
+          "samples": 2849
+        },
+        "follower": {
+          "mean_ms": 0.5634366511094125,
+          "peak_ms": 6.712690999847837,
+          "recent_p95_ms": 1.2997919993722462,
+          "samples": 2849
+        },
+        "laser": {
+          "mean_ms": 1.7351127570968874,
+          "peak_ms": 11.38082800025586,
+          "recent_p95_ms": 3.920269999980519,
+          "samples": 2849
+        },
+        "sensors_tf": {
+          "mean_ms": 0.5205296005670438,
+          "peak_ms": 8.409223999478854,
+          "recent_p95_ms": 1.1116830000901246,
+          "samples": 2849
+        },
+        "simulation_interval": {
+          "mean_ms": 19.99859599859704,
+          "peak_ms": 36.0,
+          "recent_p95_ms": 20.0,
+          "samples": 2849
+        }
+      },
+      "interval_attribution": "previous command/reason; trapezoidal measured speed",
+      "last_fault": {
+        "control": {
+          "active_acceleration": 6.6,
+          "actuator_target_steer": 0.4543390143458967,
+          "alignment_ready_seconds": 0.0,
+          "command_speed": 1.8601484208558452,
+          "constraint_curvature": 1.8785301115978386,
+          "control_tracking_error": 0.000828774071107522,
+          "departure": false,
+          "desired_steer": 0.44144768700723275,
+          "effective_steering_feedback_gain": 0.25,
+          "feedforward_curvature": 0.0,
+          "heading_error": -0.0342008694149305,
+          "lateral_control": "smooth_pursuit",
+          "launch_limited": false,
+          "launch_ready_seconds": 0.3,
+          "live_curvature": 1.8175010722546214,
+          "measured_speed": 2.0110426788459064,
+          "measured_steer": 0.38988237765257705,
+          "output_speed": 1.8601484208558452,
+          "outward_heading": 0.03419420234840149,
+          "planned_speed": 2.0316940077764416,
+          "preview_distance": 0.5027606697114766,
+          "preview_length": 0.39313419963859214,
+          "preview_speed": 2.012597023417176,
+          "reason": "tracking_lateral",
+          "recovery_speed_cap": 10.0,
+          "response_delay": 0.25,
+          "speed_excess": 0.15089425799006118,
+          "start_connector": false,
+          "startup_acceleration": 2.0,
+          "startup_speed": 1.8,
+          "steer": 0.4543390143458967,
+          "steering_alignment_risk": 0.0,
+          "steering_feedback_age": 0.019,
+          "steering_feedback_gain": 0.25,
+          "steering_mismatch": 0.0515653093546557,
+          "tracking_error": 0.000828774071107522
+        },
+        "feedback": {
+          "control_rear_pose": [
+            -4.369062940799151,
+            4.445578587604271,
+            -2.5768596205352563
+          ],
+          "odometry_lateral_speed": 0.3422012558090882,
+          "odometry_longitudinal_speed": 2.0110426788459064,
+          "odometry_yaw_rate": 2.6790023890405115,
+          "prediction_applied": false,
+          "raw_rear_pose": [
+            -4.369062940799151,
+            4.445578587604271,
+            -2.5768596205352563
+          ],
+          "tf_age_seconds": 0.08
+        },
+        "reason": "Lookup would require extrapolation 0.014000000s into the future.  Requested time 244.727000000 but the latest data is at time 244.713000000, when looking up transform from frame [tianracer/laser] to frame [map]",
+        "simulation_time": 244.781
+      },
+      "limits": {
+        "acceleration": 6.6,
+        "braking": 3.6,
+        "curvature_lead_gain": 0.0,
+        "lateral_accel": 6.5,
+        "max_error": 0.15,
+        "max_speed": 10.0,
+        "response_delay": 0.25,
+        "steering_feedback_gain": 0.25,
+        "steering_rate": 2.0,
+        "yaw_rate": 3.8
+      },
+      "observed_simulation_seconds": 56.956,
+      "official_result": false,
+      "peak_measured_speed": 5.90288544672373,
+      "peak_reference_tracking_error": 0.10699339963291789,
+      "reference_loop_seconds": [
+        19.636,
+        17.140000000000004,
+        17.36
+      ],
+      "reference_sha256": "5a7957f169b9e84f1763863a894794f430d802519f808a0c3a54c4559a56f7a0",
+      "startup": {
+        "alignment_released_seconds": 0.016,
+        "first_measured_motion_seconds": 0.076,
+        "first_reference_loop_seconds": 19.636,
+        "initial_reference_error": 0.07363127842756273,
+        "prepare_used": true,
+        "start_mode": {
+          "initial_error": 0.07363127842756273,
+          "length": 2.5,
+          "mode": "connector"
+        }
+      },
+      "time_by_state": {
+        "acceleration": {
+          "mean_command_speed": 2.4984489860234365,
+          "mean_measured_speed": 2.355209066106253,
+          "seconds": 9.173000000000025
+        },
+        "lap:first_reference": {
+          "mean_command_speed": 2.2867068872365968,
+          "mean_measured_speed": 2.2831381150712726,
+          "seconds": 19.636
+        },
+        "lap:subsequent_reference": {
+          "mean_command_speed": 2.619925667019518,
+          "mean_measured_speed": 2.628283196836961,
+          "seconds": 37.32
+        },
+        "laser": {
+          "mean_command_speed": 1.6851037628760603,
+          "mean_measured_speed": 1.772802488677709,
+          "seconds": 0.040000000000000036
+        },
+        "outward_error_recovery": {
+          "mean_command_speed": 1.6153020351249854,
+          "mean_measured_speed": 1.515959737875861,
+          "seconds": 0.22000000000000064
+        },
+        "phase:tracking": {
+          "mean_command_speed": 2.505046041346762,
+          "mean_measured_speed": 2.5092918908191404,
+          "seconds": 56.956
+        },
+        "planned_envelope": {
+          "mean_command_speed": 2.6793991013193654,
+          "mean_measured_speed": 2.5695194437206945,
+          "seconds": 6.049999999999922
+        },
+        "response_preview": {
+          "mean_command_speed": 2.7461495300664347,
+          "mean_measured_speed": 2.810366464915232,
+          "seconds": 27.030000000000037
+        },
+        "road:curve": {
+          "mean_command_speed": 2.314804427360943,
+          "mean_measured_speed": 2.2941258294281632,
+          "seconds": 41.809999999999995
+        },
+        "road:straight_or_gentle": {
+          "mean_command_speed": 3.0302013219982458,
+          "mean_measured_speed": 3.103250231421055,
+          "seconds": 15.146000000000004
+        },
+        "startup_connector": {
+          "mean_command_speed": 1.7999999999999992,
+          "mean_measured_speed": 1.7969841548451166,
+          "seconds": 2.36
+        },
+        "startup_wait": {
+          "mean_command_speed": 0.0,
+          "mean_measured_speed": -0.0009500182080250479,
+          "seconds": 0.016
+        },
+        "steering_slew": {
+          "mean_command_speed": 1.9762679649048622,
+          "mean_measured_speed": 2.2079169710816404,
+          "seconds": 3.143999999999993
+        },
+        "tracking_error": {
+          "mean_command_speed": 2.482860715420439,
+          "mean_measured_speed": 2.597433321308989,
+          "seconds": 0.20000000000000062
+        },
+        "tracking_lateral": {
+          "mean_command_speed": 2.059427356564631,
+          "mean_measured_speed": 2.032038111610804,
+          "seconds": 8.663000000000025
+        },
+        "tracking_yaw": {
+          "mean_command_speed": 1.6465834761442186,
+          "mean_measured_speed": 1.5847259947241903,
+          "seconds": 0.060000000000002274
+        }
+      }
+    },
+    "final_tf_history_fix_refined_higher_accel_brake_five_reference_loops": {
+      "controller": "smooth_pursuit",
+      "cycle_wall_timing": {
+        "compute_to_command": {
+          "mean_ms": 2.1846435640074646,
+          "peak_ms": 16.177960998902563,
+          "recent_p95_ms": 3.407584001251962,
+          "samples": 4390
+        },
+        "follower": {
+          "mean_ms": 0.4653685833715634,
+          "peak_ms": 4.178188999503618,
+          "recent_p95_ms": 0.7311969984584721,
+          "samples": 4390
+        },
+        "laser": {
+          "mean_ms": 1.2581817239141502,
+          "peak_ms": 9.826896999584278,
+          "recent_p95_ms": 2.357584000492352,
+          "samples": 4390
+        },
+        "sensors_tf": {
+          "mean_ms": 0.46109325672175117,
+          "peak_ms": 11.445909000030952,
+          "recent_p95_ms": 0.5599020005320199,
+          "samples": 4390
+        },
+        "simulation_interval": {
+          "mean_ms": 19.99931662870155,
+          "peak_ms": 26.0,
+          "recent_p95_ms": 20.0,
+          "samples": 4390
+        }
+      },
+      "interval_attribution": "previous command/reason; trapezoidal measured speed",
+      "last_fault": null,
+      "limits": {
+        "acceleration": 6.6,
+        "braking": 3.6,
+        "lateral_accel": 6.5,
+        "max_error": 0.15,
+        "max_speed": 10.0,
+        "response_delay": 0.25,
+        "steering_feedback_gain": 0.25,
+        "steering_rate": 2.0,
+        "yaw_rate": 3.8
+      },
+      "observed_simulation_seconds": 87.777,
+      "official_result": false,
+      "peak_measured_speed": 5.889542139344496,
+      "peak_reference_tracking_error": 0.10616179967887504,
+      "reference_loop_seconds": [
+        19.537,
+        17.04,
+        17.1,
+        16.9,
+        17.200000000000003
+      ],
+      "reference_sha256": "5a7957f169b9e84f1763863a894794f430d802519f808a0c3a54c4559a56f7a0",
+      "startup": {
+        "alignment_released_seconds": 0.003,
+        "first_measured_motion_seconds": 0.077,
+        "first_reference_loop_seconds": 19.537,
+        "initial_reference_error": 0.07282467804522387,
+        "prepare_used": true,
+        "start_mode": {
+          "initial_error": 0.07282467804522386,
+          "length": 2.5,
+          "mode": "connector"
+        }
+      },
+      "time_by_state": {
+        "acceleration": {
+          "mean_command_speed": 2.6956797541130606,
+          "mean_measured_speed": 2.5350280249411967,
+          "seconds": 13.883999999999977
+        },
+        "lap:first_reference": {
+          "mean_command_speed": 2.300919227121624,
+          "mean_measured_speed": 2.2908208962168866,
+          "seconds": 19.537
+        },
+        "lap:subsequent_reference": {
+          "mean_command_speed": 2.6046346116610075,
+          "mean_measured_speed": 2.607314273431546,
+          "seconds": 68.24
+        },
+        "outward_error_recovery": {
+          "mean_command_speed": 1.8277243787958455,
+          "mean_measured_speed": 2.117942223236795,
+          "seconds": 0.7799999999999994
+        },
+        "phase:tracking": {
+          "mean_command_speed": 2.5370350415259333,
+          "mean_measured_speed": 2.5368706365945273,
+          "seconds": 87.777
+        },
+        "planned_envelope": {
+          "mean_command_speed": 2.513608853691295,
+          "mean_measured_speed": 2.4281209877803085,
+          "seconds": 14.478999999999989
+        },
+        "response_preview": {
+          "mean_command_speed": 2.7084067632911513,
+          "mean_measured_speed": 2.770995166781419,
+          "seconds": 42.12400000000005
+        },
+        "road:curve": {
+          "mean_command_speed": 2.345280405110609,
+          "mean_measured_speed": 2.317560906340744,
+          "seconds": 65.84099999999995
+        },
+        "road:straight_or_gentle": {
+          "mean_command_speed": 3.112587421915359,
+          "mean_measured_speed": 3.195129751731263,
+          "seconds": 21.936000000000053
+        },
+        "startup_connector": {
+          "mean_command_speed": 1.7999999999999978,
+          "mean_measured_speed": 1.7990909754955473,
+          "seconds": 3.4220000000000006
+        },
+        "startup_wait": {
+          "mean_command_speed": 0.0,
+          "mean_measured_speed": 0.001077016251597576,
+          "seconds": 0.003
+        },
+        "steering_slew": {
+          "mean_command_speed": 2.036014370688216,
+          "mean_measured_speed": 2.227495336609062,
+          "seconds": 5.164999999999985
+        },
+        "tracking_error": {
+          "mean_command_speed": 2.449087455681354,
+          "mean_measured_speed": 2.531541154867441,
+          "seconds": 0.32199999999999207
+        },
+        "tracking_lateral": {
+          "mean_command_speed": 2.103690033947386,
+          "mean_measured_speed": 2.050663599620181,
+          "seconds": 7.399000000000006
+        },
+        "tracking_yaw": {
+          "mean_command_speed": 1.6481913692109638,
+          "mean_measured_speed": 1.5019269353786138,
+          "seconds": 0.19900000000000162
+        }
+      }
+    }
+  },
+  "plan": {
+    "lateral_control": "smooth_pursuit",
+    "length": 44.69859777954826,
+    "limits": {
+      "acceleration": 6.6,
+      "braking": 3.6,
+      "lateral_accel": 6.5,
+      "max_speed": 10.0,
+      "steering_rate": 2.0,
+      "yaw_rate": 3.8
+    },
+    "model_five_seconds": 74.25318060069962,
+    "model_includes_response_preview": false,
+    "model_includes_startup": false,
+    "model_lap_seconds": 14.850636120139924,
+    "nominal_wall_tracking_reserve": 0.11000000000000001,
+    "official_lap_validation_required": true,
+    "peak_planned_speed": 6.548113591970975,
+    "reference_sha256": "5a7957f169b9e84f1763863a894794f430d802519f808a0c3a54c4559a56f7a0",
+    "required_mean_speed_for_60s": 3.7248831482956883,
+    "response_delay_is_measured": false,
+    "response_delay_seconds": 0.25,
+    "response_preview_proxy_five_seconds": 84.99099165224476,
+    "response_preview_proxy_includes_startup": false,
+    "response_preview_proxy_uses_nominal_speed": true,
+    "route_margin": 0.34,
+    "route_selection": {
+      "baseline_model_lap_seconds": 17.331490334526556,
+      "clearance_weight": 2.0,
+      "corner_offset": 0.0,
+      "estimated_lap_seconds": 16.99819833044895,
+      "refinement_gain_seconds": 0.33329200407760595,
+      "refinement_moves": 10,
+      "route_changed": true,
+      "route_sha256": "645f94022c112264e0c864476c2504829a2f1f4af224a90479785f063197c329",
+      "scoring_includes_startup": false,
+      "scoring_model": "nominal_speed_response_preview_proxy",
+      "scoring_response_delay": 0.25,
+      "smoothing_width": 0.45999999999999985
+    },
+    "same_route_parameter_sensitivity": {
+      "acceleration_plus_20_percent": {
+        "model_five_seconds": 73.84847579745468,
+        "model_seconds_saved": 0.4047048032449396,
+        "parameter": "acceleration",
+        "value": 7.919999999999999
+      },
+      "braking_plus_20_percent": {
+        "model_five_seconds": 73.16078803585117,
+        "model_seconds_saved": 1.0923925648484527,
+        "parameter": "braking",
+        "value": 4.32
+      },
+      "lateral_plus_10_percent": {
+        "model_five_seconds": 71.6288413221059,
+        "model_seconds_saved": 2.624339278593723,
+        "parameter": "lateral_accel",
+        "value": 7.15
+      },
+      "max_speed_plus_1": {
+        "model_five_seconds": 74.25318060069962,
+        "model_seconds_saved": 0.0,
+        "parameter": "max_speed",
+        "value": 11.0
+      }
+    },
+    "sensitivity_is_physical_validation": false,
+    "speed_ceiling_binding": false,
+    "startup_limits": {
+      "acceleration": 2.0,
+      "acceleration_guard_distance": 5.0,
+      "speed": 1.8
+    },
+    "steering_feedback_gain": 0.25,
+    "time_fraction_by_limit": {
+      "acceleration_braking": 0.5630860104866222,
+      "lateral": 0.43280055045566634,
+      "steering_rate": 0.004113439057711451,
+      "straight": 0.0,
+      "yaw_rate": 0.0
+    },
+    "wall_stop_clearance": 0.23
+  },
+  "public_sensor_observations": {
+    "tuned": {
+      "official_result": false,
+      "source_topics": [
+        "/tianracer/odom",
+        "/tianracer/imu"
+      ],
+      "odom_samples": 6063,
+      "imu_samples": 30262,
+      "peak_abs_roll": 0.0009265740326528353,
+      "peak_abs_pitch": 0.01740561813445128,
+      "peak_speed": 5.963327611937152,
+      "minimum_speed": -0.0011161297543674914,
+      "reverse_below_minus_point_one": 0
+    },
+    "final_verified": {
+      "official_result": false,
+      "source_topics": [
+        "/tianracer/odom",
+        "/tianracer/imu"
+      ],
+      "odom_samples": 8033,
+      "imu_samples": 40112,
+      "peak_abs_roll": 0.0018349359534698953,
+      "peak_abs_pitch": 0.01732414143038661,
+      "peak_speed": 5.889542139344496,
+      "minimum_speed": -0.002636923780632475,
+      "reverse_below_minus_point_one": 0
+    }
+  },
+  "limitations": [
+    "Controller reference loops, not official referee results",
+    "No platform submission or formal referee run",
+    "One run per configuration; two runs for tuned budgets before/after TF history fix",
+    "Different host, scheduling and localization may affect the user result",
+    "Kernel benchmark uses synthetic scans and is not whole-node CPU utilization",
+    "Extra curvature-lead removal was not retained; that trial fault was TF acquisition, not a proven control instability",
+    "Safety limits stay enabled; tests cannot guarantee no future protective stop"
+  ]
+}

@@ -59,6 +59,16 @@ class ClosedPath:
         f = index - int(index)
         return self.points[i] * (1 - f) + self.points[(i + 1) % self.n] * f
 
+    def sample_many(self, distances):
+        """Same cyclic interpolation as sample(), for a one-dimensional batch."""
+        distances = np.asarray(distances, dtype=float)
+        if distances.ndim != 1 or not np.isfinite(distances).all():
+            raise ValueError('Need finite one-dimensional path distances')
+        index = (distances % self.length) / self.ds
+        whole = np.floor(index).astype(int)
+        fraction = (index-whole)[:, None]
+        return self.points[whole % self.n]*(1-fraction)+self.points[(whole+1) % self.n]*fraction
+
     def project(self, x, y, begin=None, end=None):
         # Restrict projection to a forward arc to prevent jumps at nearby lanes.
         if begin is None:

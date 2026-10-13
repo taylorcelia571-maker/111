@@ -91,10 +91,22 @@ class Converter:
                 return
             self.target = speed, steer
             self.received = rospy.Time.now()
+            if not self.enabled and not self.corner_enabled and (self.received-self.previous).to_sec()<0:
+                # Immediate forwarding must preserve the timer's reset guard.
+                # Discard commands arriving before the watchdog sees the reset.
+                self.target=(0.,0.)
+                self.received=None
+                self.publish(0.,0.)
+                return
             if speed == 0.0:
                 self.motion.speed = 0.0
                 if self.governor is not None: self.governor.speed = 0.0
                 self.publish(0.0, self.motion.steer if self.enabled else steer)
+            elif not self.enabled and not self.corner_enabled:
+                # Raw race commands already contain steering and speed limits.
+                # Forward immediately; the timer monitors expiry instead of
+                # delaying every fresh command until its next 20ms tick.
+                self.publish(speed, steer)
 
     def tick(self, event):
         with self.lock:
@@ -102,6 +114,10 @@ class Converter:
             dt = (now - self.previous).to_sec()
             self.previous = now
             age = (now - self.received).to_sec() if self.received is not None else -1
+            if dt == 0 and 0 <= age <= self.timeout and not self.enabled and not self.corner_enabled:
+                # Repeated /clock does not invalidate an unchanged fresh raw
+                # command. Clock reversal and command expiry still stop below.
+                return
             if age < 0 or age > self.timeout or dt <= 0:
                 if age < 0 or dt < 0:
                     self.received = None
@@ -125,8 +141,8 @@ class Converter:
                                       self.target[0], speed, self.governor.last_limit, self.governor.reason)
             elif self.enabled:
                 self.publish(*self.motion.step(*self.target, dt))
-            else:
-                self.publish(*self.target)
+            # Raw commands were published by callback. ROS controllers retain
+            # their targets; never replay a live command a second time here.
 
     def stop(self):
         if self.timer is not None:

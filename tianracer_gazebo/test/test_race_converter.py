@@ -33,6 +33,35 @@ def ackermann():
 
 
 class ConverterTests(unittest.TestCase):
+    def test_immediate_raw_command_cannot_bypass_clock_reset_guard(self):
+        self.params={'~race_profile':False,'~command_watchdog':True}
+        converter=self.module.Converter()
+        Stamp.now_value=1.;self.command(converter,3.,.1)
+        Stamp.now_value=1.02;converter.tick(None)
+        Stamp.now_value=.5;self.command(converter,3.,.1)
+        self.assertEqual(self.latest(converter).speed,0.)
+        self.assertIsNone(converter.received)
+        Stamp.now_value=.52;converter.tick(None)
+        self.assertEqual(self.latest(converter).speed,0.)
+        Stamp.now_value=.54;self.command(converter,3.,.1)
+        self.assertEqual(self.latest(converter).speed,3.)
+
+    def test_raw_watchdog_forwards_before_tick_without_duplicate_live_replay(self):
+        self.params={'~race_profile':False,'~command_watchdog':True}
+        converter=self.module.Converter()
+        Stamp.now_value=.011
+        self.command(converter,3.2,-.18)
+        self.assertEqual(self.latest(converter).speed,3.2)
+        self.assertEqual(self.latest(converter).steering_angle,-.18)
+        count=converter.pub.publish.call_count
+        Stamp.now_value=.02;converter.tick(None)
+        self.assertEqual(converter.pub.publish.call_count,count)
+        converter.tick(None)  # repeated simulation clock is not an expired command
+        self.assertEqual(converter.pub.publish.call_count,count)
+        self.assertEqual(self.latest(converter).speed,3.2)
+        Stamp.now_value=.6;converter.tick(None)
+        self.assertEqual(self.latest(converter).speed,0.)
+
     def setUp(self):
         Stamp.now_value = 0.0
         self.params = {'~race_profile': True}
