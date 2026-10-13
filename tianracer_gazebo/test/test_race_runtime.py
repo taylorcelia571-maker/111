@@ -174,6 +174,15 @@ class RuntimeTests(unittest.TestCase):
         self.node.on_joints(self.joints(stamp=.5))
         self.assertFalse(self.node.start(None).success)
 
+    def test_enabled_steering_compensation_requires_fresh_joints(self):
+        self.params['~steering_feedback_gain']=.25
+        self.smooth_node()
+        self.assertFalse(self.node.start(None).success)
+        self.node.on_joints(self.joints())
+        self.assertTrue(self.node.start(None).success)
+        self.node.on_joints(self.joints(stamp=.5))
+        with self.assertRaisesRegex(ValueError,'feedback stale'):self.node.sensors()
+
     def smooth_node(self):
         old=self.node;self.params['~lateral_control']='smooth_pursuit'
         self.node=self.module.ContinuousRace(old.path)

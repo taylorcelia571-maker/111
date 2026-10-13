@@ -1,3 +1,5 @@
+> 最新转向跟踪与圈速试验：[STEERING_FEEDBACK_CN.md](STEERING_FEEDBACK_CN.md)。新增默认关闭的受限转向反馈补偿；模型有条件改善，官方一分钟目标尚未达成。
+
 > 最新发车后起步偏差停车修正：[PREPARED_START_FIX_CN.md](PREPARED_START_FIX_CN.md)。prepare 后先等 status.steering_ready=true，再准备裁判并发车；同时修正起步弯道前视。
 
 > 最新起步低速退出条件及控制服务检查：[DEPARTURE_READY_FIX_CN.md](DEPARTURE_READY_FIX_CN.md)。弯道对齐不再要求转角接近零，实际首圈收益仍待本机验证。

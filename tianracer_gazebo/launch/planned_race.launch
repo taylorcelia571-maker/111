@@ -15,6 +15,7 @@
   <arg name="refine_line" default="false"/>
   <arg name="predict_pose" default="false"/>
   <arg name="response_delay" default="0.0"/>
+  <arg name="steering_feedback_gain" default="0.0"/>
   <arg name="lateral_control" default="pursuit"/>
   <arg name="run_report" default="~/ican_race_logs/control_run_report.json"/>
   <arg name="startup_speed" default="1.2"/>
@@ -29,6 +30,7 @@
     <param name="steering_rate" value="$(arg steering_rate)" type="double"/>
     <param name="yaw_rate" value="$(arg yaw_rate)" type="double"/>
     <param name="response_delay" value="$(arg response_delay)" type="double"/>
+    <param name="steering_feedback_gain" value="$(arg steering_feedback_gain)" type="double"/>
     <param name="lateral_control" value="$(arg lateral_control)"/>
     <param name="run_report" value="$(arg run_report)"/>
     <param name="startup_speed" value="$(arg startup_speed)" type="double"/>

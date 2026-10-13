@@ -48,6 +48,10 @@ class ResultCheckTests(unittest.TestCase):
         self.run['limits']['response_delay'] = .15
         self.assertFalse(analyze(self.plan, self.run, 59, 5)['supplied_result_meets_time_target'])
 
+    def test_different_steering_compensation_cannot_pass(self):
+        self.run['limits']['steering_feedback_gain']=.25
+        self.assertFalse(analyze(self.plan, self.run, 59, 5)['supplied_result_meets_time_target'])
+
     def test_strict_time_target_and_evidence_label(self):
         self.assertFalse(analyze(self.plan, self.run, 60, 5)['supplied_result_meets_time_target'])
         result = analyze(self.plan, self.run, 59.999, 5)

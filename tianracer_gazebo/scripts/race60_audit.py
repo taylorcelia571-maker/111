@@ -39,10 +39,11 @@ def rear_path(center):
 
 
 def simulate(center, planner, budgets, delay, plant_lag, laps=5,
-             lateral_control='curvature_feedback'):
+             lateral_control='curvature_feedback', steering_feedback_gain=0.0):
     """Hypothetical first-order actuators; excludes tires, AMCL and referee gates."""
     follower = PredictiveFollower(rear_path(center), response_delay=delay,
-                                  lateral_control=lateral_control, fast_start=True, **budgets)
+                                  lateral_control=lateral_control, fast_start=True,
+                                  steering_feedback_gain=steering_feedback_gain, **budgets)
     x, y, yaw = .0081, -.1494, 1.5709
     speed = steer = peak_error = 0.0
     clearance = float('inf')
@@ -80,6 +81,7 @@ def main():
     parser.add_argument('--route-margin', type=float, default=.34,
                         help='candidate center-route clearance, baseline remains .26m')
     parser.add_argument('--simulate', action='store_true')
+    parser.add_argument('--steering-feedback-gain', type=float, default=0.0)
     parser.add_argument('--lateral-control', choices=['pursuit', 'smooth_pursuit', 'curvature_feedback'],
                         default='curvature_feedback', help='match the controller actually used on the car')
     parser.add_argument('--lags', type=float, nargs='+', default=[.08, .15, .25])
@@ -92,7 +94,8 @@ def main():
     planner, anchors = load_course(Path(__file__).resolve().parents[1])
     report = dict(official_result=False, official_five_laps_under_60_verified=False,
                   budgets=budgets, response_delay=args.response_delay,
-                  candidate_route_margin=args.route_margin, lateral_control=args.lateral_control, routes={})
+                  candidate_route_margin=args.route_margin, lateral_control=args.lateral_control,
+                  steering_feedback_gain=args.steering_feedback_gain, routes={})
     for name, options in [('finish_baseline', dict(optimize_time=False)),
                           ('time_selected', dict(optimize_time=True)),
                           ('refined', dict(optimize_time=True, refine_line=True))]:
@@ -101,13 +104,15 @@ def main():
         planner.allowed=planner.clearance>=margin
         center = planner.build(anchors, response_delay=args.response_delay, **budgets, **options)
         follower = PredictiveFollower(rear_path(center), response_delay=args.response_delay,
-                                      lateral_control=args.lateral_control, **budgets)
+                                      lateral_control=args.lateral_control,
+                                      steering_feedback_gain=args.steering_feedback_gain, **budgets)
         row = dict(selection=copy.deepcopy(planner.selection), plan=follower.plan_report(),
                    minimum_center_route_clearance=planner.segment_check(center.points),
                    route_margin=margin, wall_stop_clearance=.23)
         if args.simulate:
             row['hypothetical_tracking'] = [simulate(center, planner, budgets, args.response_delay, lag,
-                                                     lateral_control=args.lateral_control)
+                                                     lateral_control=args.lateral_control,
+                                                     steering_feedback_gain=args.steering_feedback_gain)
                                              for lag in args.lags]
         report['routes'][name] = row
         print(name, 'envelope five=%.3fs; preview proxy five=%.3fs' % (

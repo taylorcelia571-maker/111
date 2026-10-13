@@ -43,13 +43,15 @@ class ContinuousRace:
             options.update(fast_start=rospy.get_param('~fast_start',False),
                            start_blend=rospy.get_param('~start_blend',False),
                            response_delay=rospy.get_param('~response_delay',0.0),
+                           steering_feedback_gain=rospy.get_param('~steering_feedback_gain',0.0),
                            lateral_control=rospy.get_param('~lateral_control','pursuit'),
                            startup_speed=rospy.get_param('~startup_speed',1.2),
                            startup_acceleration=rospy.get_param('~startup_acceleration',1.5),
                            steering_rate=rospy.get_param('~steering_rate',2.0),
                            yaw_rate=rospy.get_param('~yaw_rate',3.2))
         self.follower = follower_type(self.path, **options)
-        self.require_joint_feedback=self.generated and self.follower.lateral_control=='curvature_feedback'
+        self.require_joint_feedback=self.generated and (
+            self.follower.lateral_control=='curvature_feedback' or self.follower.steering_feedback_gain>0)
         self.laps = rospy.get_param('~laps', 5)
         if isinstance(self.laps, bool) or not isinstance(self.laps, int) or self.laps < 1:
             raise ValueError('laps must be a positive integer')
@@ -110,6 +112,7 @@ class ContinuousRace:
             # Never retain expired steering, and do not require an extra stream
             # to run the command-slew fallback. Scan/odom/TF guards remain mandatory.
             self.follower.measured_steer=None
+            self.follower.measured_steer_age=None
             msg=self.joints
             if msg is not None and self.joints_time is not None:
                 age=(now-msg.header.stamp).to_sec()
@@ -119,6 +122,7 @@ class ContinuousRace:
                     if left is not None and right is not None and all(math.isfinite(v) and abs(v)<=.65 for v in (left,right)):
                         from wheel_kinematics import equivalent_steer
                         self.follower.measured_steer=equivalent_steer(left,right)
+                        self.follower.measured_steer_age=age
         if self.require_joint_feedback:
             msg=self.joints
             if msg is None or self.joints_time is None:
@@ -133,6 +137,7 @@ class ContinuousRace:
                     raise ValueError('Invalid steering hinge position')
                 from wheel_kinematics import equivalent_steer
                 self.follower.measured_steer=equivalent_steer(left,right)
+                self.follower.measured_steer_age=age
             except KeyError:
                 raise ValueError('Steering hinges absent from joint_states')
         for label,msg,received in (('scan',self.scan,self.scan_time),('odom',self.odom,self.odom_time)):
@@ -301,7 +306,7 @@ class ContinuousRace:
                       startup=self.start_metrics,last_fault=self.last_fault,
                       limits={name:getattr(self.follower,name) for name in
                               ('max_speed','lateral_accel','acceleration','braking','max_error',
-                               'yaw_rate','steering_rate','response_delay') if hasattr(self.follower,name)})
+                               'yaw_rate','steering_rate','response_delay','steering_feedback_gain') if hasattr(self.follower,name)})
         report=copy.deepcopy(report)
         if background:
             # Never wait for storage in the 50Hz control loop. Skip a periodic

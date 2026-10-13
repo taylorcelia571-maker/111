@@ -30,6 +30,8 @@ def analyze(plan, run, official_seconds, official_laps, target=60.0):
             problems.append('Parameter missing or different between plan and run: ' + key)
     if 'response_delay' not in limits or limits['response_delay'] != plan.get('response_delay_seconds'):
         problems.append('Response delay missing or different between plan and run')
+    if limits.get('steering_feedback_gain',0)!=plan.get('steering_feedback_gain',0):
+        problems.append('Steering feedback gain differs between plan and run')
     observed = positive(run.get('observed_simulation_seconds'), 'observed_simulation_seconds')
     if run.get('last_fault'):
         problems.append('Controller recorded a protective stop')

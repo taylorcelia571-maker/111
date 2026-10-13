@@ -10,7 +10,7 @@ class PredictiveFollower(LineFollower):
                  braking=3.0, max_error=0.15, wheelbase=0.26, max_steer=0.48,
                  steering_rate=2.0, yaw_rate=3.2, fast_start=False, start_blend=False,
                  response_delay=0.0, lateral_control='pursuit',
-                 startup_speed=1.2, startup_acceleration=1.5):
+                 startup_speed=1.2, startup_acceleration=1.5, steering_feedback_gain=0.0):
         super().__init__(path, max_speed, lateral_accel, acceleration, braking,
                          wheelbase, max_steer, max_error)
         self.steering_rate = positive('steering_rate', steering_rate)
@@ -18,12 +18,16 @@ class PredictiveFollower(LineFollower):
         if not math.isfinite(response_delay) or not 0 <= response_delay <= 0.5:
             raise ValueError('response_delay must be between 0 and 0.5 seconds')
         self.response_delay = float(response_delay)
+        if not math.isfinite(steering_feedback_gain) or not 0<=steering_feedback_gain<=.5:
+            raise ValueError('steering_feedback_gain must be between 0 and 0.5')
+        self.steering_feedback_gain=float(steering_feedback_gain)
         if lateral_control not in ('pursuit','smooth_pursuit','curvature_feedback'):
             raise ValueError('Unknown lateral_control: '+str(lateral_control))
         if lateral_control == 'curvature_feedback' and start_blend:
             raise ValueError('Selected lateral controller requires the unmodified reference path')
         self.lateral_control = lateral_control
         self.measured_steer = None
+        self.measured_steer_age = 0.0
         self.startup_speed=positive('startup_speed',startup_speed)
         self.startup_acceleration=positive('startup_acceleration',startup_acceleration)
         self.launch_limited=False
@@ -97,6 +101,7 @@ class PredictiveFollower(LineFollower):
                     response_preview_proxy_includes_startup=False,
                     response_preview_proxy_uses_nominal_speed=True,
                     reference_sha256=self.path.fingerprint(),
+                    steering_feedback_gain=self.steering_feedback_gain,
                     length=self.path.length,model_lap_seconds=float(weights.sum()),
                     model_five_seconds=float(5*weights.sum()),model_includes_startup=False,
                     required_mean_speed_for_60s=self.path.length/12,
@@ -238,9 +243,27 @@ class PredictiveFollower(LineFollower):
             desired_steer=float(np.clip(math.atan(self.wheelbase*feedforward)+correction,
                                         -self.max_steer,self.max_steer))
             k=math.tan(desired_steer)/self.wheelbase
-        self.steer += float(np.clip(desired_steer-self.steer,-self.steering_rate*dt,self.steering_rate*dt))
-        live_lateral = math.sqrt(self.lateral_accel/max(abs(k),1e-6))
-        live_yaw = self.yaw_rate/max(abs(k),1e-6)
+        actuator_target=desired_steer
+        feedback_available=(
+            self.measured_steer is not None and self.measured_steer_age is not None and
+            -.02<=self.measured_steer_age<=.08)
+        # Taper aging feedback instead of switching the extra steering target
+        # on/off as transport jitter straddles one freshness threshold.
+        quality=float(np.clip((.08-self.measured_steer_age)/.04,0,1)) if feedback_available else 0.0
+        effective_gain=self.steering_feedback_gain*quality
+        if effective_gain:
+            if not math.isfinite(self.measured_steer):
+                self.stop();raise ValueError('Nonfinite measured steering')
+            actuator_target=float(np.clip(desired_steer+effective_gain*(desired_steer-self.measured_steer),
+                                          -self.max_steer,self.max_steer))
+        self.steer += float(np.clip(actuator_target-self.steer,-self.steering_rate*dt,self.steering_rate*dt))
+        constraint_curvature=abs(k)
+        if self.steering_feedback_gain:
+            angles=[actuator_target,self.steer]
+            if self.measured_steer is not None:angles.append(self.measured_steer)
+            constraint_curvature=max(constraint_curvature,*(abs(math.tan(a)/self.wheelbase) for a in angles))
+        live_lateral = math.sqrt(self.lateral_accel/max(constraint_curvature,1e-6))
+        live_yaw = self.yaw_rate/max(constraint_curvature,1e-6)
         # The spatial envelope assumes instantaneous execution. Real wheels keep
         # moving after a lower command: advance the braking envelope by measured
         # travel during the response allowance. Never substitute command speed
@@ -369,6 +392,11 @@ class PredictiveFollower(LineFollower):
                                 startup_speed=self.startup_speed,startup_acceleration=self.startup_acceleration,
                                 alignment_ready_seconds=self.alignment_ready,
                                 active_acceleration=active_acceleration)
+        self.last_report.update(actuator_target_steer=actuator_target,
+                                constraint_curvature=constraint_curvature,
+                                steering_feedback_gain=self.steering_feedback_gain,
+                                effective_steering_feedback_gain=effective_gain,
+                                steering_feedback_age=self.measured_steer_age)
         return self.speed,self.steer
 
 
