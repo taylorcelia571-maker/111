@@ -34,7 +34,7 @@ def main():
                           margin=rospy.get_param("~route_margin",0.26))
     rospy.loginfo('Planning full course while stationary; no motion until start service')
     optimize = rospy.get_param('~optimize_time',False)
-    center = planner.build(anchors,speed_planning=rospy.get_param("~speed_planning","legacy"),optimize_time=optimize,refine_line=rospy.get_param('~refine_line',False),
+    center = planner.build(anchors,line_search_level=rospy.get_param('~line_search_level',0),speed_planning=rospy.get_param("~speed_planning","legacy"),optimize_time=optimize,refine_line=rospy.get_param('~refine_line',False),
                            **{k:rospy.get_param('~'+k,v) for k,v in (
                                ('max_speed',2.0),('lateral_accel',5.0),('acceleration',2.0),('braking',3.0),
                                ('steering_rate',2.0),('yaw_rate',3.2),('response_delay',0.0))})
