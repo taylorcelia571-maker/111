@@ -84,6 +84,44 @@ class RuntimeTests(unittest.TestCase):
         self.ros.is_shutdown.side_effect = [False, True]
         self.node.run()
 
+    def test_laser_drop_holds_reacceleration_but_not_stop(self):
+        old=self.node;self.params['~speed_recovery_hold']=.12
+        self.node=self.module.ContinuousRace(old.path)
+        self.node.on_scan(old.scan);self.node.on_odom(old.odom)
+        self.assertTrue(self.node.start(None).success)
+        self.node.acceleration_recovery.previous=3.
+        def proposed(*args,**kwargs):
+            self.node.follower.last_report={'command_speed':3.,'reason':'acceleration'}
+            return 3.,0.
+        with patch.object(self.node.follower,'step',side_effect=proposed), \
+                patch('predictive_follower.reference_clearance',return_value=1.):
+            self.tick()
+        self.assertEqual(self.node.pub.publish.call_args.args[0].linear.x,1.)
+        Stamp.now_value=1.02
+        with patch.object(self.node.follower,'step',side_effect=proposed), \
+                patch('predictive_follower.reference_clearance',return_value=float('inf')):
+            self.tick()
+        self.assertEqual(self.node.pub.publish.call_args.args[0].linear.x,1.)
+        self.assertEqual(self.node.follower.last_report['reason'],'recovery_hold')
+        self.node.stop(None)
+        self.assertEqual(self.node.pub.publish.call_args.args[0].linear.x,0.)
+
+    def test_laser_hard_stop_is_not_delayed_by_recovery_hold(self):
+        old=self.node;self.params['~speed_recovery_hold']=.12
+        self.node=self.module.ContinuousRace(old.path)
+        self.node.on_scan(old.scan);self.node.on_odom(old.odom)
+        self.assertTrue(self.node.start(None).success)
+        with patch('predictive_follower.reference_clearance',return_value=0.):self.tick()
+        self.assertFalse(self.node.active)
+        self.assertEqual(self.node.pub.publish.call_args.args[0].linear.x,0.)
+
+    def test_start_resets_previous_recovery_hold(self):
+        self.node.acceleration_recovery.remaining=.12
+        self.node.acceleration_recovery.previous=2.
+        self.assertTrue(self.node.start(None).success)
+        self.assertEqual(self.node.acceleration_recovery.remaining,0.)
+        self.assertEqual(self.node.acceleration_recovery.previous,0.)
+
     def test_first_cycle_publishes_valid_motion(self):
         # Start subtracts a duration; fake Stamp implements the needed API.
         self.assertTrue(self.node.start(None).success)
