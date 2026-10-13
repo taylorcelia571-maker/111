@@ -1,0 +1,833 @@
+{
+  "gazebo_tested": false,
+  "official_under60_verified": false,
+  "user_reported_best_seconds": 82,
+  "budget_sweep": [
+    {
+      "profile": "recovery",
+      "budgets": {
+        "max_speed": 10,
+        "lateral_accel": 6.5,
+        "acceleration": 6.6,
+        "braking": 3.6,
+        "yaw_rate": 3.8,
+        "steering_rate": 2
+      },
+      "models": [
+        {
+          "hypothetical_actuator_lag": 0.08,
+          "joint_transport_delay": 0.0,
+          "controller": "smooth_pursuit",
+          "speed_planning": "legacy",
+          "official_result": false,
+          "plan_five_seconds": 84.99090546311555,
+          "completed": true,
+          "seconds": 86.4,
+          "first_loop_seconds": 18.56,
+          "loop_end_seconds": [
+            18.56,
+            35.52,
+            52.480000000000004,
+            69.44,
+            86.4
+          ],
+          "peak_error": 0.07370363353207342,
+          "minimum_center_clearance": 0.3174735953698292,
+          "startup_limit_released_seconds": 2.2,
+          "maximum_command_deceleration": 30.51454080353996
+        },
+        {
+          "hypothetical_actuator_lag": 0.15,
+          "joint_transport_delay": 0.0,
+          "controller": "smooth_pursuit",
+          "speed_planning": "legacy",
+          "official_result": false,
+          "plan_five_seconds": 84.99090546311555,
+          "completed": true,
+          "seconds": 88.32000000000001,
+          "first_loop_seconds": 19.06,
+          "loop_end_seconds": [
+            19.06,
+            36.36,
+            53.68,
+            71.0,
+            88.32000000000001
+          ],
+          "peak_error": 0.07371195662513728,
+          "minimum_center_clearance": 0.3281941021221222,
+          "startup_limit_released_seconds": 2.2600000000000002,
+          "maximum_command_deceleration": 27.596296460255097
+        },
+        {
+          "hypothetical_actuator_lag": 0.25,
+          "joint_transport_delay": 0.0,
+          "controller": "smooth_pursuit",
+          "speed_planning": "legacy",
+          "official_result": false,
+          "plan_five_seconds": 84.99090546311555,
+          "completed": true,
+          "seconds": 106.82000000000001,
+          "first_loop_seconds": 23.400000000000002,
+          "loop_end_seconds": [
+            23.400000000000002,
+            44.12,
+            65.02,
+            85.82000000000001,
+            106.82000000000001
+          ],
+          "peak_error": 0.10388651599758157,
+          "minimum_center_clearance": 0.322755428448959,
+          "startup_limit_released_seconds": 2.36,
+          "maximum_command_deceleration": 42.53812129614869
+        }
+      ]
+    },
+    {
+      "profile": "lateral70",
+      "budgets": {
+        "max_speed": 10,
+        "lateral_accel": 7.0,
+        "acceleration": 6.6,
+        "braking": 3.6,
+        "yaw_rate": 3.8,
+        "steering_rate": 2
+      },
+      "models": [
+        {
+          "hypothetical_actuator_lag": 0.08,
+          "joint_transport_delay": 0.0,
+          "controller": "smooth_pursuit",
+          "speed_planning": "legacy",
+          "official_result": false,
+          "plan_five_seconds": 82.4700642002206,
+          "completed": true,
+          "seconds": 84.14,
+          "first_loop_seconds": 18.12,
+          "loop_end_seconds": [
+            18.12,
+            34.62,
+            51.120000000000005,
+            67.64,
+            84.14
+          ],
+          "peak_error": 0.07370363353207342,
+          "minimum_center_clearance": 0.3161627851141181,
+          "startup_limit_released_seconds": 2.2,
+          "maximum_command_deceleration": 40.790454736161074
+        },
+        {
+          "hypothetical_actuator_lag": 0.15,
+          "joint_transport_delay": 0.0,
+          "controller": "smooth_pursuit",
+          "speed_planning": "legacy",
+          "official_result": false,
+          "plan_five_seconds": 82.4700642002206,
+          "completed": true,
+          "seconds": 86.46000000000001,
+          "first_loop_seconds": 18.7,
+          "loop_end_seconds": [
+            18.7,
+            35.64,
+            52.58,
+            69.52,
+            86.46000000000001
+          ],
+          "peak_error": 0.07371195662513728,
+          "minimum_center_clearance": 0.32749793563448154,
+          "startup_limit_released_seconds": 2.2600000000000002,
+          "maximum_command_deceleration": 34.701298345655175
+        },
+        {
+          "hypothetical_actuator_lag": 0.25,
+          "joint_transport_delay": 0.0,
+          "controller": "smooth_pursuit",
+          "speed_planning": "legacy",
+          "official_result": false,
+          "plan_five_seconds": 82.4700642002206,
+          "completed": true,
+          "seconds": 105.8,
+          "first_loop_seconds": 23.48,
+          "loop_end_seconds": [
+            23.48,
+            44.18,
+            64.76,
+            85.28,
+            105.8
+          ],
+          "peak_error": 0.11256340028571359,
+          "minimum_center_clearance": 0.3196883791598687,
+          "startup_limit_released_seconds": 2.36,
+          "maximum_command_deceleration": 72.64066453920881
+        }
+      ]
+    },
+    {
+      "profile": "lateral75",
+      "budgets": {
+        "max_speed": 10,
+        "lateral_accel": 7.5,
+        "acceleration": 6.6,
+        "braking": 3.6,
+        "yaw_rate": 3.8,
+        "steering_rate": 2
+      },
+      "models": [
+        {
+          "hypothetical_actuator_lag": 0.08,
+          "joint_transport_delay": 0.0,
+          "controller": "smooth_pursuit",
+          "speed_planning": "legacy",
+          "official_result": false,
+          "plan_five_seconds": 80.17663694965945,
+          "completed": true,
+          "seconds": 82.24,
+          "first_loop_seconds": 17.76,
+          "loop_end_seconds": [
+            17.76,
+            33.88,
+            50.0,
+            66.12,
+            82.24
+          ],
+          "peak_error": 0.07370363353207342,
+          "minimum_center_clearance": 0.3150532367438236,
+          "startup_limit_released_seconds": 2.2,
+          "maximum_command_deceleration": 49.067017367790086
+        },
+        {
+          "hypothetical_actuator_lag": 0.15,
+          "joint_transport_delay": 0.0,
+          "controller": "smooth_pursuit",
+          "speed_planning": "legacy",
+          "official_result": false,
+          "plan_five_seconds": 80.17663694965945,
+          "completed": true,
+          "seconds": 84.8,
+          "first_loop_seconds": 18.38,
+          "loop_end_seconds": [
+            18.38,
+            34.980000000000004,
+            51.58,
+            68.18,
+            84.8
+          ],
+          "peak_error": 0.07371195662513728,
+          "minimum_center_clearance": 0.32562492881195965,
+          "startup_limit_released_seconds": 2.2600000000000002,
+          "maximum_command_deceleration": 38.05059719355099
+        },
+        {
+          "hypothetical_actuator_lag": 0.25,
+          "joint_transport_delay": 0.0,
+          "controller": "smooth_pursuit",
+          "speed_planning": "legacy",
+          "official_result": false,
+          "plan_five_seconds": 80.17663694965945,
+          "completed": true,
+          "seconds": 105.72,
+          "first_loop_seconds": 23.96,
+          "loop_end_seconds": [
+            23.96,
+            44.480000000000004,
+            64.82000000000001,
+            85.2,
+            105.72
+          ],
+          "peak_error": 0.12264305001681537,
+          "minimum_center_clearance": 0.31686075532765906,
+          "startup_limit_released_seconds": 2.36,
+          "maximum_command_deceleration": 78.18283148817322
+        }
+      ]
+    },
+    {
+      "profile": "brake38",
+      "budgets": {
+        "max_speed": 10,
+        "lateral_accel": 7.0,
+        "acceleration": 6.6,
+        "braking": 3.8,
+        "yaw_rate": 3.8,
+        "steering_rate": 2
+      },
+      "models": [
+        {
+          "hypothetical_actuator_lag": 0.08,
+          "joint_transport_delay": 0.0,
+          "controller": "smooth_pursuit",
+          "speed_planning": "legacy",
+          "official_result": false,
+          "plan_five_seconds": 82.37579146112758,
+          "completed": true,
+          "seconds": 83.98,
+          "first_loop_seconds": 18.1,
+          "loop_end_seconds": [
+            18.1,
+            34.58,
+            51.04,
+            67.52,
+            83.98
+          ],
+          "peak_error": 0.07370363353207342,
+          "minimum_center_clearance": 0.31610986698547017,
+          "startup_limit_released_seconds": 2.2,
+          "maximum_command_deceleration": 41.05745351661475
+        },
+        {
+          "hypothetical_actuator_lag": 0.15,
+          "joint_transport_delay": 0.0,
+          "controller": "smooth_pursuit",
+          "speed_planning": "legacy",
+          "official_result": false,
+          "plan_five_seconds": 82.37579146112758,
+          "completed": true,
+          "seconds": 86.26,
+          "first_loop_seconds": 18.66,
+          "loop_end_seconds": [
+            18.66,
+            35.56,
+            52.46,
+            69.36,
+            86.26
+          ],
+          "peak_error": 0.07371195662513728,
+          "minimum_center_clearance": 0.32746434057277185,
+          "startup_limit_released_seconds": 2.2600000000000002,
+          "maximum_command_deceleration": 30.675255962805025
+        },
+        {
+          "hypothetical_actuator_lag": 0.25,
+          "joint_transport_delay": 0.0,
+          "controller": "smooth_pursuit",
+          "speed_planning": "legacy",
+          "official_result": false,
+          "plan_five_seconds": 82.37579146112758,
+          "completed": true,
+          "seconds": 105.76,
+          "first_loop_seconds": 23.5,
+          "loop_end_seconds": [
+            23.5,
+            44.06,
+            64.72,
+            85.26,
+            105.76
+          ],
+          "peak_error": 0.11387256094025558,
+          "minimum_center_clearance": 0.3194394730562036,
+          "startup_limit_released_seconds": 2.36,
+          "maximum_command_deceleration": 71.45630897005569
+        }
+      ]
+    },
+    {
+      "profile": "yaw40",
+      "budgets": {
+        "max_speed": 10,
+        "lateral_accel": 7.0,
+        "acceleration": 6.6,
+        "braking": 3.8,
+        "yaw_rate": 4.0,
+        "steering_rate": 2
+      },
+      "models": [
+        {
+          "hypothetical_actuator_lag": 0.08,
+          "joint_transport_delay": 0.0,
+          "controller": "smooth_pursuit",
+          "speed_planning": "legacy",
+          "official_result": false,
+          "plan_five_seconds": 82.37579146112758,
+          "completed": true,
+          "seconds": 83.98,
+          "first_loop_seconds": 18.1,
+          "loop_end_seconds": [
+            18.1,
+            34.58,
+            51.04,
+            67.52,
+            83.98
+          ],
+          "peak_error": 0.07370363353207342,
+          "minimum_center_clearance": 0.31610986698547017,
+          "startup_limit_released_seconds": 2.2,
+          "maximum_command_deceleration": 41.05745351661475
+        },
+        {
+          "hypothetical_actuator_lag": 0.15,
+          "joint_transport_delay": 0.0,
+          "controller": "smooth_pursuit",
+          "speed_planning": "legacy",
+          "official_result": false,
+          "plan_five_seconds": 82.37579146112758,
+          "completed": true,
+          "seconds": 86.26,
+          "first_loop_seconds": 18.66,
+          "loop_end_seconds": [
+            18.66,
+            35.56,
+            52.46,
+            69.36,
+            86.26
+          ],
+          "peak_error": 0.07371195662513728,
+          "minimum_center_clearance": 0.32746434057277185,
+          "startup_limit_released_seconds": 2.2600000000000002,
+          "maximum_command_deceleration": 30.675255962805025
+        },
+        {
+          "hypothetical_actuator_lag": 0.25,
+          "joint_transport_delay": 0.0,
+          "controller": "smooth_pursuit",
+          "speed_planning": "legacy",
+          "official_result": false,
+          "plan_five_seconds": 82.37579146112758,
+          "completed": true,
+          "seconds": 105.48,
+          "first_loop_seconds": 23.38,
+          "loop_end_seconds": [
+            23.38,
+            43.9,
+            64.4,
+            84.98,
+            105.48
+          ],
+          "peak_error": 0.11077658429678854,
+          "minimum_center_clearance": 0.3195432761847287,
+          "startup_limit_released_seconds": 2.36,
+          "maximum_command_deceleration": 65.64313228768519
+        }
+      ]
+    }
+  ],
+  "preview_sweep": [
+    {
+      "steering_preview_time": 0.1,
+      "models": [
+        {
+          "hypothetical_actuator_lag": 0.08,
+          "joint_transport_delay": 0.0,
+          "controller": "smooth_pursuit",
+          "speed_planning": "legacy",
+          "official_result": false,
+          "plan_five_seconds": 84.99090546311555,
+          "completed": true,
+          "seconds": 86.4,
+          "first_loop_seconds": 18.56,
+          "loop_end_seconds": [
+            18.56,
+            35.52,
+            52.480000000000004,
+            69.44,
+            86.4
+          ],
+          "peak_error": 0.07370363353207342,
+          "minimum_center_clearance": 0.3174735953698292,
+          "startup_limit_released_seconds": 2.2,
+          "maximum_command_deceleration": 30.51454080353996
+        },
+        {
+          "hypothetical_actuator_lag": 0.15,
+          "joint_transport_delay": 0.0,
+          "controller": "smooth_pursuit",
+          "speed_planning": "legacy",
+          "official_result": false,
+          "plan_five_seconds": 84.99090546311555,
+          "completed": true,
+          "seconds": 88.32000000000001,
+          "first_loop_seconds": 19.06,
+          "loop_end_seconds": [
+            19.06,
+            36.36,
+            53.68,
+            71.0,
+            88.32000000000001
+          ],
+          "peak_error": 0.07371195662513728,
+          "minimum_center_clearance": 0.3281941021221222,
+          "startup_limit_released_seconds": 2.2600000000000002,
+          "maximum_command_deceleration": 27.596296460255097
+        },
+        {
+          "hypothetical_actuator_lag": 0.25,
+          "joint_transport_delay": 0.0,
+          "controller": "smooth_pursuit",
+          "speed_planning": "legacy",
+          "official_result": false,
+          "plan_five_seconds": 84.99090546311555,
+          "completed": true,
+          "seconds": 106.82000000000001,
+          "first_loop_seconds": 23.400000000000002,
+          "loop_end_seconds": [
+            23.400000000000002,
+            44.12,
+            65.02,
+            85.82000000000001,
+            106.82000000000001
+          ],
+          "peak_error": 0.10388651599758157,
+          "minimum_center_clearance": 0.322755428448959,
+          "startup_limit_released_seconds": 2.36,
+          "maximum_command_deceleration": 42.53812129614869
+        }
+      ]
+    },
+    {
+      "steering_preview_time": 0.12,
+      "models": [
+        {
+          "hypothetical_actuator_lag": 0.08,
+          "joint_transport_delay": 0.0,
+          "controller": "smooth_pursuit",
+          "speed_planning": "legacy",
+          "official_result": false,
+          "plan_five_seconds": 84.99090546311555,
+          "completed": true,
+          "seconds": 86.84,
+          "first_loop_seconds": 18.64,
+          "loop_end_seconds": [
+            18.64,
+            35.68,
+            52.74,
+            69.78,
+            86.84
+          ],
+          "peak_error": 0.07370344048322329,
+          "minimum_center_clearance": 0.31432111025555914,
+          "startup_limit_released_seconds": 2.2,
+          "maximum_command_deceleration": 45.51401625854977
+        },
+        {
+          "hypothetical_actuator_lag": 0.15,
+          "joint_transport_delay": 0.0,
+          "controller": "smooth_pursuit",
+          "speed_planning": "legacy",
+          "official_result": false,
+          "plan_five_seconds": 84.99090546311555,
+          "completed": true,
+          "seconds": 88.84,
+          "first_loop_seconds": 19.16,
+          "loop_end_seconds": [
+            19.16,
+            36.58,
+            54.0,
+            71.42,
+            88.84
+          ],
+          "peak_error": 0.07371177652570055,
+          "minimum_center_clearance": 0.32602911177855687,
+          "startup_limit_released_seconds": 2.2600000000000002,
+          "maximum_command_deceleration": 31.32621834373922
+        },
+        {
+          "hypothetical_actuator_lag": 0.25,
+          "joint_transport_delay": 0.0,
+          "controller": "smooth_pursuit",
+          "speed_planning": "legacy",
+          "official_result": false,
+          "plan_five_seconds": 84.99090546311555,
+          "completed": true,
+          "seconds": 105.44,
+          "first_loop_seconds": 22.92,
+          "loop_end_seconds": [
+            22.92,
+            43.58,
+            64.18,
+            84.8,
+            105.44
+          ],
+          "peak_error": 0.08686167660141887,
+          "minimum_center_clearance": 0.32820357671967854,
+          "startup_limit_released_seconds": 2.36,
+          "maximum_command_deceleration": 50.87026847618117
+        }
+      ]
+    },
+    {
+      "steering_preview_time": 0.15,
+      "models": [
+        {
+          "hypothetical_actuator_lag": 0.08,
+          "joint_transport_delay": 0.0,
+          "controller": "smooth_pursuit",
+          "speed_planning": "legacy",
+          "official_result": false,
+          "plan_five_seconds": 84.99090546311555,
+          "completed": true,
+          "seconds": 88.22,
+          "first_loop_seconds": 18.92,
+          "loop_end_seconds": [
+            18.92,
+            36.24,
+            53.58,
+            70.88,
+            88.22
+          ],
+          "peak_error": 0.07370313635402216,
+          "minimum_center_clearance": 0.3103246275177477,
+          "startup_limit_released_seconds": 2.2,
+          "maximum_command_deceleration": 63.64205636916773
+        },
+        {
+          "hypothetical_actuator_lag": 0.15,
+          "joint_transport_delay": 0.0,
+          "controller": "smooth_pursuit",
+          "speed_planning": "legacy",
+          "official_result": false,
+          "plan_five_seconds": 84.99090546311555,
+          "completed": true,
+          "seconds": 90.32000000000001,
+          "first_loop_seconds": 19.44,
+          "loop_end_seconds": [
+            19.44,
+            37.160000000000004,
+            54.88,
+            72.60000000000001,
+            90.32000000000001
+          ],
+          "peak_error": 0.07371149617137077,
+          "minimum_center_clearance": 0.3182144229848735,
+          "startup_limit_released_seconds": 2.2600000000000002,
+          "maximum_command_deceleration": 42.47863447933774
+        },
+        {
+          "hypothetical_actuator_lag": 0.25,
+          "joint_transport_delay": 0.0,
+          "controller": "smooth_pursuit",
+          "speed_planning": "legacy",
+          "official_result": false,
+          "plan_five_seconds": 84.99090546311555,
+          "completed": true,
+          "seconds": 104.86,
+          "first_loop_seconds": 22.6,
+          "loop_end_seconds": [
+            22.6,
+            43.14,
+            63.68,
+            84.28,
+            104.86
+          ],
+          "peak_error": 0.07746669162150716,
+          "minimum_center_clearance": 0.32958764854365546,
+          "startup_limit_released_seconds": 2.36,
+          "maximum_command_deceleration": 61.791564203253266
+        }
+      ]
+    },
+    {
+      "steering_preview_time": 0.18,
+      "models": [
+        {
+          "hypothetical_actuator_lag": 0.08,
+          "joint_transport_delay": 0.0,
+          "controller": "smooth_pursuit",
+          "speed_planning": "legacy",
+          "official_result": false,
+          "plan_five_seconds": 84.99090546311555,
+          "completed": true,
+          "seconds": 89.68,
+          "first_loop_seconds": 19.2,
+          "loop_end_seconds": [
+            19.2,
+            36.82,
+            54.44,
+            72.06,
+            89.68
+          ],
+          "peak_error": 0.07370281951700401,
+          "minimum_center_clearance": 0.30755384714751505,
+          "startup_limit_released_seconds": 2.2,
+          "maximum_command_deceleration": 68.21299889409782
+        },
+        {
+          "hypothetical_actuator_lag": 0.15,
+          "joint_transport_delay": 0.0,
+          "controller": "smooth_pursuit",
+          "speed_planning": "legacy",
+          "official_result": false,
+          "plan_five_seconds": 84.99090546311555,
+          "completed": true,
+          "seconds": 94.10000000000001,
+          "first_loop_seconds": 20.22,
+          "loop_end_seconds": [
+            20.22,
+            38.660000000000004,
+            57.14,
+            75.64,
+            94.10000000000001
+          ],
+          "peak_error": 0.07371120400448565,
+          "minimum_center_clearance": 0.309926962060309,
+          "startup_limit_released_seconds": 2.2600000000000002,
+          "maximum_command_deceleration": 53.9779191873486
+        },
+        {
+          "hypothetical_actuator_lag": 0.25,
+          "joint_transport_delay": 0.0,
+          "controller": "smooth_pursuit",
+          "speed_planning": "legacy",
+          "official_result": false,
+          "plan_five_seconds": 84.99090546311555,
+          "completed": true,
+          "seconds": 104.74000000000001,
+          "first_loop_seconds": 22.56,
+          "loop_end_seconds": [
+            22.56,
+            43.1,
+            63.64,
+            84.2,
+            104.74000000000001
+          ],
+          "peak_error": 0.0737191800020941,
+          "minimum_center_clearance": 0.3313753737030936,
+          "startup_limit_released_seconds": 2.36,
+          "maximum_command_deceleration": 51.19814475035278
+        }
+      ]
+    },
+    {
+      "steering_preview_time": 0.05,
+      "models": [
+        {
+          "hypothetical_actuator_lag": 0.08,
+          "joint_transport_delay": 0.0,
+          "controller": "smooth_pursuit",
+          "speed_planning": "legacy",
+          "official_result": false,
+          "plan_five_seconds": 84.99090546311555,
+          "completed": true,
+          "seconds": 85.74,
+          "first_loop_seconds": 18.44,
+          "loop_end_seconds": [
+            18.44,
+            35.26,
+            52.08,
+            68.92,
+            85.74
+          ],
+          "peak_error": 0.0737040892167439,
+          "minimum_center_clearance": 0.32665393862787523,
+          "startup_limit_released_seconds": 2.2,
+          "maximum_command_deceleration": 16.96438936664436
+        },
+        {
+          "hypothetical_actuator_lag": 0.15,
+          "joint_transport_delay": 0.0,
+          "controller": "smooth_pursuit",
+          "speed_planning": "legacy",
+          "official_result": false,
+          "plan_five_seconds": 84.99090546311555,
+          "completed": true,
+          "seconds": 88.74,
+          "first_loop_seconds": 19.14,
+          "loop_end_seconds": [
+            19.14,
+            36.54,
+            53.94,
+            71.34,
+            88.74
+          ],
+          "peak_error": 0.07371238078474687,
+          "minimum_center_clearance": 0.33392863056517197,
+          "startup_limit_released_seconds": 2.2600000000000002,
+          "maximum_command_deceleration": 25.51169165827474
+        },
+        {
+          "hypothetical_actuator_lag": 0.25,
+          "joint_transport_delay": 0.0,
+          "controller": "smooth_pursuit",
+          "speed_planning": "legacy",
+          "official_result": false,
+          "plan_five_seconds": 84.99090546311555,
+          "completed": true,
+          "seconds": 111.18,
+          "first_loop_seconds": 25.46,
+          "loop_end_seconds": [
+            25.46,
+            46.92,
+            68.3,
+            89.74,
+            111.18
+          ],
+          "peak_error": 0.1289528253129007,
+          "minimum_center_clearance": 0.32455405382791525,
+          "startup_limit_released_seconds": 2.36,
+          "maximum_command_deceleration": 52.02199210052862
+        }
+      ]
+    },
+    {
+      "steering_preview_time": 0.08,
+      "models": [
+        {
+          "hypothetical_actuator_lag": 0.08,
+          "joint_transport_delay": 0.0,
+          "controller": "smooth_pursuit",
+          "speed_planning": "legacy",
+          "official_result": false,
+          "plan_five_seconds": 84.99090546311555,
+          "completed": true,
+          "seconds": 86.26,
+          "first_loop_seconds": 18.52,
+          "loop_end_seconds": [
+            18.52,
+            35.46,
+            52.38,
+            69.32000000000001,
+            86.26
+          ],
+          "peak_error": 0.0737038217308956,
+          "minimum_center_clearance": 0.3206729552506349,
+          "startup_limit_released_seconds": 2.2,
+          "maximum_command_deceleration": 27.699643972790277
+        },
+        {
+          "hypothetical_actuator_lag": 0.15,
+          "joint_transport_delay": 0.0,
+          "controller": "smooth_pursuit",
+          "speed_planning": "legacy",
+          "official_result": false,
+          "plan_five_seconds": 84.99090546311555,
+          "completed": true,
+          "seconds": 88.18,
+          "first_loop_seconds": 19.02,
+          "loop_end_seconds": [
+            19.02,
+            36.32,
+            53.6,
+            70.88,
+            88.18
+          ],
+          "peak_error": 0.07371213076374983,
+          "minimum_center_clearance": 0.3291671166880501,
+          "startup_limit_released_seconds": 2.2600000000000002,
+          "maximum_command_deceleration": 29.99658305671302
+        },
+        {
+          "hypothetical_actuator_lag": 0.25,
+          "joint_transport_delay": 0.0,
+          "controller": "smooth_pursuit",
+          "speed_planning": "legacy",
+          "official_result": false,
+          "plan_five_seconds": 84.99090546311555,
+          "completed": true,
+          "seconds": 108.28,
+          "first_loop_seconds": 23.84,
+          "loop_end_seconds": [
+            23.84,
+            44.980000000000004,
+            65.92,
+            87.02,
+            108.28
+          ],
+          "peak_error": 0.11507395721289893,
+          "minimum_center_clearance": 0.32141172509547955,
+          "startup_limit_released_seconds": 2.36,
+          "maximum_command_deceleration": 42.432438774566236
+        }
+      ]
+    }
+  ],
+  "targeted_tests_passed": 78,
+  "native_noetic_launch_parameters_verified": true,
+  "model_assumptions": "first-order bicycle dynamics; not official timing, no AMCL jumps/real laser/tire/roll dynamics"
+}
