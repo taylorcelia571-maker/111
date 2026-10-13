@@ -50,6 +50,8 @@ class ContinuousRace:
                            steering_preview_time=rospy.get_param('~steering_preview_time',.10),
                            curvature_feedforward_gain=rospy.get_param('~curvature_feedforward_gain',.4),
                            pursuit_lookahead_scale=rospy.get_param('~pursuit_lookahead_scale',1.0),
+                           heading_feedback_gain=rospy.get_param('~heading_feedback_gain',.8),
+                           cross_track_gain=rospy.get_param('~cross_track_gain',.8),
                            lateral_control=rospy.get_param('~lateral_control','pursuit'),
                            startup_speed=rospy.get_param('~startup_speed',1.2),
                            startup_acceleration=rospy.get_param('~startup_acceleration',1.5),
