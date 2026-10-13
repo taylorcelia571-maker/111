@@ -10,6 +10,10 @@ from predictive_follower import PredictiveFollower
 
 class SteeringPreviewTests(unittest.TestCase):
     def test_invalid_tracking_tuning_rejected(self):
+        for key in ('heading_feedback_gain','cross_track_gain'):
+            for value in (.3,1.7,float('nan')):
+                with self.assertRaisesRegex(ValueError,key):
+                    PredictiveFollower(self.path(),**{key:value})
         for gain in (-.1,1.1,float('nan')):
             with self.assertRaisesRegex(ValueError,'curvature_feedforward_gain'):
                 PredictiveFollower(self.path(),curvature_feedforward_gain=gain)
