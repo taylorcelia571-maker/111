@@ -12,7 +12,8 @@ class PredictiveFollower(LineFollower):
                  response_delay=0.0, lateral_control='pursuit',
                  startup_speed=1.2, startup_acceleration=1.5, steering_feedback_gain=0.0,
                  speed_planning="legacy", startup_release_early=False,
-                 steering_preview_time=.10):
+                 steering_preview_time=.10, curvature_feedforward_gain=.4,
+                 pursuit_lookahead_scale=1.0):
         super().__init__(path, max_speed, lateral_accel, acceleration, braking,
                          wheelbase, max_steer, max_error)
         self.steering_rate = positive('steering_rate', steering_rate)
@@ -23,6 +24,12 @@ class PredictiveFollower(LineFollower):
         if not math.isfinite(steering_preview_time) or not .05 <= steering_preview_time <= .25:
             raise ValueError('steering_preview_time must be between .05 and .25 seconds')
         self.steering_preview_time = float(steering_preview_time)
+        if not math.isfinite(curvature_feedforward_gain) or not 0 <= curvature_feedforward_gain <= 1:
+            raise ValueError('curvature_feedforward_gain must be between 0 and 1')
+        if not math.isfinite(pursuit_lookahead_scale) or not .8 <= pursuit_lookahead_scale <= 1.2:
+            raise ValueError('pursuit_lookahead_scale must be between .8 and 1.2')
+        self.curvature_feedforward_gain=float(curvature_feedforward_gain)
+        self.pursuit_lookahead_scale=float(pursuit_lookahead_scale)
         if speed_planning not in ('legacy','delayed_braking'):
             raise ValueError('Invalid speed_planning')
         if not isinstance(startup_release_early,bool):raise ValueError('startup_release_early must be boolean')
@@ -119,6 +126,8 @@ class PredictiveFollower(LineFollower):
                     reference_sha256=self.path.fingerprint(),
                     steering_feedback_gain=self.steering_feedback_gain,
                     steering_preview_time=self.steering_preview_time,
+                    curvature_feedforward_gain=self.curvature_feedforward_gain,
+                    pursuit_lookahead_scale=self.pursuit_lookahead_scale,
                     speed_planning=self.speed_planning,startup_release_early=self.startup_release_early,
                     length=self.path.length,model_lap_seconds=float(weights.sum()),
                     model_five_seconds=float(5*weights.sum()),model_includes_startup=False,
@@ -243,6 +252,8 @@ class PredictiveFollower(LineFollower):
         recovery_heading_error=heading_error
         recovering=(control_error>.02 and outward>.12) or (control_error>.06 and outward>.05)
         preview = min(0.80, max(0.28, (0.35+0.18*max(0,measured_speed))/(1+0.55*curve)))
+        if self.lateral_control=='smooth_pursuit':
+            preview=float(np.clip(preview*self.pursuit_lookahead_scale,.28,.80))
         if self.lateral_control in ('smooth_pursuit','race_feedback'):
             severity=float(np.clip(max(0,control_error-.02)/.04*max(0,outward)/.12,0,1))
             preview+=(min(preview,.30)-preview)*severity
@@ -280,7 +291,7 @@ class PredictiveFollower(LineFollower):
                     return 2*area/max(float(np.linalg.norm(a)*np.linalg.norm(b)*np.linalg.norm(a+b)),1e-9)
                 current=tracking_curvature(tracking_s)
                 ahead=tracking_curvature(tracking_s+advance)
-            feedforward=.4*(ahead-current)
+            feedforward=self.curvature_feedforward_gain*(ahead-current)
             k+=feedforward
             desired_steer=float(np.clip(math.atan(self.wheelbase*k),-self.max_steer,self.max_steer))
         if self.lateral_control in ('curvature_feedback','race_feedback'):
@@ -483,6 +494,8 @@ class PredictiveFollower(LineFollower):
                                 signed_tracking_error=signed_error,
                                 controller_revision='projection-consistency-v1')
         self.last_report['steering_preview_time'] = self.steering_preview_time
+        self.last_report.update(curvature_feedforward_gain=self.curvature_feedforward_gain,
+                                pursuit_lookahead_scale=self.pursuit_lookahead_scale)
         return self.speed,self.steer
 
 
