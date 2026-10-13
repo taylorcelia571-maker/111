@@ -75,10 +75,17 @@ class ClosedPath:
             ids = np.arange(self.n)
         else:
             ids = np.arange(int(math.floor(begin / self.ds)), int(math.ceil(end / self.ds)) + 1)
+            ids = ids[(ids*self.ds <= end) & ((ids+1)*self.ds >= begin)]
         a = self.points[ids % self.n]
         b = self.points[(ids + 1) % self.n] - a
         q = np.array([x, y]) - a
         t = np.clip(np.sum(q * b, axis=1) / np.maximum(np.sum(b * b, axis=1), 1e-9), 0, 1)
+        if begin is not None:
+            # Clip the geometry before measuring distance, not only the returned
+            # arc. Otherwise the error belongs to a point outside the window.
+            lower = np.clip(begin / self.ds - ids, 0, 1)
+            upper = np.clip(end / self.ds - ids, 0, 1)
+            t = np.clip(t, lower, upper)
         projected = a + t[:, None] * b
         d = np.linalg.norm(projected - [x, y], axis=1)
         i = int(np.argmin(d))
