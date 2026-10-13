@@ -128,7 +128,7 @@ class PredictiveFollower(LineFollower):
                     model_includes_response_preview=self.speed_planning=="delayed_braking",
                     lateral_control=self.lateral_control,
                     startup_limits=dict(speed=self.startup_speed,acceleration=self.startup_acceleration,
-                                        acceleration_guard_distance=None if self.startup_release_early and self.lateral_control=="race_feedback" else self.launch_guard_distance,
+                                        acceleration_guard_distance=None if self.startup_release_early and self.lateral_control in ('smooth_pursuit','race_feedback') else self.launch_guard_distance,
                                         minimum_release_distance=.6 if self.startup_release_early else self.connector_length,
                                         release_hold_seconds=.3),
                     peak_planned_speed=float(self.path.speeds.max()),
@@ -267,7 +267,11 @@ class PredictiveFollower(LineFollower):
             a=int(math.floor(index));fraction=index-a
             ahead=float((1-fraction)*self.path.curvature[a%self.path.n]+
                         fraction*self.path.curvature[(a+1)%self.path.n])
-            current=float(self.path.curvature[i])
+            current_index=tracking_s/self.path.ds
+            current_whole=int(math.floor(current_index))
+            current_fraction=current_index-current_whole
+            current=float((1-current_fraction)*self.path.curvature[current_whole%self.path.n]+
+                          current_fraction*self.path.curvature[(current_whole+1)%self.path.n])
             if connector_active:
                 def tracking_curvature(distance):
                     a=self.sample_tracking(distance)-self.sample_tracking(distance-.3)
@@ -420,7 +424,7 @@ class PredictiveFollower(LineFollower):
         if self.launch_limited:
             actual=self.steer if self.measured_steer is None else self.measured_steer
             completed=not connector_active
-            if self.startup_release_early and self.lateral_control=='race_feedback':
+            if self.startup_release_early and self.lateral_control in ('smooth_pursuit','race_feedback'):
                 completed=self.progress-self.origin>=.6
             if not completed:startup_blockers.append('minimum_progress_or_connector_not_complete')
             if control_error>=.025:startup_blockers.append('tracking_error')
