@@ -9,6 +9,14 @@ from predictive_follower import PredictiveFollower
 
 
 class SteeringPreviewTests(unittest.TestCase):
+    def test_invalid_tracking_tuning_rejected(self):
+        for gain in (-.1,1.1,float('nan')):
+            with self.assertRaisesRegex(ValueError,'curvature_feedforward_gain'):
+                PredictiveFollower(self.path(),curvature_feedforward_gain=gain)
+        for scale in (.7,1.3,float('nan')):
+            with self.assertRaisesRegex(ValueError,'pursuit_lookahead_scale'):
+                PredictiveFollower(self.path(),pursuit_lookahead_scale=scale)
+
     def path(self):
         a=np.linspace(0,2*np.pi,401)
         return ClosedPath(np.column_stack((5*np.cos(a),5*np.sin(a))))
