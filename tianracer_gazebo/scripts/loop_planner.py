@@ -106,7 +106,12 @@ class LoopPlanner:
 
     def build(self, waypoints, max_steer=0.48, wheelbase=0.26, optimize_time=False,
               max_speed=4.0, lateral_accel=5.0, acceleration=2.0, braking=3.0,
-              clearance_weight=None, steering_rate=2.0, yaw_rate=3.2, refine_line=False, response_delay=0.0, speed_planning="legacy"):
+              clearance_weight=None, steering_rate=2.0, yaw_rate=3.2, refine_line=False, response_delay=0.0, speed_planning="legacy",
+              line_search_level=0):
+        if isinstance(line_search_level,bool) or not isinstance(line_search_level,int) or line_search_level not in (0,1,2):
+            raise ValueError('line_search_level must be 0, 1 or 2')
+        if line_search_level and not optimize_time:
+            raise ValueError('Advanced line search requires optimize_time')
         if not math.isfinite(response_delay) or not 0 <= response_delay <= .5:
             raise ValueError("response_delay must be between 0 and 0.5 seconds")
         if optimize_time:
@@ -174,6 +179,20 @@ class LoopPlanner:
                                 best=candidate
                                 best_selection['estimated_lap_seconds']=estimated
                                 accepted+=1
+            if line_search_level:
+                preliminary=None
+                if line_search_level==2:
+                    best,preliminary=self.refine_multiscale(best,np.asarray(waypoints),max_steer,wheelbase,
+                        max_speed,lateral_accel,acceleration,braking,steering_rate,yaw_rate,
+                        response_delay,speed_planning,1)
+                best,extra=self.refine_multiscale(best,np.asarray(waypoints),max_steer,wheelbase,
+                    max_speed,lateral_accel,acceleration,braking,steering_rate,yaw_rate,
+                    response_delay,speed_planning,line_search_level)
+                if preliminary:
+                    extra['multiscale_moves']+=preliminary['multiscale_moves']
+                    extra['multiscale_model_seconds_saved']+=preliminary['multiscale_model_seconds_saved']
+                best_selection.update(extra)
+                accepted+=extra['multiscale_moves']
             best_selection.update(scoring_response_delay=response_delay,
                                   scoring_model='delayed_braking_reachability' if speed_planning=='delayed_braking' else 'nominal_speed_response_preview_proxy',
                                   scoring_includes_startup=False,
@@ -209,3 +228,51 @@ class LoopPlanner:
         if chosen is None:
             raise ValueError('Route cannot meet clearance and steering limits; do not drive')
         return chosen
+
+    def refine_multiscale(self, seed, anchors, max_steer, wheelbase, max_speed,
+                         lateral_accel, acceleration, braking, steering_rate, yaw_rate,
+                         response_delay, speed_planning, level):
+        """Stationary search: broader entry/apex/exit offsets, fully rechecked.
+
+        Preserve the launch region near the origin checkpoint in this official
+        course. No margin reduction, checkpoint bypass or topology change.
+        """
+        budgets=(max_speed,lateral_accel,acceleration,braking,steering_rate,yaw_rate,
+                 response_delay,speed_planning)
+        best=seed;score=self.estimate(best,*budgets);initial=score;moves=0
+        launch_anchor=anchors[int(np.argmin(np.linalg.norm(anchors,axis=1)))]
+        peaks=[]
+        for index in np.argsort(-np.abs(seed.curvature)):
+            s=index*seed.ds
+            if abs(seed.curvature[index])<.35:break
+            if all(min(abs(s-p),seed.length-abs(s-p))>1.2 for p in peaks):peaks.append(s)
+            if len(peaks)>=12:break
+        widths=(.4,.8,1.2) if level==1 else (.3,.4,.5,.8,1.2)
+        offsets=(-.06,-.03,.03,.06) if level==1 else (-.09,-.06,-.03,.03,.06,.09)
+        for _ in range(2 if level==1 else 4):
+            before=moves
+            for peak in peaks:
+                current=best
+                tangent=np.roll(current.points,-1,axis=0)-np.roll(current.points,1,axis=0)
+                tangent/=np.linalg.norm(tangent,axis=1)[:,None]
+                normal=np.column_stack((-tangent[:,1],tangent[:,0]))
+                arc=np.arange(current.n)*current.ds
+                launch_s=current.project(*launch_anchor)[0]
+                from_launch=(arc-launch_s)%current.length
+                protected=(from_launch<6.)|(from_launch>current.length-1.)
+                distance=np.abs(arc-peak/seed.length*current.length)
+                distance=np.minimum(distance,current.length-distance)
+                for width in widths:
+                    bump=np.exp(-.5*(distance/width)**2)
+                    bump[protected]=0.
+                    for offset in offsets:
+                        points=current.points+offset*bump[:,None]*normal
+                        candidate=self.feasible(points,anchors,max_steer,wheelbase)
+                        if candidate is None:continue
+                        estimated=self.estimate(candidate,*budgets)
+                        if estimated < score-.002:
+                            best,score=candidate,estimated;moves+=1
+            if moves==before:break
+        return best,dict(line_search_level=level,multiscale_moves=moves,
+            multiscale_model_seconds_saved=initial-score,estimated_lap_seconds=score,
+            launch_region_protected_m=6.)
