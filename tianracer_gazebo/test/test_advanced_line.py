@@ -43,11 +43,18 @@ class AdvancedLineTests(unittest.TestCase):
         self.assertEqual(report['multiscale_moves'],0)
 
     def test_invalid_search_levels_rejected(self):
-        for level in (-1,3,True,1.5):
+        for level in (-1,4,True,1.5):
             with self.assertRaisesRegex(ValueError,'line_search_level'):
                 self.planner.build(self.anchors,line_search_level=level)
         with self.assertRaisesRegex(ValueError,'requires optimize_time'):
             self.planner.build(self.anchors,line_search_level=1)
+
+    def test_entry_exit_search_never_worsens_accepted_nominal_time(self):
+        result,report=self.planner.refine_multiscale(self.result,self.anchors,.48,.26,
+                                                   *self.budgets,3)
+        self.assertLessEqual(report['estimated_lap_seconds'],
+                             self.planner.estimate(self.result,*self.budgets)+1e-9)
+        self.assertIsNotNone(self.planner.feasible(result.points,self.anchors))
 
 
 if __name__=='__main__':unittest.main()
