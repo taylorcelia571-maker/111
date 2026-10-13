@@ -108,8 +108,8 @@ class LoopPlanner:
               max_speed=4.0, lateral_accel=5.0, acceleration=2.0, braking=3.0,
               clearance_weight=None, steering_rate=2.0, yaw_rate=3.2, refine_line=False, response_delay=0.0, speed_planning="legacy",
               line_search_level=0):
-        if isinstance(line_search_level,bool) or not isinstance(line_search_level,int) or line_search_level not in (0,1,2):
-            raise ValueError('line_search_level must be 0, 1 or 2')
+        if isinstance(line_search_level,bool) or not isinstance(line_search_level,int) or line_search_level not in (0,1,2,3):
+            raise ValueError('line_search_level must be 0, 1, 2 or 3')
         if line_search_level and not optimize_time:
             raise ValueError('Advanced line search requires optimize_time')
         if not math.isfinite(response_delay) or not 0 <= response_delay <= .5:
@@ -181,10 +181,16 @@ class LoopPlanner:
                                 accepted+=1
             if line_search_level:
                 preliminary=None
-                if line_search_level==2:
+                if line_search_level>=2:
                     best,preliminary=self.refine_multiscale(best,np.asarray(waypoints),max_steer,wheelbase,
                         max_speed,lateral_accel,acceleration,braking,steering_rate,yaw_rate,
                         response_delay,speed_planning,1)
+                if line_search_level==3:
+                    best,middle=self.refine_multiscale(best,np.asarray(waypoints),max_steer,wheelbase,
+                        max_speed,lateral_accel,acceleration,braking,steering_rate,yaw_rate,
+                        response_delay,speed_planning,2)
+                    preliminary['multiscale_moves']+=middle['multiscale_moves']
+                    preliminary['multiscale_model_seconds_saved']+=middle['multiscale_model_seconds_saved']
                 best,extra=self.refine_multiscale(best,np.asarray(waypoints),max_steer,wheelbase,
                     max_speed,lateral_accel,acceleration,braking,steering_rate,yaw_rate,
                     response_delay,speed_planning,line_search_level)
@@ -260,18 +266,21 @@ class LoopPlanner:
                 launch_s=current.project(*launch_anchor)[0]
                 from_launch=(arc-launch_s)%current.length
                 protected=(from_launch<6.)|(from_launch>current.length-1.)
-                distance=np.abs(arc-peak/seed.length*current.length)
-                distance=np.minimum(distance,current.length-distance)
-                for width in widths:
-                    bump=np.exp(-.5*(distance/width)**2)
-                    bump[protected]=0.
-                    for offset in offsets:
-                        points=current.points+offset*bump[:,None]*normal
-                        candidate=self.feasible(points,anchors,max_steer,wheelbase)
-                        if candidate is None:continue
-                        estimated=self.estimate(candidate,*budgets)
-                        if estimated < score-.002:
-                            best,score=candidate,estimated;moves+=1
+                shifts=(-.5,0.,.5) if level==3 else (0.,)
+                for shift in shifts:
+                    center=(peak/seed.length*current.length+shift)%current.length
+                    distance=np.abs(arc-center)
+                    distance=np.minimum(distance,current.length-distance)
+                    for width in widths:
+                        bump=np.exp(-.5*(distance/width)**2)
+                        bump[protected]=0.
+                        for offset in offsets:
+                            points=current.points+offset*bump[:,None]*normal
+                            candidate=self.feasible(points,anchors,max_steer,wheelbase)
+                            if candidate is None:continue
+                            estimated=self.estimate(candidate,*budgets)
+                            if estimated < score-.002:
+                                best,score=candidate,estimated;moves+=1
             if moves==before:break
         return best,dict(line_search_level=level,multiscale_moves=moves,
             multiscale_model_seconds_saved=initial-score,estimated_lap_seconds=score,
