@@ -6,12 +6,16 @@
   <arg name="steering_feedback_gain" default="0.25"/>
   <arg name="steering_preview_time" default="0.10"/>
   <arg name="startup_speed" default="1.8"/>
+  <arg name="startup_acceleration" default="2.0"/>
+  <arg name="heading_feedback_gain" default="0.8"/>
+  <arg name="cross_track_gain" default="0.8"/>
   <arg name="startup_release_early" default="false"/>
   <arg name="speed_recovery_hold" default="0.0"/>
   <arg name="line_search_level" default="0"/>
   <arg name="curvature_feedforward_gain" default="0.4"/>
   <arg name="pursuit_lookahead_scale" default="1.0"/>
   <arg name="lateral_control" default="smooth_pursuit"/>
+  <arg name="speed_planning" default="legacy"/>
   <arg name="run_report" default="~/ican_race_logs/race_tuning.json"/>
   <arg name="with_referee" default="true"/>
   <arg name="gui" default="true"/>
@@ -31,12 +35,16 @@
     <arg name="steering_feedback_gain" value="$(arg steering_feedback_gain)"/>
     <arg name="steering_preview_time" value="$(arg steering_preview_time)"/>
     <arg name="startup_speed" value="$(arg startup_speed)"/>
+    <arg name="startup_acceleration" value="$(arg startup_acceleration)"/>
+    <arg name="heading_feedback_gain" value="$(arg heading_feedback_gain)"/>
+    <arg name="cross_track_gain" value="$(arg cross_track_gain)"/>
     <arg name="startup_release_early" value="$(arg startup_release_early)"/>
     <arg name="speed_recovery_hold" value="$(arg speed_recovery_hold)"/>
     <arg name="line_search_level" value="$(arg line_search_level)"/>
     <arg name="curvature_feedforward_gain" value="$(arg curvature_feedforward_gain)"/>
     <arg name="pursuit_lookahead_scale" value="$(arg pursuit_lookahead_scale)"/>
     <arg name="lateral_control" value="$(arg lateral_control)"/>
+    <arg name="speed_planning" value="$(arg speed_planning)"/>
     <arg name="run_report" value="$(arg run_report)"/>
   </include>
 </launch>
