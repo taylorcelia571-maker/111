@@ -1,0 +1,1327 @@
+diff --git a/tianracer_gazebo/launch/final_speedup.launch b/tianracer_gazebo/launch/final_speedup.launch
+new file mode 100644
+index 0000000..5a50dcc
+--- /dev/null
++++ b/tianracer_gazebo/launch/final_speedup.launch
+@@ -0,0 +1,55 @@
++<launch>
++  <!-- Frozen user71 budgets; optional geometry/score changes, manual start only. -->
++  <arg name="version" default="baseline"/>
++  <arg name="legacy_control" default="false"/>
++  <arg name="log_dir" default="~/ican_race_logs/final71"/>
++  <arg name="lateral_accel" default="9.94"/>
++  <arg name="acceleration" default="7.3"/>
++  <arg name="braking" default="3.7"/>
++  <arg name="yaw_rate" default="4.4"/>
++  <arg name="startup_speed" default="2.0"/>
++  <arg name="startup_acceleration" default="2.5"/>
++  <arg name="steering_feedback_gain" default="0.25"/>
++  <arg name="steering_preview_time" default="0.12"/>
++  <arg name="heading_feedback_gain" default="0.8"/>
++  <arg name="cross_track_gain" default="0.8"/>
++  <arg name="line_search_level" default="3"/>
++  <arg name="predict_pose" default="false"/>
++  <arg name="startup_connector_length" default="2.5"/>
++  <arg name="speed_recovery_hold" default="0.0"/>
++  <arg name="require_prepared_start" default="true"/>
++  <arg name="route_control_scoring" default="$(eval arg('version') == 'v2')"/>
++  <include file="$(find tianracer_gazebo)/launch/planned_race.launch">
++    <arg name="lateral_accel" value="$(arg lateral_accel)"/>
++    <arg name="acceleration" value="$(arg acceleration)"/>
++    <arg name="braking" value="$(arg braking)"/>
++    <arg name="yaw_rate" value="$(arg yaw_rate)"/>
++    <arg name="startup_speed" value="$(arg startup_speed)"/>
++    <arg name="startup_acceleration" value="$(arg startup_acceleration)"/>
++    <arg name="steering_feedback_gain" value="$(arg steering_feedback_gain)"/>
++    <arg name="steering_preview_time" value="$(arg steering_preview_time)"/>
++    <arg name="heading_feedback_gain" value="$(arg heading_feedback_gain)"/>
++    <arg name="cross_track_gain" value="$(arg cross_track_gain)"/>
++    <arg name="line_search_level" value="$(arg line_search_level)"/>
++    <arg name="predict_pose" value="$(arg predict_pose)"/>
++    <arg name="speed_recovery_hold" value="$(arg speed_recovery_hold)"/>
++    <arg name="require_prepared_start" value="$(arg require_prepared_start)"/>
++    <arg name="max_speed" value="10.0"/>
++    <arg name="route_margin" value="0.34"/>
++    <arg name="response_delay" value="0.25"/>
++    <arg name="steering_rate" value="2.0"/>
++    <arg name="laps" value="6"/>
++    <arg name="lateral_control" value="race_feedback"/>
++    <arg name="speed_planning" value="delayed_braking"/>
++    <arg name="startup_release_early" value="true"/>
++    <arg name="start_blend" value="true"/>
++    <arg name="fast_start" value="true"/>
++    <arg name="optimize_time" value="true"/>
++    <arg name="refine_line" value="true"/>
++    <arg name="startup_connector_length" value="$(eval 2.5 if arg('legacy_control') else float(arg('startup_connector_length')))"/>
++    <arg name="route_control_scoring" value="$(eval False if arg('legacy_control') else arg('route_control_scoring'))"/>
++    <arg name="run_report" value="$(arg log_dir)/run_report.json"/>
++    <arg name="cycle_log" value="$(arg log_dir)/cycles.jsonl"/>
++    <arg name="output" value="$(arg log_dir)/planned_course.csv"/>
++  </include>
++</launch>
+diff --git a/tianracer_gazebo/launch/final_speedup_demo.launch b/tianracer_gazebo/launch/final_speedup_demo.launch
+new file mode 100644
+index 0000000..99fbe72
+--- /dev/null
++++ b/tianracer_gazebo/launch/final_speedup_demo.launch
+@@ -0,0 +1,52 @@
++<launch>
++  <arg name="gui" default="true"/>
++  <arg name="use_rviz" default="true"/>
++  <arg name="with_referee" default="true"/>
++  <arg name="version" default="baseline"/>
++  <arg name="legacy_control" default="false"/>
++  <arg name="log_dir" default="~/ican_race_logs/final71"/>
++  <arg name="lateral_accel" default="9.94"/>
++  <arg name="acceleration" default="7.3"/>
++  <arg name="braking" default="3.7"/>
++  <arg name="yaw_rate" default="4.4"/>
++  <arg name="startup_speed" default="2.0"/>
++  <arg name="startup_acceleration" default="2.5"/>
++  <arg name="steering_feedback_gain" default="0.25"/>
++  <arg name="steering_preview_time" default="0.12"/>
++  <arg name="heading_feedback_gain" default="0.8"/>
++  <arg name="cross_track_gain" default="0.8"/>
++  <arg name="line_search_level" default="3"/>
++  <arg name="predict_pose" default="false"/>
++  <arg name="startup_connector_length" default="2.5"/>
++  <arg name="speed_recovery_hold" default="0.0"/>
++  <arg name="require_prepared_start" default="true"/>
++  <arg name="route_control_scoring" default="$(eval arg('version') == 'v2')"/>
++  <include file="$(find tianracer_gazebo)/launch/planned_race_demo.launch">
++    <arg name="gui" value="$(arg gui)"/>
++    <arg name="use_rviz" value="$(arg use_rviz)"/>
++  </include>
++  <group if="$(arg with_referee)">
++    <include file="$(find tianracer_sim_referee)/launch/referee.launch"/>
++  </group>
++  <include file="$(find tianracer_gazebo)/launch/final_speedup.launch">
++    <arg name="version" value="$(arg version)"/>
++    <arg name="legacy_control" value="$(arg legacy_control)"/>
++    <arg name="log_dir" value="$(arg log_dir)"/>
++    <arg name="lateral_accel" value="$(arg lateral_accel)"/>
++    <arg name="acceleration" value="$(arg acceleration)"/>
++    <arg name="braking" value="$(arg braking)"/>
++    <arg name="yaw_rate" value="$(arg yaw_rate)"/>
++    <arg name="startup_speed" value="$(arg startup_speed)"/>
++    <arg name="startup_acceleration" value="$(arg startup_acceleration)"/>
++    <arg name="steering_feedback_gain" value="$(arg steering_feedback_gain)"/>
++    <arg name="steering_preview_time" value="$(arg steering_preview_time)"/>
++    <arg name="heading_feedback_gain" value="$(arg heading_feedback_gain)"/>
++    <arg name="cross_track_gain" value="$(arg cross_track_gain)"/>
++    <arg name="line_search_level" value="$(arg line_search_level)"/>
++    <arg name="predict_pose" value="$(arg predict_pose)"/>
++    <arg name="startup_connector_length" value="$(arg startup_connector_length)"/>
++    <arg name="speed_recovery_hold" value="$(arg speed_recovery_hold)"/>
++    <arg name="require_prepared_start" value="$(arg require_prepared_start)"/>
++    <arg name="route_control_scoring" value="$(arg route_control_scoring)"/>
++  </include>
++</launch>
+diff --git a/tianracer_gazebo/launch/planned_race.launch b/tianracer_gazebo/launch/planned_race.launch
+index 0c080f9..fbd9fcf 100644
+--- a/tianracer_gazebo/launch/planned_race.launch
++++ b/tianracer_gazebo/launch/planned_race.launch
+@@ -1,4 +1,8 @@
+ <launch>
++  <arg name="startup_connector_length" default="2.5"/>
++  <arg name="route_control_scoring" default="false"/>
++  <arg name="cycle_log" default=""/>
++  <arg name="output" default="~/ican_race_logs/planned_course.csv"/>
+   <arg name="require_prepared_start" default="false"/>
+   <arg name="speed_planning" default="legacy"/>
+   <arg name="startup_release_early" default="false"/>
+@@ -32,6 +36,10 @@
+   <arg name="startup_acceleration" default="1.5"/>
+   <node pkg="tianracer_gazebo" type="planned_race.py" name="continuous_race"
+         ns="tianracer" output="screen" required="true">
++    <param name="startup_connector_length" value="$(arg startup_connector_length)" type="double"/>
++    <param name="route_control_scoring" value="$(arg route_control_scoring)" type="bool"/>
++    <param name="cycle_log" value="$(arg cycle_log)"/>
++    <param name="output" value="$(arg output)"/>
+     <param name="require_prepared_start" value="$(arg require_prepared_start)" type="bool"/>
+     <param name="speed_planning" value="$(arg speed_planning)"/>
+     <param name="startup_release_early" value="$(arg startup_release_early)" type="bool"/>
+diff --git a/tianracer_gazebo/scripts/analyze_final_race.py b/tianracer_gazebo/scripts/analyze_final_race.py
+new file mode 100755
+index 0000000..8add172
+--- /dev/null
++++ b/tianracer_gazebo/scripts/analyze_final_race.py
+@@ -0,0 +1,259 @@
++#!/usr/bin/env python3
++"""Read session telemetry/bag. Never commands ROS or certifies official results."""
++import argparse
++from collections import Counter
++import json
++import math
++from pathlib import Path
++import statistics
++import numpy as np
++
++
++TOPICS = ['/clock', '/tf', '/tf_static', '/tianracer/cmd_vel',
++          '/tianracer/ackermann_cmd_stamped', '/tianracer/odom',
++          '/tianracer/joint_states', '/tianracer/scan', '/tianracer/amcl_pose',
++          '/tianracer/imu', '/rosout_agg']
++
++
++def summarize_cycles(rows):
++    cycles = [r for r in rows if r.get('event') == 'cycle']
++    if not cycles:
++        return {'available': False}
++    reasons = Counter()
++    first_turn = []
++    entered = recovered = None
++    drop = 0.0
++    drop_rate = 0.0
++    for previous, row in zip(cycles, cycles[1:]):
++        dt = row['simulation_time'] - previous['simulation_time']
++        if dt <= 0:
++            continue
++        reasons[previous['control'].get('reason', 'unknown')] += dt
++        difference = max(0., previous['output_speed'] - row['output_speed'])
++        drop = max(drop, difference)
++        drop_rate = max(drop_rate, difference / dt)
++    for row in cycles:
++        curve = abs(row['control'].get('reference_curvature', 0.))
++        if entered is None and row['progress'] > 1 and curve >= .35:
++            entered = row['elapsed']
++        if entered is not None and recovered is None:
++            first_turn.append(row)
++            if curve < .25 and row['elapsed'] - entered >= .3:
++                recovered = row['elapsed']
++    elapsed = cycles[-1]['elapsed']
++    curves = [r for r in cycles if abs(r['control'].get('reference_curvature', 0)) >= .35]
++    return dict(available=True, samples=len(cycles), observed_elapsed=elapsed,
++        reason_seconds=dict(reasons), reason_attribution='previous cycle final reason; excludes overlapping road/phase/lap bins',
++        peak_reference_error=max(r['control'].get('tracking_error', 0.) for r in cycles),
++        p95_reference_error=float(np.quantile([r['control'].get('tracking_error', 0.) for r in cycles], .95)),
++        maximum_single_sample_command_drop=drop, maximum_command_drop_rate=drop_rate,
++        command_drop_rate_is_not_measured_braking=True,
++        peak_speed_excess=max(r['control'].get('speed_excess', 0.) for r in cycles),
++        maximum_joint_age=max((r['control'].get('steering_feedback_age') or 0.) for r in cycles),
++        first_turn=dict(entry_elapsed=entered,
++            entry_speed=first_turn[0]['measured_speed'] if first_turn else None,
++            minimum_speed=min(r['measured_speed'] for r in first_turn) if first_turn else None,
++            exit_elapsed=recovered,
++            duration=recovered-entered if recovered is not None else None,
++            definition='reference curvature >=0.35/m after 1m; exit <0.25/m after >=0.3s; not an official gate'),
++        curve_speed_median=statistics.median(r['measured_speed'] for r in curves) if curves else None)
++
++
++def estimate_braking(commands, odometry, reaction=.25):
++    """Fit measured straight-line deceleration after the configured allowance.
++
++    Produces observations, not a certified minimum deceleration. Windows with
++    turning/lateral motion, too little speed change or poor fit are rejected.
++    """
++    invalid = sum(not all(math.isfinite(r[k]) for k in ('t','v','omega','lateral')) for r in odometry)
++    odometry = [r for r in odometry if all(math.isfinite(r[k]) for k in ('t','v','omega','lateral'))]
++    commands = [r for r in commands if all(math.isfinite(r[k]) for k in ('t','v'))]
++    if invalid:
++        return {'available':False,'reason':'Nonfinite odometry in braking evidence',
++                'invalid_samples':invalid,'permission_to_raise_braking':False}
++    if len(commands) < 2 or len(odometry) < 5:
++        return {'available': False, 'reason': 'Not enough command/odom data',
++                'permission_to_raise_braking': False}
++    odometry = sorted(odometry, key=lambda r: r['t'])
++    clean = []
++    rejected = 0
++    last_event = -math.inf
++    for old, command in zip(commands, commands[1:]):
++        # Planned braking is usually gradual at 50Hz. Detect a cumulative drop
++        # over 200ms, not only abrupt single-command drops that bias the evidence.
++        recent=[r for r in commands if command['t']-.2 <= r['t'] < command['t']]
++        approach=max([old['v']] + [r['v'] for r in recent])
++        if approach - command['v'] < .3 or approach < 2 or command['t'] - last_event < 1.:
++            continue
++        last_event = command['t']
++        low, high = command['t'] + reaction, command['t'] + reaction + .7
++        rises = [r['t'] for r in commands if command['t'] < r['t'] <= high and r['v'] > command['v'] + .2]
++        if rises:
++            high = min(high, min(rises))
++        samples = [r for r in odometry if low <= r['t'] <= high and r['v'] > .5]
++        if (len(samples) < 5 or samples[-1]['t'] - samples[0]['t'] < .3 or
++            max(abs(r['omega']) for r in samples) > .3 or max(abs(r['lateral']) for r in samples) > .15):
++            rejected += 1
++            continue
++        t = np.array([r['t'] - low for r in samples]); v = np.array([r['v'] for r in samples])
++        slope, intercept = np.polyfit(t, v, 1)
++        residual = float(np.sum((v - (intercept + slope*t))**2))
++        variation = float(np.sum((v-v.mean())**2))
++        r2 = 1-residual/max(variation, 1e-12)
++        if slope >= 0 or v[0]-v[-1] < .5 or r2 < .9:
++            rejected += 1
++            continue
++        clean.append(dict(command_time=command['t'], window_start=low, window_end=high,
++                          measured_deceleration=float(-slope), r_squared=r2, samples=len(samples)))
++    return dict(available=bool(clean), windows=clean, rejected_events=rejected,
++        minimum_observed_deceleration=min((r['measured_deceleration'] for r in clean), default=None),
++        configured_response_allowance=reaction, allowance_is_not_measured_response=True,
++        permission_to_raise_braking=False,
++        note='Turning, slopes, slip, contact and hidden faults require separate review. Sparse windows do not prove braking budget safety.')
++
++
++def read_bag(filename):
++    import rosbag
++    counts = Counter(); commands = []; odometry = []; observations = []; logs = []; joints=[]
++    with rosbag.Bag(str(filename), 'r') as bag:
++        for topic, msg, stamp in bag.read_messages(topics=TOPICS):
++            counts[topic] += 1
++            header = getattr(msg, 'header', None)
++            t = header.stamp.to_sec() if header is not None and header.stamp.to_sec() > 0 else stamp.to_sec()
++            if topic == '/tianracer/cmd_vel':
++                commands.append(dict(t=t, v=msg.linear.x, steer=msg.angular.z))
++            elif topic == '/tianracer/odom':
++                v = msg.twist.twist
++                row = dict(t=t, v=v.linear.x, lateral=v.linear.y, omega=v.angular.z,
++                           position=[msg.pose.pose.position.x, msg.pose.pose.position.y])
++                odometry.append(row); observations.append(dict(topic=topic, **row))
++            elif topic == '/tianracer/ackermann_cmd_stamped':
++                observations.append(dict(topic=topic,t=t,v=msg.drive.speed,steer=msg.drive.steering_angle))
++            elif topic == '/tianracer/joint_states':
++                positions=dict(zip(msg.name,msg.position))
++                left=positions.get('left_steering_hinge_joint');right=positions.get('right_steering_hinge_joint')
++                observations.append(dict(topic=topic,t=t,left=left,right=right))
++                if left is not None and right is not None and all(math.isfinite(v) for v in (left,right)):
++                    from wheel_kinematics import equivalent_steer
++                    joints.append(dict(t=t,angle=equivalent_steer(left,right)))
++            elif topic == '/tianracer/amcl_pose':
++                p=msg.pose.pose; observations.append(dict(topic=topic,t=t,position=[p.position.x,p.position.y],quaternion=[p.orientation.x,p.orientation.y,p.orientation.z,p.orientation.w]))
++            elif topic == '/tianracer/scan':
++                ranges=np.asarray(msg.ranges)
++                observations.append(dict(topic=topic,t=t,nan=int(np.isnan(ranges).sum()),negative_inf=int(np.isneginf(ranges).sum()),samples=len(ranges)))
++            elif topic == '/rosout_agg':
++                if msg.level >= 4:
++                    logs.append(dict(t=t,node=msg.name,level=msg.level,text=msg.msg))
++            elif topic in ('/tf','/tf_static'):
++                observations.append(dict(topic=topic,t=t,transforms=[dict(
++                    stamp=r.header.stamp.to_sec(),parent=r.header.frame_id,child=r.child_frame_id,
++                    position=[r.transform.translation.x,r.transform.translation.y,r.transform.translation.z],
++                    quaternion=[r.transform.rotation.x,r.transform.rotation.y,r.transform.rotation.z,r.transform.rotation.w]) for r in msg.transforms]))
++            elif topic == '/clock':
++                observations.append(dict(topic=topic,t=t,simulation_clock=msg.clock.to_sec()))
++            elif topic == '/tianracer/imu':
++                q=msg.orientation;norm=math.sqrt(q.x*q.x+q.y*q.y+q.z*q.z+q.w*q.w)
++                roll=pitch=None
++                if math.isfinite(norm) and norm>1e-6:
++                    x,y,z,w=q.x/norm,q.y/norm,q.z/norm,q.w/norm
++                    roll=math.atan2(2*(w*x+y*z),1-2*(x*x+y*y))
++                    pitch=math.asin(max(-1.,min(1.,2*(w*y-z*x))))
++                observations.append(dict(topic=topic,t=t,roll=roll,pitch=pitch))
++    return dict(topic_counts=dict(counts), braking=estimate_braking(commands,odometry),
++                steering_response=estimate_steering_response(commands,joints),
++                commands=commands, observations=observations, warnings_errors=logs)
++
++
++def estimate_steering_response(commands, joints):
++    """Fit an effective first-order response, including transport/time alignment.
++
++    Delay and actuator constant are not independently identifiable from every lap.
++    This is a descriptive fit, never evidence for relaxing a protection budget.
++    """
++    commands=[r for r in commands if all(math.isfinite(r[k]) for k in ('t','steer'))]
++    joints=[r for r in joints if all(math.isfinite(r[k]) for k in ('t','angle'))]
++    if len(commands)<50 or len(joints)<50:
++        return dict(available=False,reason='Need continuous steering excitation',permission_to_change_safety=False)
++    if any(b['t']<a['t'] for a,b in zip(commands,commands[1:])) or any(b['t']<a['t'] for a,b in zip(joints,joints[1:])):
++        return dict(available=False,reason='Clock reset/mixed runs',permission_to_change_safety=False)
++    times=np.array([r['t'] for r in commands]);angles=np.array([r['steer'] for r in commands])
++    t=np.array([r['t'] for r in joints]);actual=np.array([r['angle'] for r in joints])
++    dt=np.diff(t);valid=(dt>=.005)&(dt<=.10)
++    measured_rate=np.diff(actual)/np.maximum(dt,1e-9)
++    best=None
++    for delay in np.arange(0,.151,.01):
++        index=np.searchsorted(times,t[:-1]-delay,side='right')-1
++        chosen=np.clip(index,0,len(times)-1)
++        error=angles[chosen]-actual[:-1]
++        mask=valid&(index>=0)&(np.abs(error)>=.01)&(np.abs(measured_rate)<5)
++        if mask.sum()<50:continue
++        x=error[mask];y=measured_rate[mask]
++        gain=float(np.dot(x,y)/max(np.dot(x,x),1e-12))
++        if gain<=0 or not .02<=1/gain<=.5:continue
++        residual=float(np.mean((y-gain*x)**2))
++        quality=1-residual/max(float(np.var(y)),1e-12)
++        if best is None or residual<best['mean_squared_rate_residual']:
++            best=dict(effective_time_constant_seconds=1/gain,effective_delay_seconds=float(delay),
++                      mean_squared_rate_residual=residual,r_squared=quality,samples=int(mask.sum()))
++    return dict(available=best is not None and best['r_squared']>=.4,fit=best,
++        permission_to_change_safety=False,
++        note='Effective joint response including transport/stamp alignment; low-quality or nonunique fit cannot certify servo delay.')
++
++
++def analyze(session, bag=None):
++    session=Path(session).expanduser()
++    run=json.loads((session/'run_report.json').read_text())
++    plan=json.loads((session/'planned_course_report.json').read_text())
++    rows=[]; invalid_lines=0
++    with (session/'cycles.jsonl').open() as stream:
++        for line in stream:
++            try: rows.append(json.loads(line))
++            except ValueError: invalid_lines+=1
++    cycles=summarize_cycles(rows)
++    loops=run.get('reference_loop_seconds',[])
++    result=dict(official_result_verified=False,official_under_60_verified=False,
++        reference_matches=run.get('reference_sha256') == plan.get('reference_sha256'),
++        configuration=run.get('configuration'),startup=run.get('startup'),last_fault=run.get('last_fault'),
++        telemetry=run.get('telemetry'),invalid_jsonl_lines=invalid_lines,
++        reference_first_loop=loops[0] if loops else None,
++        reference_later_mean=statistics.mean(loops[1:5]) if len(loops)>=5 else None,
++        reference_loops_are_not_official_laps=True,cycle_analysis=cycles,
++        collision_count=None,rollover_count=None,
++        unverified=['Official original microsecond result and lap validity','Collision/rollover visual evidence','Actual servo response','Fault-free measured braking capability'])
++    telemetry=run.get('telemetry') or {}
++    result['cycle_data_complete']=bool(telemetry and telemetry.get('dropped')==0 and
++        telemetry.get('error') is None and telemetry.get('written')==telemetry.get('accepted') and not invalid_lines)
++    bag_data=read_bag(Path(bag).expanduser()) if bag else None
++    if bag_data:
++        fault=(run.get('last_fault') or {}).get('simulation_time')
++        if fault is None:
++            cycle_rows=[r for r in rows if r.get('event')=='cycle']
++            fault=cycle_rows[-1]['simulation_time'] if cycle_rows else None
++        result['bag_topic_counts']=bag_data['topic_counts'];result['measured_braking']=bag_data['braking']
++        result['effective_steering_response']=bag_data['steering_response']
++        if fault is not None:
++            result['last_five_seconds']=dict(end_time=fault,
++                cmd_vel=[r for r in bag_data['commands'] if fault-5<=r['t']<=fault],
++                observations=[r for r in bag_data['observations'] if fault-5<=r['t']<=fault],
++                warnings_errors=[r for r in bag_data['warnings_errors'] if fault-5<=r['t']<=fault])
++    return result
++
++
++def main():
++    parser=argparse.ArgumentParser(description=__doc__)
++    parser.add_argument('--session',type=Path,required=True)
++    parser.add_argument('--bag',type=Path)
++    args=parser.parse_args()
++    try:
++        result=analyze(args.session,args.bag)
++        from cycle_telemetry import finite_json
++        result=finite_json(result)
++        output=args.session.expanduser()/'analysis.json'
++        output.write_text(json.dumps(result,indent=2,ensure_ascii=False,allow_nan=False)+'\n')
++        print(json.dumps({k:result[k] for k in ('reference_matches','last_fault','cycle_analysis')},indent=2,ensure_ascii=False))
++        print('Saved '+str(output)+'; official result remains unverified.')
++    except (OSError,ValueError,KeyError,ImportError) as error:
++        parser.error(str(error))
++
++
++if __name__=='__main__':main()
+diff --git a/tianracer_gazebo/scripts/continuous_race.py b/tianracer_gazebo/scripts/continuous_race.py
+index 176b8bc..e967716 100755
+--- a/tianracer_gazebo/scripts/continuous_race.py
++++ b/tianracer_gazebo/scripts/continuous_race.py
+@@ -60,6 +60,7 @@ class ContinuousRace:
+                            lateral_control=rospy.get_param('~lateral_control','pursuit'),
+                            startup_speed=rospy.get_param('~startup_speed',1.2),
+                            startup_acceleration=rospy.get_param('~startup_acceleration',1.5),
++                           startup_connector_length=rospy.get_param('~startup_connector_length',2.5),
+                            steering_rate=rospy.get_param('~steering_rate',2.0),
+                            yaw_rate=rospy.get_param('~yaw_rate',3.2))
+         self.follower = follower_type(self.path, **options)
+@@ -93,6 +94,12 @@ class ContinuousRace:
+         self.acceleration_recovery=AccelerationRecovery(rospy.get_param('~speed_recovery_hold',0.0))
+         self.run_report_file=os.path.expanduser(rospy.get_param('~run_report',''))
+         self.report_lock=threading.Lock()
++        self.telemetry = None
++        self.run_sequence = 0
++        filename = rospy.get_param('~cycle_log','')
++        if filename:
++            from cycle_telemetry import CycleTelemetry
++            self.telemetry = CycleTelemetry(filename)
+         self.previous = rospy.Time.now()
+         self.scan_sub = rospy.Subscriber('scan', LaserScan, self.on_scan, queue_size=1)
+         self.odom_sub = rospy.Subscriber('odom', Odometry, self.on_odom, queue_size=1)
+@@ -102,7 +109,7 @@ class ContinuousRace:
+         self.prepare_service = rospy.Service('~prepare',Trigger,self.prepare)
+         self.stop_service = rospy.Service('~stop', Trigger, self.stop)
+         self.status_service = rospy.Service('~status', Trigger, self.status)
+-        rospy.on_shutdown(lambda: self.stop(None))
++        rospy.on_shutdown(self.shutdown)
+         rospy.loginfo('Loaded %.1fm closed path. Idle; prepare referee then call ~start.', self.path.length)
+         if self.generated:
+             rospy.loginfo('Controller: %s; speed budget %.2fm/s; steering joint feedback required=%s',
+@@ -222,6 +229,7 @@ class ContinuousRace:
+             state=dict(active=self.active,prepared_steer=self.prepared_steer,control=getattr(self.follower,'last_report',{}),
+                        startup=self.start_metrics,feedback=self.feedback_pose,last_fault=self.last_fault,
+                        last_start_rejection=self.last_start_rejection)
++            state['telemetry'] = self.telemetry.status() if self.telemetry else None
+             if self.run_metrics is not None:state['run_metrics']=self.run_metrics.report()
+             try:
+                 pose = self.sensors()
+@@ -240,6 +248,9 @@ class ContinuousRace:
+         self.last_fault=dict(reason=str(error),simulation_time=rospy.Time.now().to_sec(),
+                              control=dict(getattr(self.follower,'last_report',{})),
+                              feedback=dict(self.feedback_pose))
++        if self.telemetry:
++            self.telemetry.append(dict(event='fault',run_sequence=self.run_sequence,
++                simulation_time=rospy.Time.now().to_sec(),fault=self.last_fault))
+ 
+     def prepare(self,request):
+         """Pre-position steering while stopped; does not drive or start timing."""
+@@ -310,6 +321,7 @@ class ContinuousRace:
+                 self.prepared_steer = None
+                 self.last_fault = None
+                 self.started_at=rospy.Time.now()
++                self.run_sequence += 1
+                 self.start_metrics=dict(prepare_used=prepared_used,
+                     prepared_start_required=self.require_prepared_start,
+                     start_mode=dict(getattr(self.follower,'start_diagnostics',{})),
+@@ -317,6 +329,11 @@ class ContinuousRace:
+                         np.asarray(pose[:2])-self.path.sample(self.follower.origin))))
+                 self.departure_trace=[]
+                 self.departure_trace_at=-1.0
++                if self.telemetry:
++                    self.telemetry.append(dict(event='start',run_sequence=self.run_sequence,
++                        simulation_time=self.started_at.to_sec(),
++                        reference_sha256=self.reference_sha256,
++                        configuration=self.configuration(),startup=self.start_metrics))
+                 self.acceleration_recovery.reset()
+                 self.run_metrics=RunMetrics()
+                 self.cycle_timing=CycleTiming()
+@@ -338,9 +355,31 @@ class ContinuousRace:
+             self.prepared_steer = None
+             self.follower.stop()
+             self.pub.publish(Twist())
++            if self.telemetry:
++                self.telemetry.append(dict(event='stop',run_sequence=self.run_sequence,
++                    simulation_time=rospy.Time.now().to_sec(),last_fault=self.last_fault))
++                if not self.telemetry.flush():
++                    rospy.logwarn('Cycle telemetry flush incomplete: %s',self.telemetry.status())
+             self.save_run_report()
+             return TriggerResponse(True, 'Stopped')
+ 
++    def shutdown(self):
++        self.stop(None)
++        if self.telemetry:
++            self.telemetry.close()
++
++    def configuration(self):
++        names=('max_speed','lateral_accel','acceleration','braking','max_error',
++               'yaw_rate','steering_rate','response_delay','steering_feedback_gain',
++               'steering_preview_time','heading_feedback_gain','cross_track_gain',
++               'startup_speed','startup_acceleration','connector_length',
++               'startup_release_early','lateral_control','speed_planning')
++        result={name:getattr(self.follower,name) for name in names if hasattr(self.follower,name)}
++        result.update(require_prepared_start=self.require_prepared_start,
++            route_control_scoring=rospy.get_param('~route_control_scoring',False),
++            route_margin=rospy.get_param('~route_margin',.34))
++        return result
++
+     def save_run_report(self,background=False):
+         if not self.run_report_file or self.run_metrics is None:return
+         report=self.run_metrics.report()
+@@ -349,6 +388,9 @@ class ContinuousRace:
+                       controller=getattr(self.follower,'lateral_control','legacy'),
+                       startup=self.start_metrics,last_fault=self.last_fault,
+                       departure_trace=self.departure_trace,
++                      configuration=self.configuration(),
++                      run_sequence=self.run_sequence,
++                      telemetry=self.telemetry.status() if self.telemetry else None,
+                       limits={name:getattr(self.follower,name) for name in
+                               ('max_speed','lateral_accel','acceleration','braking','max_error',
+                                 'yaw_rate','steering_rate','response_delay','steering_feedback_gain',
+@@ -550,6 +592,13 @@ class ContinuousRace:
+                 self.follower.last_report['reason']='recovery_hold'
+         progress = self.follower.progress - self.follower.origin
+         elapsed=(now-self.started_at).to_sec() if self.started_at is not None else 0
++        if self.telemetry:
++            self.telemetry.append(dict(event='cycle',run_sequence=self.run_sequence,
++                simulation_time=now.to_sec(),elapsed=elapsed,dt=dt,
++                progress=progress,measured_speed=float(pose[3]),output_speed=float(speed),
++                control=dict(getattr(self.follower,'last_report',{})),
++                feedback=dict(self.feedback_pose),
++                laser=dict(report) if self.generated else None))
+         if pose[3]>.05 and 'first_measured_motion_seconds' not in self.start_metrics:
+             self.start_metrics['first_measured_motion_seconds']=elapsed
+             rospy.loginfo('Startup: measured motion after %.3fs',elapsed)
+diff --git a/tianracer_gazebo/scripts/controller_score.py b/tianracer_gazebo/scripts/controller_score.py
+new file mode 100644
+index 0000000..d00ade3
+--- /dev/null
++++ b/tianracer_gazebo/scripts/controller_score.py
+@@ -0,0 +1,47 @@
++"""Optional stationary route score; an ideal-control proxy, never race evidence."""
++import math
++import numpy as np
++from braking_envelope import delayed_envelope
++
++
++def controller_speed_profile(follower, iterations=3):
++    """Include ideal race_feedback feedforward/compensation and command slew.
++
++    Assumes perfect tracking, zero joint transport age and measured steering equal
++    to the current reference angle. No actuator, tire, localization or laser model.
++    Uses the unchanged response/braking budget once for each candidate cap set.
++    This score is used only while stationary; it never changes live protection.
++    """
++    if follower.speed_planning != 'delayed_braking':
++        raise ValueError('Controller route scoring requires delayed_braking')
++    path = follower.path
++    raw_caps = np.minimum.reduce(list(follower.speed_caps.values()))
++    speed = path.speeds.copy()
++    current_angle = np.arctan(follower.wheelbase * path.curvature)
++    for _ in range(iterations):
++        advance = np.minimum(2.5 * follower.steering_preview_time,
++                             speed * follower.steering_preview_time)
++        indexes = (np.arange(path.n) * path.ds + advance) / path.ds
++        whole = np.floor(indexes).astype(int)
++        fraction = indexes - whole
++        curve = ((1 - fraction) * path.curvature[whole % path.n] +
++                 fraction * path.curvature[(whole + 1) % path.n])
++        desired = np.clip(np.arctan(follower.wheelbase * curve),
++                          -follower.max_steer, follower.max_steer)
++        target = np.clip(desired + follower.steering_feedback_gain *
++                         (desired - current_angle),
++                         -follower.max_steer, follower.max_steer)
++        curvature = np.maximum.reduce((np.abs(curve), np.abs(path.curvature),
++                                       np.abs(np.tan(target) / follower.wheelbase)))
++        derivative = np.maximum(np.abs(np.roll(target, -1) - target),
++                                np.abs(target - np.roll(target, 1))) / path.ds
++        caps = np.minimum.reduce((raw_caps,
++            np.sqrt(follower.lateral_accel / np.maximum(curvature, 1e-6)),
++            follower.yaw_rate / np.maximum(curvature, 1e-6),
++            follower.steering_rate / np.maximum(derivative, 1e-6)))
++        trial = delayed_envelope(caps, path.ds, follower.braking,
++                                 follower.acceleration, follower.response_delay)
++        speed = np.minimum(speed, trial)
++    if not np.isfinite(speed).all() or np.any(speed <= 0):
++        raise ValueError('Invalid controller scoring profile')
++    return speed
+diff --git a/tianracer_gazebo/scripts/cycle_telemetry.py b/tianracer_gazebo/scripts/cycle_telemetry.py
+new file mode 100644
+index 0000000..65f16e5
+--- /dev/null
++++ b/tianracer_gazebo/scripts/cycle_telemetry.py
+@@ -0,0 +1,89 @@
++"""Bounded nonblocking JSONL telemetry. Observes control, never issues commands."""
++import copy
++import json
++import math
++import os
++import queue
++import threading
++
++
++def finite_json(value):
++    if isinstance(value, dict):
++        return {str(k): finite_json(v) for k, v in value.items()}
++    if isinstance(value, (tuple, list)):
++        return [finite_json(v) for v in value]
++    if isinstance(value, float) and not math.isfinite(value):
++        return None
++    return value
++
++
++class CycleTelemetry:
++    def __init__(self, filename, capacity=2048):
++        self.filename = os.path.expanduser(filename)
++        os.makedirs(os.path.dirname(os.path.abspath(self.filename)), exist_ok=True)
++        # Never silently replace an earlier experiment's evidence.
++        self.stream = open(self.filename, 'x')
++        self.queue = queue.Queue(maxsize=capacity)
++        self.accepted = self.written = self.dropped = 0
++        self.error = None
++        self.closed = False
++        self.worker = threading.Thread(target=self._write, daemon=True)
++        self.worker.start()
++
++    def append(self, row):
++        if self.closed or self.error is not None:
++            self.dropped += 1
++            return False
++        try:
++            self.queue.put_nowait(copy.deepcopy(row))
++            self.accepted += 1
++            return True
++        except queue.Full:
++            self.dropped += 1
++            return False
++
++    def _write(self):
++        try:
++            while True:
++                try:
++                    row = self.queue.get(timeout=.1)
++                except queue.Empty:
++                    if self.closed:
++                        break
++                    continue
++                try:
++                    if isinstance(row, threading.Event):
++                        self.stream.flush()
++                        row.set()
++                        continue
++                    self.stream.write(json.dumps(finite_json(row), allow_nan=False,
++                                                  separators=(',', ':')) + '\n')
++                    self.written += 1
++                    if self.written % 50 == 0:
++                        self.stream.flush()
++                finally:
++                    self.queue.task_done()
++        except (OSError, ValueError, TypeError) as error:
++            self.error = str(error)
++        finally:
++            self.stream.close()
++
++    def close(self, timeout=2.0):
++        self.closed = True
++        self.worker.join(timeout=timeout)
++        return not self.worker.is_alive()
++
++    def flush(self, timeout=2.0):
++        if self.error is not None or self.closed:
++            return False
++        signal = threading.Event()
++        try:
++            self.queue.put(signal, timeout=timeout)
++        except queue.Full:
++            return False
++        return signal.wait(timeout)
++
++    def status(self):
++        return dict(filename=self.filename, accepted=self.accepted,
++                    written=self.written, dropped=self.dropped, error=self.error,
++                    flushed=self.closed and not self.worker.is_alive())
+diff --git a/tianracer_gazebo/scripts/final_speedup_audit.py b/tianracer_gazebo/scripts/final_speedup_audit.py
+new file mode 100755
+index 0000000..d9deb16
+--- /dev/null
++++ b/tianracer_gazebo/scripts/final_speedup_audit.py
+@@ -0,0 +1,104 @@
++#!/usr/bin/env python3
++"""User71 hypothetical five-loop comparisons; never starts ROS or a referee."""
++import argparse
++import json
++import math
++from pathlib import Path
++import time
++import numpy as np
++from race60_audit import load_course, rear_path
++from predictive_follower import PredictiveFollower
++
++
++BUDGETS=dict(max_speed=10.,lateral_accel=9.94,acceleration=7.3,braking=3.7,
++             yaw_rate=4.4,steering_rate=2.)
++OPTIONS=dict(response_delay=.25,fast_start=True,start_blend=True,
++    lateral_control='race_feedback',steering_feedback_gain=.25,
++    startup_release_early=True,startup_speed=2.,startup_acceleration=2.5,
++    steering_preview_time=.12,speed_planning='delayed_braking',
++    heading_feedback_gain=.8,cross_track_gain=.8)
++
++
++def simulate(center,planner,options,lag,pose_age,joint_age,budgets=None):
++    budgets=BUDGETS if budgets is None else budgets
++    follower=PredictiveFollower(rear_path(center),**budgets,**options)
++    x,y,yaw=.0081,-.1665,1.5707
++    speed=steer=peak=actual_peak=0.;wall=math.inf;loops=[];release=None
++    pose_history=[(x,y,yaw,speed,steer)]*(round(pose_age/.02)+1)
++    joint_history=[steer]*(round(joint_age/.02)+1)
++    follower.start(x,y,yaw)
++    row=dict(official_result=False,hypothetical_actuator_lag=lag,
++        pose_age=pose_age,joint_transport_age=joint_age,
++        reference_sha256=follower.path.fingerprint(),options=options,budgets=budgets)
++    max_drop=0.;old_command=0.
++    try:
++        for tick in range(12000):
++            elapsed=(tick+1)*.02;hx,hy,hyaw,hv,hd=pose_history[0]
++            if joint_age>.3:raise ValueError('Steering feedback stale (adapter guard)')
++            follower.measured_steer=joint_history[0];follower.measured_steer_age=joint_age
++            v,d=follower.step(hx,hy,hyaw,hv,.02)
++            max_drop=max(max_drop,old_command-v);old_command=v
++            speed+=(v-speed)*.02/lag;steer+=(d-steer)*.02/lag
++            x+=speed*math.cos(yaw)*.02;y+=speed*math.sin(yaw)*.02
++            yaw+=speed*math.tan(steer)/.26*.02
++            pose_history.append((x,y,yaw,speed,steer));pose_history.pop(0)
++            joint_history.append(steer);joint_history.pop(0)
++            peak=max(peak,follower.error)
++            actual_peak=max(actual_peak,follower.path.project(x,y,follower.progress-.9,follower.progress+1.)[1])
++            wall=min(wall,planner.check_vehicle_clearance((x,y,yaw,speed)))
++            if actual_peak>.15:raise ValueError('Actual model tracking corridor exceeded')
++            if release is None and not follower.launch_limited and not follower.departure:release=elapsed
++            completed=(follower.progress-follower.origin)/follower.path.length
++            if completed>=len(loops)+1:loops.append(elapsed)
++            if completed>=5:
++                row.update(completed=True,total_seconds=elapsed,first_loop_seconds=loops[0],
++                    peak_reference_error=peak,peak_actual_error=actual_peak,
++                    minimum_center_clearance=wall,startup_release_seconds=release,
++                    maximum_single_cycle_command_drop=max_drop)
++                return row
++        raise ValueError('Model timeout')
++    except ValueError as error:
++        row.update(completed=False,fault=str(error),elapsed=elapsed,
++            peak_reference_error=peak,peak_actual_error=actual_peak,
++            minimum_center_clearance=wall,startup_release_seconds=release,
++            maximum_single_cycle_command_drop=max_drop)
++        return row
++
++
++def main():
++    parser=argparse.ArgumentParser(description=__doc__)
++    parser.add_argument('--output',type=Path,required=True)
++    parser.add_argument('--quick',action='store_true')
++    args=parser.parse_args()
++    package=Path(__file__).resolve().parents[1]
++    routes={};rows=[];planning=[]
++    for enabled in (False,True):
++        planner,anchors=load_course(package)
++        planner.margin=.34;planner.allowed=planner.clearance>=.34
++        planner.control_scoring=enabled;planner.scoring_preview_time=.12;planner.scoring_feedback_gain=.25
++        started=time.perf_counter()
++        center=planner.build(anchors,optimize_time=True,refine_line=True,line_search_level=3,
++            response_delay=.25,speed_planning='delayed_braking',**BUDGETS)
++        routes[enabled]=(planner,center)
++        item=dict(controller_score=enabled,wall_seconds=time.perf_counter()-started,
++            selection=dict(planner.selection),minimum_route_clearance=planner.segment_check(center.points))
++        planning.append(item);print(json.dumps(item),flush=True)
++    cases=[('baseline',False,{}),('v1_connector24',False,{'startup_connector_length':2.4}),
++           ('v1_speed21',False,{'startup_speed':2.1}),
++           ('v2_route_score',True,{}),('v3_connector24_route_score',True,{'startup_connector_length':2.4})]
++    disturbances=[(.08,.02,0.),(.15,.02,0.),(.15,.04,.04),(.25,.04,.04),(.15,.02,.12)]
++    if args.quick:disturbances=disturbances[:2]
++    for name,scoring,change in cases:
++        planner,center=routes[scoring]
++        options=dict(OPTIONS,**change)
++        for lag,age,joint in disturbances:
++            row=simulate(center,planner,options,lag,age,joint);row['name']=name
++            rows.append(row);print(json.dumps(row),flush=True)
++    output=args.output.expanduser();output.parent.mkdir(parents=True,exist_ok=True)
++    output.write_text(json.dumps(dict(official_result=False,gazebo_tested=False,
++        official_under_60_verified=False,user_reported_best_seconds=71,
++        assumptions='Bicycle plus first-order actuator response; no tires/roll/AMCL/laser/referee. Transport age includes sampled history approximation.',
++        planning=planning,rows=rows),indent=2)+'\n')
++
++
++if __name__=='__main__':main()
+diff --git a/tianracer_gazebo/scripts/loop_planner.py b/tianracer_gazebo/scripts/loop_planner.py
+index fa08bf5..fc37ee6 100644
+--- a/tianracer_gazebo/scripts/loop_planner.py
++++ b/tianracer_gazebo/scripts/loop_planner.py
+@@ -8,7 +8,17 @@ from race_line import ClosedPath, positive
+ 
+ 
+ class LoopPlanner:
+-    def __init__(self, occupancy, resolution, origin, margin=0.26):
++    def __init__(self, occupancy, resolution, origin, margin=0.26,
++                 control_scoring=False, steering_preview_time=.10, steering_feedback_gain=.25):
++        if not isinstance(control_scoring, bool):
++            raise ValueError('control_scoring must be boolean')
++        if not math.isfinite(steering_preview_time) or not .05 <= steering_preview_time <= .25:
++            raise ValueError('Invalid scoring steering preview time')
++        if not math.isfinite(steering_feedback_gain) or not 0 <= steering_feedback_gain <= .5:
++            raise ValueError('Invalid scoring steering feedback gain')
++        self.control_scoring = control_scoring
++        self.scoring_preview_time = steering_preview_time
++        self.scoring_feedback_gain = steering_feedback_gain
+         self.resolution = positive('resolution', resolution)
+         self.margin = positive('margin', margin)
+         self.origin = np.asarray(origin, dtype=float)
+@@ -93,7 +103,8 @@ class LoopPlanner:
+         return trial
+ 
+     @staticmethod
+-    def estimate(trial, max_speed, lateral_accel, acceleration, braking, steering_rate, yaw_rate, response_delay=0.0, speed_planning="legacy"):
++    def estimate(trial, max_speed, lateral_accel, acceleration, braking, steering_rate, yaw_rate, response_delay=0.0, speed_planning="legacy",
++                 control_scoring=False, steering_preview_time=.10, steering_feedback_gain=.25):
+         from predictive_follower import PredictiveFollower
+         tangent=np.roll(trial.points,-1,axis=0)-np.roll(trial.points,1,axis=0)
+         tangent/=np.linalg.norm(tangent,axis=1)[:,None]
+@@ -101,9 +112,19 @@ class LoopPlanner:
+         reference=ClosedPath(np.vstack([rear,rear[0]]),spacing=.04)
+         follower=PredictiveFollower(reference,max_speed=max_speed,lateral_accel=lateral_accel,
+                            acceleration=acceleration,braking=braking,steering_rate=steering_rate,yaw_rate=yaw_rate,
+-                           response_delay=response_delay,speed_planning=speed_planning)
++                           response_delay=response_delay,speed_planning=speed_planning,
++                           steering_preview_time=steering_preview_time,steering_feedback_gain=steering_feedback_gain)
++        if control_scoring:
++            from controller_score import controller_speed_profile
++            speed = controller_speed_profile(follower)
++            return float(np.sum(reference.ds / speed))
+         return float(np.sum(reference.ds/follower.preview_speed_profile()))
+ 
++    def score(self, *args):
++        return self.estimate(*args, control_scoring=self.control_scoring,
++            steering_preview_time=self.scoring_preview_time,
++            steering_feedback_gain=self.scoring_feedback_gain)
++
+     def build(self, waypoints, max_steer=0.48, wheelbase=0.26, optimize_time=False,
+               max_speed=4.0, lateral_accel=5.0, acceleration=2.0, braking=3.0,
+               clearance_weight=None, steering_rate=2.0, yaw_rate=3.2, refine_line=False, response_delay=0.0, speed_planning="legacy",
+@@ -112,6 +133,8 @@ class LoopPlanner:
+             raise ValueError('line_search_level must be 0, 1, 2 or 3')
+         if line_search_level and not optimize_time:
+             raise ValueError('Advanced line search requires optimize_time')
++        if self.control_scoring and (not optimize_time or speed_planning != 'delayed_braking'):
++            raise ValueError('Controller route score requires optimize_time and delayed_braking')
+         if not math.isfinite(response_delay) or not 0 <= response_delay <= .5:
+             raise ValueError("response_delay must be between 0 and 0.5 seconds")
+         if optimize_time:
+@@ -143,7 +166,7 @@ class LoopPlanner:
+             for offset in (-.12,-.08,-.04,.04,.08,.12):
+                 candidate=self.feasible(seed.points+offset*shape[:,None]*normal,np.asarray(waypoints),max_steer,wheelbase)
+                 if candidate is None: continue
+-                estimated=self.estimate(candidate,max_speed,lateral_accel,acceleration,braking,steering_rate,yaw_rate,response_delay,speed_planning)
++                estimated=self.score(candidate,max_speed,lateral_accel,acceleration,braking,steering_rate,yaw_rate,response_delay,speed_planning)
+                 if estimated < best_selection['estimated_lap_seconds']:
+                     best=candidate
+                     best_selection.update(estimated_lap_seconds=estimated,corner_offset=offset)
+@@ -174,7 +197,7 @@ class LoopPlanner:
+                         for offset in (-.06,-.03,.03,.06):
+                             candidate=self.feasible(current.points+offset*bump[:,None]*normal,np.asarray(waypoints),max_steer,wheelbase)
+                             if candidate is None: continue
+-                            estimated=self.estimate(candidate,max_speed,lateral_accel,acceleration,braking,steering_rate,yaw_rate,response_delay,speed_planning)
++                            estimated=self.score(candidate,max_speed,lateral_accel,acceleration,braking,steering_rate,yaw_rate,response_delay,speed_planning)
+                             if estimated < best_selection['estimated_lap_seconds']-1e-4:
+                                 best=candidate
+                                 best_selection['estimated_lap_seconds']=estimated
+@@ -200,7 +223,9 @@ class LoopPlanner:
+                 best_selection.update(extra)
+                 accepted+=extra['multiscale_moves']
+             best_selection.update(scoring_response_delay=response_delay,
+-                                  scoring_model='delayed_braking_reachability' if speed_planning=='delayed_braking' else 'nominal_speed_response_preview_proxy',
++                                  scoring_controller_proxy=self.control_scoring,
++                                  scoring_model=('controller_feedforward_proxy_delayed_braking' if self.control_scoring else
++                                      'delayed_braking_reachability' if speed_planning=='delayed_braking' else 'nominal_speed_response_preview_proxy'),
+                                   scoring_includes_startup=False,
+                                   refinement_moves=accepted,baseline_model_lap_seconds=baseline_time,
+                                   refinement_gain_seconds=baseline_time-best_selection['estimated_lap_seconds'],
+@@ -226,7 +251,7 @@ class LoopPlanner:
+             trial=self.feasible(candidate,anchors,max_steer,wheelbase)
+             if trial is None: continue
+             if optimize_time:
+-                estimated=self.estimate(trial,max_speed,lateral_accel,acceleration,braking,steering_rate,yaw_rate,response_delay,speed_planning)
++                estimated=self.score(trial,max_speed,lateral_accel,acceleration,braking,steering_rate,yaw_rate,response_delay,speed_planning)
+                 if estimated >= best_time: continue
+                 best_time = estimated
+                 self.selection = dict(estimated_lap_seconds=estimated,smoothing_width=float(width))
+@@ -245,7 +270,7 @@ class LoopPlanner:
+         """
+         budgets=(max_speed,lateral_accel,acceleration,braking,steering_rate,yaw_rate,
+                  response_delay,speed_planning)
+-        best=seed;score=self.estimate(best,*budgets);initial=score;moves=0
++        best=seed;score=self.score(best,*budgets);initial=score;moves=0
+         launch_anchor=anchors[int(np.argmin(np.linalg.norm(anchors,axis=1)))]
+         peaks=[]
+         for index in np.argsort(-np.abs(seed.curvature)):
+@@ -278,7 +303,7 @@ class LoopPlanner:
+                             points=current.points+offset*bump[:,None]*normal
+                             candidate=self.feasible(points,anchors,max_steer,wheelbase)
+                             if candidate is None:continue
+-                            estimated=self.estimate(candidate,*budgets)
++                            estimated=self.score(candidate,*budgets)
+                             if estimated < score-.002:
+                                 best,score=candidate,estimated;moves+=1
+             if moves==before:break
+diff --git a/tianracer_gazebo/scripts/planned_race.py b/tianracer_gazebo/scripts/planned_race.py
+index ac2b21c..5f824f4 100755
+--- a/tianracer_gazebo/scripts/planned_race.py
++++ b/tianracer_gazebo/scripts/planned_race.py
+@@ -31,7 +31,12 @@ def main():
+     occupancy = np.asarray(grid.data).reshape(grid.info.height,grid.info.width)
+     planner = LoopPlanner(occupancy,grid.info.resolution,
+                           [grid.info.origin.position.x,grid.info.origin.position.y],
+-                          margin=rospy.get_param("~route_margin",0.26))
++                          margin=rospy.get_param("~route_margin",0.26),
++                          control_scoring=rospy.get_param('~route_control_scoring',False),
++                          steering_preview_time=rospy.get_param('~steering_preview_time',.10),
++                          steering_feedback_gain=rospy.get_param('~steering_feedback_gain',.25))
++    if planner.control_scoring and rospy.get_param('~lateral_control','pursuit') != 'race_feedback':
++        raise ValueError('Controller route score requires race_feedback')
+     rospy.loginfo('Planning full course while stationary; no motion until start service')
+     optimize = rospy.get_param('~optimize_time',False)
+     center = planner.build(anchors,line_search_level=rospy.get_param('~line_search_level',0),speed_planning=rospy.get_param("~speed_planning","legacy"),optimize_time=optimize,refine_line=rospy.get_param('~refine_line',False),
+@@ -64,6 +69,11 @@ def main():
+     report.update(route_selection=planner.selection,official_lap_validation_required=True,
+                   route_margin=planner.margin,wall_stop_clearance=.23,
+                   nominal_wall_tracking_reserve=planner.margin-.23)
++    report['route_control_scoring']=planner.control_scoring
++    report['route_control_score_assumptions']= (
++        'Perfect localization and current-reference steering, zero joint age; '
++        'feedforward/compensation/slew proxy only, not actuator or tire validation'
++        if planner.control_scoring else None)
+     report_file=os.path.splitext(output)[0]+'_report.json'
+     with open(report_file,'w') as stream: json.dump(report,stream,indent=2,sort_keys=True)
+     rospy.loginfo('Speed budget report (model, not result): %s; saved %s',json.dumps(report,sort_keys=True),report_file)
+diff --git a/tianracer_gazebo/scripts/predictive_follower.py b/tianracer_gazebo/scripts/predictive_follower.py
+index aaf0e96..ae010dc 100644
+--- a/tianracer_gazebo/scripts/predictive_follower.py
++++ b/tianracer_gazebo/scripts/predictive_follower.py
+@@ -14,7 +14,7 @@ class PredictiveFollower(LineFollower):
+                  speed_planning="legacy", startup_release_early=False,
+                  steering_preview_time=.10, curvature_feedforward_gain=.4,
+                  pursuit_lookahead_scale=1.0, heading_feedback_gain=.8,
+-                 cross_track_gain=.8):
++                 cross_track_gain=.8, startup_connector_length=2.5):
+         super().__init__(path, max_speed, lateral_accel, acceleration, braking,
+                          wheelbase, max_steer, max_error)
+         self.steering_rate = positive('steering_rate', steering_rate)
+@@ -82,7 +82,9 @@ class PredictiveFollower(LineFollower):
+         self.start_blend = start_blend
+         if not isinstance(start_blend,bool): raise ValueError('start_blend must be boolean')
+         self.connector_offset = None
+-        self.connector_length = 2.5
++        if not math.isfinite(startup_connector_length) or not 2.0 <= startup_connector_length <= 3.0:
++            raise ValueError('startup_connector_length must be between 2.0 and 3.0 meters')
++        self.connector_length = float(startup_connector_length)
+         self.last_report = {}
+ 
+     def preview_speed_profile(self):
+@@ -145,6 +147,7 @@ class PredictiveFollower(LineFollower):
+                     model_includes_response_preview=self.speed_planning=="delayed_braking",
+                     lateral_control=self.lateral_control,
+                     startup_limits=dict(speed=self.startup_speed,acceleration=self.startup_acceleration,
++                                        connector_length=self.connector_length,
+                                         acceleration_guard_distance=None if self.startup_release_early and self.lateral_control in ('smooth_pursuit','race_feedback') else self.launch_guard_distance,
+                                         minimum_release_distance=.6 if self.startup_release_early else self.connector_length,
+                                         release_hold_seconds=.3),
+@@ -190,6 +193,13 @@ class PredictiveFollower(LineFollower):
+             point=point+blend*self.connector_offset
+         return point
+ 
++    def connector_active(self):
++        # Compare unwrapped arc endpoints directly. Subtracting a large origin
++        # can round an exact 2.4m endpoint below 2.4 and trap projection there.
++        # A nanometer tolerance affects geometry only, not readiness/stop limits.
++        return (self.connector_offset is not None and self.progress is not None and
++                self.progress < self.origin + self.connector_length - 1e-9)
++
+     def stop(self):
+         super().stop()
+         self.steer = 0.0
+@@ -213,7 +223,7 @@ class PredictiveFollower(LineFollower):
+             self.stop(); raise ValueError('Unexpected backward vehicle motion: measured_speed=%.4fm/s' % measured_speed)
+         if self.progress is None: self.start(x,y,yaw)
+         s,self.error = self.path.project(x,y,self.progress-0.1,self.progress+self.max_speed*elapsed*2+0.20)
+-        if self.connector_offset is not None and self.progress-self.origin<self.connector_length:
++        if self.connector_active():
+             begin=self.progress-.1
+             end=min(self.origin+self.connector_length,self.progress+self.max_speed*elapsed*2+.2)
+             knots=np.linspace(begin,end,max(3,int(math.ceil((end-begin)/.02))+1))
+@@ -243,8 +253,7 @@ class PredictiveFollower(LineFollower):
+         # rather than turning a longitudinal correction into lateral error.
+         reference=self.path.sample(tracking_s)
+         tangent=self.path.sample(tracking_s+.08)-self.path.sample(tracking_s-.08)
+-        connector_active=(self.connector_offset is not None and
+-                          self.progress-self.origin<self.connector_length)
++        connector_active=self.connector_active()
+         control_error=self.error
+         if connector_active and self.lateral_control in ('smooth_pursuit','race_feedback'):
+             # Track the validated connector consistently, instead of treating
+@@ -470,7 +479,7 @@ class PredictiveFollower(LineFollower):
+         self.last_report=dict(reason=reason,planned_speed=float(self.path.speeds[i]),
+                               live_curvature=float(k),measured_speed=measured_speed,
+                               command_speed=self.speed,steer=self.steer,tracking_error=self.error,
+-                              start_connector=self.connector_offset is not None and self.progress-self.origin<self.connector_length,
++                              start_connector=self.connector_active(),
+                               outward_heading=outward,heading_error=recovery_heading_error,recovery_speed_cap=recovery_cap)
+         self.last_report.update(response_delay=self.response_delay,
+                                 preview_distance=preview_distance,preview_speed=envelope,
+@@ -506,6 +515,16 @@ class PredictiveFollower(LineFollower):
+                                 pursuit_lookahead_scale=self.pursuit_lookahead_scale)
+         self.last_report.update(heading_feedback_gain=self.heading_feedback_gain,
+                                 cross_track_gain=self.cross_track_gain)
++        # Observe each constraint separately. These fields never change motion.
++        self.last_report['speed_caps'] = dict(
++            planned=float(self.path.speeds[i]), response_preview=envelope,
++            live_lateral=live_lateral, live_yaw=live_yaw,
++            tracking_error_factor=error_factor, recovery=recovery_cap,
++            steering_alignment=steering_cap if steering_mismatch is not None else None,
++            heading_alignment=heading_cap if self.lateral_control in ('curvature_feedback','race_feedback') else None,
++            startup=self.startup_speed if self.launch_limited else None,
++            acceleration=acceleration_limit)
++        self.last_report['reference_curvature'] = float(self.path.curvature[i])
+         return self.speed,self.steer
+ 
+ 
+diff --git a/tianracer_gazebo/scripts/run_final_speedup.sh b/tianracer_gazebo/scripts/run_final_speedup.sh
+new file mode 100755
+index 0000000..10fad61
+--- /dev/null
++++ b/tianracer_gazebo/scripts/run_final_speedup.sh
+@@ -0,0 +1,71 @@
++#!/usr/bin/env bash
++# One isolated experiment, automatic evidence folder/bag; never calls start.
++set -euo pipefail
++version="${1:-baseline}"
++if (($#)); then shift; fi
++case "$version" in baseline|v1|v2|v3) ;; *) echo "Use baseline, v1, v2 or v3" >&2; exit 2;; esac
++declare -A seen=()
++for argument in "$@"; do
++  key="${argument%%:=*}"
++  case "$key" in
++    startup_speed|startup_acceleration|startup_connector_length|steering_preview_time|steering_feedback_gain|heading_feedback_gain|cross_track_gain|acceleration|lateral_accel|braking|yaw_rate|line_search_level|predict_pose|route_control_scoring|speed_recovery_hold|legacy_control) ;;
++    *) echo "Unsupported/protected override: $argument" >&2; exit 2;;
++  esac
++  if [[ "$argument" != *":="* || -n "${seen[$key]:-}" ]]; then
++    echo "Use each parameter once as name:=value: $argument" >&2; exit 2
++  fi
++  seen[$key]=1
++  if [[ "$key" == lateral_accel || "$key" == braking ]]; then
++    limit=9.94
++    if [[ "$key" == braking ]]; then limit=3.7; fi
++    if ! python3 -c 'import sys,math;v=float(sys.argv[1]);limit=float(sys.argv[2]);sys.exit(0 if math.isfinite(v) and 0<v<=limit else 1)' "${argument#*:=}" "$limit"; then
++      echo "$key above the user71 budget is blocked until measured evidence is reviewed." >&2
++      exit 2
++    fi
++  fi
++done
++set +u
++source /opt/ros/noetic/setup.bash
++race_workspace="${RACE_WORKSPACE:-$HOME/ican_race_ws}"
++source "$race_workspace/devel/setup.bash"
++set -u
++package="$(rospack find tianracer_gazebo)"
++run_dir="$HOME/ican_race_logs/final71/$(date +%Y%m%d_%H%M%S)_${version}_$$"
++mkdir -p "$run_dir"
++printf '%s\n' "$run_dir" > "$HOME/ican_race_logs/final_last_session.txt"
++git -C "$package/.." rev-parse HEAD > "$run_dir/commit.txt"
++command=(roslaunch tianracer_gazebo final_speedup_demo.launch
++         "version:=$version" "log_dir:=$run_dir" "$@")
++printf '%q ' "${command[@]}" > "$run_dir/command.txt"
++printf '\n' >> "$run_dir/command.txt"
++topics=(/clock /tf /tf_static /tianracer/cmd_vel /tianracer/ackermann_cmd_stamped
++        /tianracer/odom /tianracer/joint_states /tianracer/scan
++        /tianracer/amcl_pose /tianracer/imu /rosout_agg)
++rosbag record --buffsize=256 -O "$run_dir/control.bag" "${topics[@]}" > "$run_dir/record.log" 2>&1 &
++bag_pid=$!
++capture_pid=''
++cleanup() {
++  if [[ -n "$capture_pid" ]]; then kill "$capture_pid" 2>/dev/null || true; fi
++  kill -INT "$bag_pid" 2>/dev/null || true
++  wait "$bag_pid" 2>/dev/null || true
++  echo "Evidence folder: $run_dir"
++  echo "Analyze: rosrun tianracer_gazebo analyze_final_race.py --session '$run_dir' --bag '$run_dir/control.bag'"
++}
++trap cleanup EXIT
++(
++  for ((attempt=0; attempt<120; attempt++)); do
++    if timeout 3 rosservice list 2>/dev/null | grep -qx /tianracer/continuous_race/status; then
++      rosparam get /tianracer/continuous_race > "$run_dir/params.yaml"
++      timeout 5 rosservice call /tianracer/continuous_race/status '{}' > "$run_dir/status_ready.txt" 2>&1 || true
++      exit 0
++    fi
++    sleep 1
++  done
++) &
++capture_pid=$!
++echo "Experiment $version; manual prepare/status/start required."
++echo "Evidence folder: $run_dir"
++set +e
++"${command[@]}" 2>&1 | tee "$run_dir/C.log"
++launch_status=${PIPESTATUS[0]}
++exit "$launch_status"
+diff --git a/tianracer_gazebo/test/test_final_speedup.py b/tianracer_gazebo/test/test_final_speedup.py
+new file mode 100644
+index 0000000..8b5d3b1
+--- /dev/null
++++ b/tianracer_gazebo/test/test_final_speedup.py
+@@ -0,0 +1,210 @@
++import ast
++import importlib.util
++import hashlib
++import json
++import math
++from pathlib import Path
++import sys
++import tempfile
++import unittest
++from xml.etree import ElementTree as ET
++import numpy as np
++
++PACKAGE=Path(__file__).resolve().parents[1]
++sys.path.insert(0,str(PACKAGE/'scripts'))
++from race_line import ClosedPath
++from predictive_follower import PredictiveFollower
++from controller_score import controller_speed_profile
++from cycle_telemetry import CycleTelemetry
++from analyze_final_race import estimate_braking,summarize_cycles,estimate_steering_response,read_bag,TOPICS
++
++
++def follower(**kwargs):
++    theta=np.linspace(0,2*math.pi,1000)
++    path=ClosedPath(np.column_stack((6*np.cos(theta),6*np.sin(theta))),spacing=.04)
++    return PredictiveFollower(path,max_speed=10,lateral_accel=9.94,acceleration=7.3,
++        braking=3.7,yaw_rate=4.4,response_delay=.25,speed_planning='delayed_braking',
++        lateral_control='race_feedback',steering_feedback_gain=.25,
++        fast_start=True,start_blend=True,startup_release_early=True,**kwargs)
++
++
++class ConnectorTests(unittest.TestCase):
++    def test_default_and_invalid_length(self):
++        self.assertEqual(follower().connector_length,2.5)
++        for length in (1.9,3.1,math.nan,math.inf):
++            with self.assertRaises(ValueError):follower(startup_connector_length=length)
++
++    def test_fractional_endpoint_does_not_trap_projection(self):
++        f=follower(startup_connector_length=2.4)
++        f.origin=27.5678;f.progress=f.origin+2.4;f.connector_offset=np.array([.07,0.])
++        self.assertFalse(f.connector_active())
++        f.progress-=.01
++        self.assertTrue(f.connector_active())
++
++    def test_quintic_endpoint_position_first_second_derivatives(self):
++        f=follower(startup_connector_length=2.4);f.origin=0.;f.connector_offset=np.array([.07,.01])
++        def offset(s):return f.sample_tracking(s)-f.path.sample(s)
++        h=1e-4
++        np.testing.assert_allclose(offset(0),f.connector_offset,atol=1e-12)
++        np.testing.assert_allclose(offset(f.connector_length),[0,0],atol=1e-12)
++        for s in (0.,f.connector_length):
++            self.assertLess(np.linalg.norm((offset(s+h)-offset(s-h))/(2*h)),1e-6)
++            self.assertLess(np.linalg.norm((offset(s+h)-2*offset(s)+offset(s-h))/h**2),1e-4)
++
++    def test_start_resets_readiness_and_connector_state(self):
++        f=follower(startup_connector_length=2.4)
++        f.launch_ready=2.;f.alignment_ready=3.;f.launch_limited=True
++        f.start(6.07,0,math.pi/2)
++        self.assertEqual(f.launch_ready,0);self.assertEqual(f.alignment_ready,0)
++        self.assertTrue(f.launch_limited)
++
++    def test_initial_speed_cap_and_acceleration_are_not_skipped(self):
++        f=follower(startup_speed=2.,startup_acceleration=2.5)
++        f.start(6.07,0,math.pi/2);f.measured_steer=0.;f.measured_steer_age=0.
++        v,_=f.step(6.07,0,math.pi/2,0.,.02)
++        self.assertLessEqual(v,2.5*.02+1e-12)
++        self.assertLessEqual(v,2.)
++        self.assertTrue(f.launch_limited)
++
++
++class ScoreTests(unittest.TestCase):
++    def test_proxy_keeps_speed_caps_and_response_budget(self):
++        f=follower(steering_preview_time=.12)
++        before=f.path.speeds.copy();profile=controller_speed_profile(f)
++        self.assertTrue(np.isfinite(profile).all());self.assertTrue((profile>0).all())
++        self.assertTrue((profile<=before+1e-12).all())
++        np.testing.assert_array_equal(f.path.speeds,before)
++        self.assertEqual(f.response_delay,.25)
++
++
++class TelemetryTests(unittest.TestCase):
++    def test_flush_preserves_events_and_nonfinite_values_are_explicit_null(self):
++        with tempfile.TemporaryDirectory() as directory:
++            path=Path(directory)/'cycles.jsonl';writer=CycleTelemetry(str(path))
++            self.assertTrue(writer.append({'event':'cycle','value':math.nan}))
++            self.assertTrue(writer.flush())
++            self.assertTrue(writer.close())
++            self.assertIsNone(json.loads(path.read_text())['value'])
++            self.assertEqual(writer.status()['dropped'],0)
++            with self.assertRaises(FileExistsError):CycleTelemetry(str(path))
++
++    def test_saturation_never_blocks_control_append(self):
++        with tempfile.TemporaryDirectory() as directory:
++            writer=CycleTelemetry(str(Path(directory)/'cycles.jsonl'),capacity=1)
++            for i in range(2000):writer.append({'index':i})
++            writer.flush();writer.close()
++            self.assertEqual(writer.accepted+writer.dropped,2000)
++
++
++class AnalysisTests(unittest.TestCase):
++    def test_command_drop_is_not_reported_as_measured_braking(self):
++        row={'event':'cycle','simulation_time':1.,'elapsed':0.,'progress':0.,
++             'measured_speed':3.,'output_speed':3.,'control':{'reason':'planned_envelope'}}
++        other=dict(row,simulation_time=1.02,elapsed=.02,output_speed=1.)
++        r=summarize_cycles([row,other])
++        self.assertEqual(r['maximum_single_sample_command_drop'],2.)
++        self.assertTrue(r['command_drop_rate_is_not_measured_braking'])
++        self.assertAlmostEqual(sum(r['reason_seconds'].values()),.02)
++
++    def test_measured_fit_is_not_permission_to_raise_budget(self):
++        commands=[{'t':0.,'v':5.},{'t':.1,'v':2.}]
++        odom=[{'t':t,'v':5.-3.7*max(0,t-.35),'omega':0.,'lateral':0.}
++              for t in np.arange(0,1.2,.05)]
++        r=estimate_braking(commands,odom)
++        self.assertTrue(r['available'])
++        self.assertAlmostEqual(r['minimum_observed_deceleration'],3.7,places=5)
++        self.assertFalse(r['permission_to_raise_braking'])
++        for v in odom:v['omega']=.8
++        self.assertFalse(estimate_braking(commands,odom)['available'])
++
++    def test_nonfinite_odometry_rejects_braking_evidence(self):
++        r=estimate_braking([{'t':0.,'v':5.},{'t':1.,'v':2.}],
++                          [{'t':1.,'v':math.nan,'omega':0.,'lateral':0.}])
++        self.assertFalse(r['available']);self.assertFalse(r['permission_to_raise_braking'])
++
++    def test_gradual_commanded_braking_is_not_missed_by_single_step_filter(self):
++        commands=[dict(t=float(t),v=5.-3.7*t) for t in np.arange(0,.8,.02)]
++        odom=[dict(t=float(t),v=5.-3.7*t,omega=0.,lateral=0.) for t in np.arange(0,1.3,.05)]
++        r=estimate_braking(commands,odom)
++        self.assertTrue(r['available'])
++        self.assertAlmostEqual(r['minimum_observed_deceleration'],3.7,places=5)
++        self.assertFalse(r['permission_to_raise_braking'])
++
++    def test_continuous_measured_steering_fit_is_effective_not_certified(self):
++        times=np.arange(0,8,.02)
++        commands=[dict(t=float(t),steer=.2*math.sin(t)+.1*math.sin(3*t)) for t in times]
++        actual=0.;joints=[]
++        for t in times:
++            joints.append(dict(t=float(t),angle=actual))
++            delayed=.2*math.sin(max(0,t-.02))+.1*math.sin(3*max(0,t-.02))
++            actual+=(delayed-actual)*.02/.15
++        r=estimate_steering_response(commands,joints)
++        self.assertTrue(r['available'])
++        self.assertAlmostEqual(r['fit']['effective_time_constant_seconds'],.15,delta=.03)
++        self.assertFalse(r['permission_to_change_safety'])
++
++    def test_steering_clock_reset_is_rejected(self):
++        commands=[dict(t=float(i),steer=.2) for i in range(60)]
++        commands[-1]['t']=-1.
++        joints=[dict(t=float(i),angle=.1) for i in range(60)]
++        r=estimate_steering_response(commands,joints)
++        self.assertFalse(r['available'])
++        self.assertIn('Clock reset',r['reason'])
++
++
++class BoundaryTests(unittest.TestCase):
++    def test_protected_functions_match_71_base(self):
++        hashes={
++            'continuous_race.py':{'sensors':'d9ed232bd9703c400bd176ae50e581fe89778d2feeb0806f027a19e41189ab78',
++                'verified_laser_history':'7ca662197773f1dd16f85104c6b53989de973a9a0de95c81966b3587ca206316',
++                'laser_feedback':'9c63002dd9f722d6b3febaa3b1a0c4e004ad72f6d9ce63357b5a1fa5609fd85a'},
++            'loop_planner.py':{'check_vehicle_clearance':'d075be38e71de38b8e91ab9617647516ab07add21f2b5bba1e0c6c7850ac9954',
++                'segment_check':'106cd493a0928cdafb093de6a5afb5d4ecaf01d6b345696161fa08a1022232c5',
++                'feasible':'99b219e5e2c38f92b8c97d46f2725b18ad55a796af86318061dc6eea7b907982'},
++            'predictive_follower.py':{'reference_clearance':'c50e1f3bea90ae0aeed5bd575bdbd23990bc080f6cfa36afb1dd8de461351997'}}
++        for file,wanted in hashes.items():
++            source=(PACKAGE/'scripts'/file).read_text()
++            found={n.name:hashlib.sha256(ast.get_source_segment(source,n).encode()).hexdigest()
++                   for n in ast.walk(ast.parse(source)) if isinstance(n,ast.FunctionDef) and n.name in wanted}
++            self.assertEqual(found,wanted)
++
++    def test_frozen_launch_budgets_and_feature_rollback(self):
++        root=ET.parse(PACKAGE/'launch/final_speedup.launch').getroot()
++        args={a.attrib['name']:a.attrib['default'] for a in root.findall('arg')}
++        self.assertEqual(args['lateral_accel'],'9.94');self.assertEqual(args['braking'],'3.7')
++        self.assertEqual(args['startup_connector_length'],'2.5');self.assertEqual(args['version'],'baseline')
++        includes={a.attrib['name']:a.attrib['value'] for a in root.find('include').findall('arg')}
++        for k,v in {'route_margin':'0.34','response_delay':'0.25','steering_rate':'2.0'}.items():self.assertEqual(includes[k],v)
++        self.assertIn("arg('legacy_control')",includes['route_control_scoring'])
++        self.assertIn("arg('legacy_control')",includes['startup_connector_length'])
++
++
++@unittest.skipUnless(importlib.util.find_spec('rosbag'), 'Native Noetic rosbag required')
++class NativeBagTests(unittest.TestCase):
++    def test_real_bag_roundtrip_preserves_commands_and_feedback_without_control(self):
++        import rosbag
++        import rospy
++        from geometry_msgs.msg import Twist
++        from nav_msgs.msg import Odometry
++        from sensor_msgs.msg import JointState
++        self.assertNotIn('/gazebo/model_states',TOPICS)
++        with tempfile.TemporaryDirectory() as directory:
++            path=Path(directory)/'synthetic_test_only.bag'
++            with rosbag.Bag(str(path),'w') as bag:
++                command=Twist();command.linear.x=2.;command.angular.z=.1
++                bag.write('/tianracer/cmd_vel',command,rospy.Time.from_sec(1.))
++                odom=Odometry();odom.header.stamp=rospy.Time.from_sec(1.05)
++                odom.twist.twist.linear.x=2.1;odom.pose.pose.position.x=.1
++                bag.write('/tianracer/odom',odom,odom.header.stamp)
++                joints=JointState();joints.header.stamp=rospy.Time.from_sec(1.05)
++                joints.name=['left_steering_hinge_joint','right_steering_hinge_joint']
++                joints.position=[.1,.1]
++                bag.write('/tianracer/joint_states',joints,joints.header.stamp)
++            result=read_bag(path)
++            self.assertEqual(result['commands'][0]['v'],2.)
++            self.assertEqual(result['topic_counts']['/tianracer/odom'],1)
++            self.assertEqual(result['observations'][0]['v'],2.1)
++            self.assertFalse(result['braking']['permission_to_raise_braking'])
++
++
++if __name__=='__main__':unittest.main()

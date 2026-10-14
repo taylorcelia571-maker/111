@@ -79,7 +79,11 @@ def estimate_braking(commands, odometry, reaction=.25):
     rejected = 0
     last_event = -math.inf
     for old, command in zip(commands, commands[1:]):
-        if old['v'] - command['v'] < .3 or old['v'] < 2 or command['t'] - last_event < 1.:
+        # Planned braking is usually gradual at 50Hz. Detect a cumulative drop
+        # over 200ms, not only abrupt single-command drops that bias the evidence.
+        recent=[r for r in commands if command['t']-.2 <= r['t'] < command['t']]
+        approach=max([old['v']] + [r['v'] for r in recent])
+        if approach - command['v'] < .3 or approach < 2 or command['t'] - last_event < 1.:
             continue
         last_event = command['t']
         low, high = command['t'] + reaction, command['t'] + reaction + .7

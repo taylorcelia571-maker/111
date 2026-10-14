@@ -1,0 +1,33 @@
+{
+  "user_reported_best_seconds": 71,
+  "official_result_verified_here": false,
+  "source_commit": "ad9be5bf9b4f23c042fe368d138e9c7b4bd77902",
+  "budgets": {
+    "lateral_accel": 9.94,
+    "acceleration": 7.3,
+    "braking": 3.7,
+    "yaw_rate": 4.4,
+    "max_speed": 10,
+    "steering_rate": 2
+  },
+  "controller": {
+    "startup_speed": 2.0,
+    "startup_acceleration": 2.5,
+    "steering_feedback_gain": 0.25,
+    "steering_preview_time": 0.12,
+    "heading_feedback_gain": 0.8,
+    "cross_track_gain": 0.8,
+    "line_search_level": 3,
+    "predict_pose": false,
+    "startup_release_early": true,
+    "speed_planning": "delayed_braking",
+    "lateral_control": "race_feedback",
+    "speed_recovery_hold": 0
+  },
+  "boundaries": {
+    "route_margin": 0.34,
+    "response_delay": 0.25,
+    "wall_stop": 0.23,
+    "reference_stop": 0.15
+  }
+}
