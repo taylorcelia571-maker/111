@@ -7,6 +7,7 @@
   <arg name="yaw_rate" default="3.8"/>
   <arg name="steering_feedback_gain" default="0.25"/>
   <arg name="steering_preview_time" default="0.10"/>
+  <arg name="predict_pose" default="false"/>
   <arg name="startup_speed" default="1.8"/>
   <arg name="startup_acceleration" default="2.0"/>
   <arg name="heading_feedback_gain" default="0.8"/>
@@ -46,6 +47,6 @@
     <arg name="fast_start" value="true"/>
     <arg name="optimize_time" value="true"/>
     <arg name="refine_line" value="true"/>
-    <arg name="predict_pose" value="false"/>
+    <arg name="predict_pose" value="$(arg predict_pose)"/>
   </include>
 </launch>
