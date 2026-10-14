@@ -1,4 +1,5 @@
 <launch>
+  <arg name="require_prepared_start" default="false"/>
   <arg name="lateral_accel" default="6.5"/>
   <arg name="acceleration" default="6.6"/>
   <arg name="braking" default="3.6"/>
@@ -29,6 +30,7 @@
     <include file="$(find tianracer_sim_referee)/launch/referee.launch"/>
   </group>
   <include file="$(find tianracer_gazebo)/launch/race_tuning.launch">
+    <arg name="require_prepared_start" value="$(arg require_prepared_start)"/>
     <arg name="lateral_accel" value="$(arg lateral_accel)"/>
     <arg name="acceleration" value="$(arg acceleration)"/>
     <arg name="braking" value="$(arg braking)"/>
