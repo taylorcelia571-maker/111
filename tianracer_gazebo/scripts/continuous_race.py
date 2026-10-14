@@ -24,6 +24,11 @@ class ContinuousRace:
         self.start_path_guard = start_path_guard
         self.clearance_guard = clearance_guard
         self.generated = path is not None
+        self.require_prepared_start=rospy.get_param('~require_prepared_start',False)
+        if not isinstance(self.require_prepared_start,bool):
+            raise ValueError('require_prepared_start must be boolean')
+        if self.require_prepared_start and not self.generated:
+            raise ValueError('require_prepared_start requires a generated race path')
         self.feedback_pose = {}
         self.predict_pose=rospy.get_param('~predict_pose',False) if self.generated else False
         if path is None:
@@ -278,6 +283,9 @@ class ContinuousRace:
                 if abs(pose[3]) > 0.05: raise ValueError('Vehicle must be stationary')
                 if self.clearance_guard is not None:self.clearance_guard(pose)
                 prepared_used=self.prepared_steer is not None
+                if self.require_prepared_start and not prepared_used:
+                    raise ValueError('Stationary preparation required: call ~prepare, wait for '
+                                     'status steering_ready=true, then call ~start once')
                 if prepared_used:
                     actual=getattr(self.follower,'measured_steer',None)
                     if actual is None:
@@ -303,6 +311,7 @@ class ContinuousRace:
                 self.last_fault = None
                 self.started_at=rospy.Time.now()
                 self.start_metrics=dict(prepare_used=prepared_used,
+                    prepared_start_required=self.require_prepared_start,
                     start_mode=dict(getattr(self.follower,'start_diagnostics',{})),
                     initial_reference_error=float(np.linalg.norm(
                         np.asarray(pose[:2])-self.path.sample(self.follower.origin))))
@@ -546,6 +555,10 @@ class ContinuousRace:
             rospy.loginfo('Startup: measured motion after %.3fs',elapsed)
         if self.generated and not self.follower.departure and 'alignment_released_seconds' not in self.start_metrics:
             self.start_metrics['alignment_released_seconds']=elapsed
+        if (self.generated and not self.follower.departure and not self.follower.launch_limited
+                and 'startup_speed_cap_released_seconds' not in self.start_metrics):
+            self.start_metrics['startup_speed_cap_released_seconds']=elapsed
+            rospy.loginfo('Startup speed cap released after %.3fs; progress=%.2fm',elapsed,progress)
         if progress>=self.path.length and 'first_reference_loop_seconds' not in self.start_metrics:
             self.start_metrics['first_reference_loop_seconds']=elapsed
             rospy.loginfo('First reference loop: %.3fs (official referee time is separate)',elapsed)
