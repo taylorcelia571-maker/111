@@ -7,6 +7,19 @@ LAUNCH=Path(__file__).resolve().parents[1]/'launch'
 
 
 class PredictionLaunchTests(unittest.TestCase):
+    def test_required_prepare_reaches_node_and_is_disabled_by_default(self):
+        for filename,target in [('race_tuning_demo.launch','race_tuning.launch'),
+                                ('race_tuning.launch','planned_race.launch')]:
+            root=ET.parse(LAUNCH/filename).getroot()
+            args={a.attrib['name']:a.attrib for a in root.findall('arg')}
+            self.assertEqual(args['require_prepared_start']['default'],'false')
+            includes=[i for i in root.findall('include') if i.attrib['file'].endswith(target)]
+            forwarded={a.attrib['name']:a.attrib['value'] for a in includes[0].findall('arg')}
+            self.assertEqual(forwarded['require_prepared_start'],'$(arg require_prepared_start)')
+        params={p.attrib['name']:p.attrib for p in ET.parse(LAUNCH/'planned_race.launch').getroot().iter('param')}
+        self.assertEqual(params['require_prepared_start']['type'],'bool')
+        self.assertEqual(params['require_prepared_start']['value'],'$(arg require_prepared_start)')
+
     def test_default_is_unchanged_and_option_is_forwarded_to_typed_param(self):
         for filename,target in [('race_tuning_demo.launch','race_tuning.launch'),
                                 ('race_tuning.launch','planned_race.launch')]:
