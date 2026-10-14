@@ -1,4 +1,5 @@
 <launch>
+  <arg name="require_prepared_start" default="false"/>
   <!-- Known-finish algorithm, with an explicit steering timing experiment.
        No protection or vehicle/referee changes. Official results required. -->
   <arg name="lateral_accel" default="6.5"/>
@@ -21,6 +22,7 @@
   <arg name="speed_planning" default="legacy"/>
   <arg name="run_report" default="~/ican_race_logs/race_tuning.json"/>
   <include file="$(find tianracer_gazebo)/launch/planned_race.launch">
+    <arg name="require_prepared_start" value="$(arg require_prepared_start)"/>
     <arg name="lateral_accel" value="$(arg lateral_accel)"/>
     <arg name="acceleration" value="$(arg acceleration)"/>
     <arg name="braking" value="$(arg braking)"/>
