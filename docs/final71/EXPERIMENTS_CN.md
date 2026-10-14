@@ -25,7 +25,7 @@ controller_score假设定位准确、实测转角等于当前参考角、反馈�
   set -e
   source /opt/ros/noetic/setup.bash
   cd ~/ican_race_ws/src/tianracer
-  git fetch origin
+  git fetch origin main time_attack_speedup_final:refs/remotes/origin/time_attack_speedup_final
   if git show-ref --verify --quiet refs/heads/time_attack_speedup_final; then
     git switch time_attack_speedup_final
   else
