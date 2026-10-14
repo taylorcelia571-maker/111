@@ -222,6 +222,37 @@ class RuntimeTests(unittest.TestCase):
         self.node.on_joints(self.joints((self.node.prepared_steer,)*2))
         self.assertTrue(self.node.start(None).success)
 
+    def test_required_prepare_blocks_unprepared_start_and_accepts_aligned_feedback(self):
+        old=self.node
+        self.params['~require_prepared_start']=True
+        self.params['~lateral_control']='race_feedback'
+        self.node=self.module.ContinuousRace(old.path)
+        self.node.on_scan(old.scan);self.node.on_odom(old.odom)
+        self.node.on_joints(self.joints())
+        rejected=self.node.start(None)
+        self.assertFalse(rejected.success)
+        self.assertIn('Stationary preparation required',rejected.message)
+        self.assertFalse(self.node.active)
+        self.node.pub.publish.assert_not_called()
+        self.assertTrue(self.node.prepare(None).success)
+        self.assertEqual(self.node.pub.publish.call_args.args[0].linear.x,0)
+        self.assertFalse(self.node.start(None).success)  # not actually aligned yet
+        self.node.on_joints(self.joints((self.node.prepared_steer,)*2))
+        self.assertTrue(self.node.start(None).success)
+        self.assertTrue(self.node.start_metrics['prepare_used'])
+        self.assertTrue(self.node.start_metrics['prepared_start_required'])
+        self.node.stop(None)
+        self.assertFalse(self.node.start(None).success)  # stop consumes preparation
+
+    def test_required_prepare_rejects_nonboolean_and_unsupported_path(self):
+        for invalid in ('false',1):
+            self.params['~require_prepared_start']=invalid
+            with self.assertRaisesRegex(ValueError,'must be boolean'):
+                self.module.ContinuousRace(self.node.path)
+        self.params['~require_prepared_start']=True
+        with self.assertRaisesRegex(ValueError,'generated race path'):
+            self.module.ContinuousRace()
+
     def test_first_turn_trace_records_and_survives_saved_report_then_resets(self):
         self.feedback_node();self.node.on_joints(self.joints())
         self.assertTrue(self.node.start(None).success)
@@ -237,6 +268,24 @@ class RuntimeTests(unittest.TestCase):
             self.assertEqual(report['departure_trace'],self.node.departure_trace)
         self.assertTrue(self.node.start(None).success)
         self.assertEqual(self.node.departure_trace,[])
+
+    def test_startup_speed_cap_milestone_waits_for_launch_release(self):
+        self.feedback_node();self.node.on_joints(self.joints())
+        self.assertTrue(self.node.start(None).success)
+        self.node.follower.departure=False
+        self.node.follower.launch_limited=True
+        def proposed(*args,**kwargs):
+            self.node.follower.last_report={'command_speed':.1,'reason':'startup_connector'}
+            return .1,0.
+        with patch.object(self.node.follower,'step',side_effect=proposed), \
+                patch('predictive_follower.reference_clearance',return_value=float('inf')):
+            self.tick()
+            self.assertIn('alignment_released_seconds',self.node.start_metrics)
+            self.assertNotIn('startup_speed_cap_released_seconds',self.node.start_metrics)
+            self.node.follower.launch_limited=False
+            Stamp.now_value=1.02
+            self.tick()
+        self.assertAlmostEqual(self.node.start_metrics['startup_speed_cap_released_seconds'],.02)
 
     def test_feedback_mode_blocks_start_with_missing_or_stale_joints(self):
         self.feedback_node()
