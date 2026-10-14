@@ -14,7 +14,7 @@ class PredictiveFollower(LineFollower):
                  speed_planning="legacy", startup_release_early=False,
                  steering_preview_time=.10, curvature_feedforward_gain=.4,
                  pursuit_lookahead_scale=1.0, heading_feedback_gain=.8,
-                 cross_track_gain=.8):
+                 cross_track_gain=.8, startup_connector_length=2.5):
         super().__init__(path, max_speed, lateral_accel, acceleration, braking,
                          wheelbase, max_steer, max_error)
         self.steering_rate = positive('steering_rate', steering_rate)
@@ -82,7 +82,9 @@ class PredictiveFollower(LineFollower):
         self.start_blend = start_blend
         if not isinstance(start_blend,bool): raise ValueError('start_blend must be boolean')
         self.connector_offset = None
-        self.connector_length = 2.5
+        if not math.isfinite(startup_connector_length) or not 2.0 <= startup_connector_length <= 3.0:
+            raise ValueError('startup_connector_length must be between 2.0 and 3.0 meters')
+        self.connector_length = float(startup_connector_length)
         self.last_report = {}
 
     def preview_speed_profile(self):
@@ -145,6 +147,7 @@ class PredictiveFollower(LineFollower):
                     model_includes_response_preview=self.speed_planning=="delayed_braking",
                     lateral_control=self.lateral_control,
                     startup_limits=dict(speed=self.startup_speed,acceleration=self.startup_acceleration,
+                                        connector_length=self.connector_length,
                                         acceleration_guard_distance=None if self.startup_release_early and self.lateral_control in ('smooth_pursuit','race_feedback') else self.launch_guard_distance,
                                         minimum_release_distance=.6 if self.startup_release_early else self.connector_length,
                                         release_hold_seconds=.3),
@@ -190,6 +193,13 @@ class PredictiveFollower(LineFollower):
             point=point+blend*self.connector_offset
         return point
 
+    def connector_active(self):
+        # Compare unwrapped arc endpoints directly. Subtracting a large origin
+        # can round an exact 2.4m endpoint below 2.4 and trap projection there.
+        # A nanometer tolerance affects geometry only, not readiness/stop limits.
+        return (self.connector_offset is not None and self.progress is not None and
+                self.progress < self.origin + self.connector_length - 1e-9)
+
     def stop(self):
         super().stop()
         self.steer = 0.0
@@ -213,7 +223,7 @@ class PredictiveFollower(LineFollower):
             self.stop(); raise ValueError('Unexpected backward vehicle motion: measured_speed=%.4fm/s' % measured_speed)
         if self.progress is None: self.start(x,y,yaw)
         s,self.error = self.path.project(x,y,self.progress-0.1,self.progress+self.max_speed*elapsed*2+0.20)
-        if self.connector_offset is not None and self.progress-self.origin<self.connector_length:
+        if self.connector_active():
             begin=self.progress-.1
             end=min(self.origin+self.connector_length,self.progress+self.max_speed*elapsed*2+.2)
             knots=np.linspace(begin,end,max(3,int(math.ceil((end-begin)/.02))+1))
@@ -243,8 +253,7 @@ class PredictiveFollower(LineFollower):
         # rather than turning a longitudinal correction into lateral error.
         reference=self.path.sample(tracking_s)
         tangent=self.path.sample(tracking_s+.08)-self.path.sample(tracking_s-.08)
-        connector_active=(self.connector_offset is not None and
-                          self.progress-self.origin<self.connector_length)
+        connector_active=self.connector_active()
         control_error=self.error
         if connector_active and self.lateral_control in ('smooth_pursuit','race_feedback'):
             # Track the validated connector consistently, instead of treating
@@ -470,7 +479,7 @@ class PredictiveFollower(LineFollower):
         self.last_report=dict(reason=reason,planned_speed=float(self.path.speeds[i]),
                               live_curvature=float(k),measured_speed=measured_speed,
                               command_speed=self.speed,steer=self.steer,tracking_error=self.error,
-                              start_connector=self.connector_offset is not None and self.progress-self.origin<self.connector_length,
+                              start_connector=self.connector_active(),
                               outward_heading=outward,heading_error=recovery_heading_error,recovery_speed_cap=recovery_cap)
         self.last_report.update(response_delay=self.response_delay,
                                 preview_distance=preview_distance,preview_speed=envelope,
@@ -506,6 +515,16 @@ class PredictiveFollower(LineFollower):
                                 pursuit_lookahead_scale=self.pursuit_lookahead_scale)
         self.last_report.update(heading_feedback_gain=self.heading_feedback_gain,
                                 cross_track_gain=self.cross_track_gain)
+        # Observe each constraint separately. These fields never change motion.
+        self.last_report['speed_caps'] = dict(
+            planned=float(self.path.speeds[i]), response_preview=envelope,
+            live_lateral=live_lateral, live_yaw=live_yaw,
+            tracking_error_factor=error_factor, recovery=recovery_cap,
+            steering_alignment=steering_cap if steering_mismatch is not None else None,
+            heading_alignment=heading_cap if self.lateral_control in ('curvature_feedback','race_feedback') else None,
+            startup=self.startup_speed if self.launch_limited else None,
+            acceleration=acceleration_limit)
+        self.last_report['reference_curvature'] = float(self.path.curvature[i])
         return self.speed,self.steer
 
 

@@ -60,6 +60,7 @@ class ContinuousRace:
                            lateral_control=rospy.get_param('~lateral_control','pursuit'),
                            startup_speed=rospy.get_param('~startup_speed',1.2),
                            startup_acceleration=rospy.get_param('~startup_acceleration',1.5),
+                           startup_connector_length=rospy.get_param('~startup_connector_length',2.5),
                            steering_rate=rospy.get_param('~steering_rate',2.0),
                            yaw_rate=rospy.get_param('~yaw_rate',3.2))
         self.follower = follower_type(self.path, **options)
@@ -93,6 +94,12 @@ class ContinuousRace:
         self.acceleration_recovery=AccelerationRecovery(rospy.get_param('~speed_recovery_hold',0.0))
         self.run_report_file=os.path.expanduser(rospy.get_param('~run_report',''))
         self.report_lock=threading.Lock()
+        self.telemetry = None
+        self.run_sequence = 0
+        filename = rospy.get_param('~cycle_log','')
+        if filename:
+            from cycle_telemetry import CycleTelemetry
+            self.telemetry = CycleTelemetry(filename)
         self.previous = rospy.Time.now()
         self.scan_sub = rospy.Subscriber('scan', LaserScan, self.on_scan, queue_size=1)
         self.odom_sub = rospy.Subscriber('odom', Odometry, self.on_odom, queue_size=1)
@@ -102,7 +109,7 @@ class ContinuousRace:
         self.prepare_service = rospy.Service('~prepare',Trigger,self.prepare)
         self.stop_service = rospy.Service('~stop', Trigger, self.stop)
         self.status_service = rospy.Service('~status', Trigger, self.status)
-        rospy.on_shutdown(lambda: self.stop(None))
+        rospy.on_shutdown(self.shutdown)
         rospy.loginfo('Loaded %.1fm closed path. Idle; prepare referee then call ~start.', self.path.length)
         if self.generated:
             rospy.loginfo('Controller: %s; speed budget %.2fm/s; steering joint feedback required=%s',
@@ -222,6 +229,7 @@ class ContinuousRace:
             state=dict(active=self.active,prepared_steer=self.prepared_steer,control=getattr(self.follower,'last_report',{}),
                        startup=self.start_metrics,feedback=self.feedback_pose,last_fault=self.last_fault,
                        last_start_rejection=self.last_start_rejection)
+            state['telemetry'] = self.telemetry.status() if self.telemetry else None
             if self.run_metrics is not None:state['run_metrics']=self.run_metrics.report()
             try:
                 pose = self.sensors()
@@ -240,6 +248,9 @@ class ContinuousRace:
         self.last_fault=dict(reason=str(error),simulation_time=rospy.Time.now().to_sec(),
                              control=dict(getattr(self.follower,'last_report',{})),
                              feedback=dict(self.feedback_pose))
+        if self.telemetry:
+            self.telemetry.append(dict(event='fault',run_sequence=self.run_sequence,
+                simulation_time=rospy.Time.now().to_sec(),fault=self.last_fault))
 
     def prepare(self,request):
         """Pre-position steering while stopped; does not drive or start timing."""
@@ -310,6 +321,7 @@ class ContinuousRace:
                 self.prepared_steer = None
                 self.last_fault = None
                 self.started_at=rospy.Time.now()
+                self.run_sequence += 1
                 self.start_metrics=dict(prepare_used=prepared_used,
                     prepared_start_required=self.require_prepared_start,
                     start_mode=dict(getattr(self.follower,'start_diagnostics',{})),
@@ -317,6 +329,11 @@ class ContinuousRace:
                         np.asarray(pose[:2])-self.path.sample(self.follower.origin))))
                 self.departure_trace=[]
                 self.departure_trace_at=-1.0
+                if self.telemetry:
+                    self.telemetry.append(dict(event='start',run_sequence=self.run_sequence,
+                        simulation_time=self.started_at.to_sec(),
+                        reference_sha256=self.reference_sha256,
+                        configuration=self.configuration(),startup=self.start_metrics))
                 self.acceleration_recovery.reset()
                 self.run_metrics=RunMetrics()
                 self.cycle_timing=CycleTiming()
@@ -338,8 +355,30 @@ class ContinuousRace:
             self.prepared_steer = None
             self.follower.stop()
             self.pub.publish(Twist())
+            if self.telemetry:
+                self.telemetry.append(dict(event='stop',run_sequence=self.run_sequence,
+                    simulation_time=rospy.Time.now().to_sec(),last_fault=self.last_fault))
+                if not self.telemetry.flush():
+                    rospy.logwarn('Cycle telemetry flush incomplete: %s',self.telemetry.status())
             self.save_run_report()
             return TriggerResponse(True, 'Stopped')
+
+    def shutdown(self):
+        self.stop(None)
+        if self.telemetry:
+            self.telemetry.close()
+
+    def configuration(self):
+        names=('max_speed','lateral_accel','acceleration','braking','max_error',
+               'yaw_rate','steering_rate','response_delay','steering_feedback_gain',
+               'steering_preview_time','heading_feedback_gain','cross_track_gain',
+               'startup_speed','startup_acceleration','connector_length',
+               'startup_release_early','lateral_control','speed_planning')
+        result={name:getattr(self.follower,name) for name in names if hasattr(self.follower,name)}
+        result.update(require_prepared_start=self.require_prepared_start,
+            route_control_scoring=rospy.get_param('~route_control_scoring',False),
+            route_margin=rospy.get_param('~route_margin',.34))
+        return result
 
     def save_run_report(self,background=False):
         if not self.run_report_file or self.run_metrics is None:return
@@ -349,6 +388,9 @@ class ContinuousRace:
                       controller=getattr(self.follower,'lateral_control','legacy'),
                       startup=self.start_metrics,last_fault=self.last_fault,
                       departure_trace=self.departure_trace,
+                      configuration=self.configuration(),
+                      run_sequence=self.run_sequence,
+                      telemetry=self.telemetry.status() if self.telemetry else None,
                       limits={name:getattr(self.follower,name) for name in
                               ('max_speed','lateral_accel','acceleration','braking','max_error',
                                 'yaw_rate','steering_rate','response_delay','steering_feedback_gain',
@@ -550,6 +592,13 @@ class ContinuousRace:
                 self.follower.last_report['reason']='recovery_hold'
         progress = self.follower.progress - self.follower.origin
         elapsed=(now-self.started_at).to_sec() if self.started_at is not None else 0
+        if self.telemetry:
+            self.telemetry.append(dict(event='cycle',run_sequence=self.run_sequence,
+                simulation_time=now.to_sec(),elapsed=elapsed,dt=dt,
+                progress=progress,measured_speed=float(pose[3]),output_speed=float(speed),
+                control=dict(getattr(self.follower,'last_report',{})),
+                feedback=dict(self.feedback_pose),
+                laser=dict(report) if self.generated else None))
         if pose[3]>.05 and 'first_measured_motion_seconds' not in self.start_metrics:
             self.start_metrics['first_measured_motion_seconds']=elapsed
             rospy.loginfo('Startup: measured motion after %.3fs',elapsed)
