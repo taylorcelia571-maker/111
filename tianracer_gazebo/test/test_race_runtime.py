@@ -536,6 +536,21 @@ class RuntimeTests(unittest.TestCase):
         self.node.odom.twist.twist.angular=NS(z=float('nan'))
         self.assertFalse(self.node.start(None).success)
 
+    def test_prediction_cannot_hide_observed_wall_or_corridor_violation(self):
+        self.params['~predict_pose']=True
+        old=self.node;self.node=self.module.ContinuousRace(old.path)
+        self.node.on_scan(old.scan);self.node.on_odom(old.odom)
+        self.node.odom.header.stamp=Stamp(.95)
+        self.node.odom.twist.twist.angular=NS(z=0)
+        self.node.listener.getLatestCommonTime.return_value=Stamp(.95)
+        self.node.clearance_guard=Mock(side_effect=ValueError('Observed wall too close'))
+        with self.assertRaisesRegex(ValueError,'Observed wall'):self.node.sensors()
+        self.node.clearance_guard.assert_called_once()
+        self.node.clearance_guard=Mock()
+        self.node.follower.progress=0
+        with patch.object(self.node.path,'project',return_value=(0,.151)):
+            with self.assertRaisesRegex(ValueError,'Observed tracking error'):self.node.sensors()
+
     def test_verified_laser_cache_avoids_blocking_then_stops_if_tf_reacquisition_fails(self):
         self.generated_node()
         self.tick()
