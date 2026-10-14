@@ -1,4 +1,5 @@
 <launch>
+  <arg name="require_prepared_start" default="false"/>
   <arg name="speed_planning" default="legacy"/>
   <arg name="startup_release_early" default="false"/>
   <arg name="route_margin" default="0.34"/>
@@ -31,6 +32,7 @@
   <arg name="startup_acceleration" default="1.5"/>
   <node pkg="tianracer_gazebo" type="planned_race.py" name="continuous_race"
         ns="tianracer" output="screen" required="true">
+    <param name="require_prepared_start" value="$(arg require_prepared_start)" type="bool"/>
     <param name="speed_planning" value="$(arg speed_planning)"/>
     <param name="startup_release_early" value="$(arg startup_release_early)" type="bool"/>
     <param name="route_margin" value="$(arg route_margin)" type="double"/>
