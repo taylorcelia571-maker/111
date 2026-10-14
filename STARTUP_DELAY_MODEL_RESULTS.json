@@ -1,0 +1,128 @@
+{
+  "gazebo_tested": false,
+  "official_under_60_verified": false,
+  "rows": [
+    {
+      "hypothetical_lag": 0.08,
+      "pose_acquisition_age": 0.04,
+      "predict_pose": false,
+      "official_result": false,
+      "completed": true,
+      "total_seconds": 73.32000000000001,
+      "first_loop_seconds": 15.6,
+      "peak_reference_error": 0.07373311552144649,
+      "peak_actual_reference_error": 0.07373311552144649,
+      "min_center_clearance": 0.33421356501804217,
+      "startup_release": 1.18
+    },
+    {
+      "hypothetical_lag": 0.08,
+      "pose_acquisition_age": 0.04,
+      "predict_pose": true,
+      "official_result": false,
+      "completed": true,
+      "total_seconds": 71.66,
+      "first_loop_seconds": 15.200000000000001,
+      "peak_reference_error": 0.09395263152616744,
+      "peak_actual_reference_error": 0.09199444089273343,
+      "min_center_clearance": 0.2753505814188338,
+      "startup_release": 1.1400000000000001
+    },
+    {
+      "hypothetical_lag": 0.15,
+      "pose_acquisition_age": 0.04,
+      "predict_pose": false,
+      "official_result": false,
+      "completed": true,
+      "total_seconds": 83.18,
+      "first_loop_seconds": 17.66,
+      "peak_reference_error": 0.11088158201053847,
+      "peak_actual_reference_error": 0.11088158201053847,
+      "min_center_clearance": 0.34538971583168376,
+      "startup_release": 1.24
+    },
+    {
+      "hypothetical_lag": 0.15,
+      "pose_acquisition_age": 0.04,
+      "predict_pose": true,
+      "official_result": false,
+      "completed": true,
+      "total_seconds": 74.54,
+      "first_loop_seconds": 15.88,
+      "peak_reference_error": 0.07373716940512538,
+      "peak_actual_reference_error": 0.07373896234345524,
+      "min_center_clearance": 0.31979002985211896,
+      "startup_release": 1.2
+    },
+    {
+      "hypothetical_lag": 0.25,
+      "pose_acquisition_age": 0.04,
+      "predict_pose": false,
+      "official_result": false,
+      "completed": false,
+      "fault": "Observed tracking corridor exceeded",
+      "seconds": 2.52,
+      "peak_reference_error": 0.14714180545325323
+    },
+    {
+      "hypothetical_lag": 0.25,
+      "pose_acquisition_age": 0.04,
+      "predict_pose": true,
+      "official_result": false,
+      "completed": true,
+      "total_seconds": 93.94,
+      "first_loop_seconds": 19.54,
+      "peak_reference_error": 0.127039656409424,
+      "peak_actual_reference_error": 0.12761340525573672,
+      "min_center_clearance": 0.32879747030715406,
+      "startup_release": 1.26
+    },
+    {
+      "hypothetical_lag": 0.15,
+      "pose_acquisition_age": 0.06,
+      "predict_pose": false,
+      "official_result": false,
+      "completed": false,
+      "fault": "Observed tracking corridor exceeded",
+      "seconds": 18.56,
+      "peak_reference_error": 0.14962214944650679
+    },
+    {
+      "hypothetical_lag": 0.15,
+      "pose_acquisition_age": 0.06,
+      "predict_pose": true,
+      "official_result": false,
+      "completed": true,
+      "total_seconds": 74.38,
+      "first_loop_seconds": 15.84,
+      "peak_reference_error": 0.07373775861643937,
+      "peak_actual_reference_error": 0.07373998859151809,
+      "min_center_clearance": 0.3160760775538986,
+      "startup_release": 1.2
+    }
+  ],
+  "model": "forward-only kinematic bicycle, hypothetical first-order actuators, fixed acquisition delay",
+  "budgets": {
+    "max_speed": 10,
+    "lateral_accel": 9.9,
+    "acceleration": 6.6,
+    "braking": 3.6,
+    "yaw_rate": 3.8,
+    "steering_rate": 2,
+    "response_delay": 0.25,
+    "route_margin": 0.34,
+    "line_search_level": 2,
+    "startup_acceleration": 2,
+    "startup_release_early": true,
+    "lateral_control": "race_feedback"
+  },
+  "user_reported_best_seconds": 72,
+  "user_result_independently_verified": false,
+  "not_modelled": [
+    "full_tire_physics",
+    "rollover",
+    "AMCL",
+    "laser",
+    "official_referee"
+  ]
+}
