@@ -31,7 +31,12 @@ def main():
     occupancy = np.asarray(grid.data).reshape(grid.info.height,grid.info.width)
     planner = LoopPlanner(occupancy,grid.info.resolution,
                           [grid.info.origin.position.x,grid.info.origin.position.y],
-                          margin=rospy.get_param("~route_margin",0.26))
+                          margin=rospy.get_param("~route_margin",0.26),
+                          control_scoring=rospy.get_param('~route_control_scoring',False),
+                          steering_preview_time=rospy.get_param('~steering_preview_time',.10),
+                          steering_feedback_gain=rospy.get_param('~steering_feedback_gain',.25))
+    if planner.control_scoring and rospy.get_param('~lateral_control','pursuit') != 'race_feedback':
+        raise ValueError('Controller route score requires race_feedback')
     rospy.loginfo('Planning full course while stationary; no motion until start service')
     optimize = rospy.get_param('~optimize_time',False)
     center = planner.build(anchors,line_search_level=rospy.get_param('~line_search_level',0),speed_planning=rospy.get_param("~speed_planning","legacy"),optimize_time=optimize,refine_line=rospy.get_param('~refine_line',False),
@@ -64,6 +69,11 @@ def main():
     report.update(route_selection=planner.selection,official_lap_validation_required=True,
                   route_margin=planner.margin,wall_stop_clearance=.23,
                   nominal_wall_tracking_reserve=planner.margin-.23)
+    report['route_control_scoring']=planner.control_scoring
+    report['route_control_score_assumptions']= (
+        'Perfect localization and current-reference steering, zero joint age; '
+        'feedforward/compensation/slew proxy only, not actuator or tire validation'
+        if planner.control_scoring else None)
     report_file=os.path.splitext(output)[0]+'_report.json'
     with open(report_file,'w') as stream: json.dump(report,stream,indent=2,sort_keys=True)
     rospy.loginfo('Speed budget report (model, not result): %s; saved %s',json.dumps(report,sort_keys=True),report_file)
