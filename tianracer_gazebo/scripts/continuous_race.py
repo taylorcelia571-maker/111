@@ -194,6 +194,16 @@ class ContinuousRace:
             if not math.isfinite(omega): raise ValueError('Nonfinite odometry yaw rate')
             if 0<age<=.08 and abs((self.odom.header.stamp-stamp).to_sec())<=.02:
                 from motion_prediction import predict_rear_pose
+                # Prediction must not hide a measured wall/corridor violation.
+                # Check the acquired pose as well as the predicted control pose.
+                if self.clearance_guard is not None:
+                    self.clearance_guard((x,y,yaw,speed))
+                if self.follower.progress is not None:
+                    observed_error=self.path.project(x,y,
+                        self.follower.progress-self.follower.max_speed*.08-.1,
+                        self.follower.progress+self.follower.max_speed*.08+.2)[1]
+                    if observed_error>self.follower.max_error:
+                        raise ValueError('Observed tracking error exceeds safe corridor: %.4fm' % observed_error)
                 base_lateral=getattr(self.odom.twist.twist.linear,'y',None)
                 rear_lateral=0 if base_lateral is None else base_lateral-omega*offset
                 x,y,yaw=predict_rear_pose(x,y,yaw,speed,omega,age,rear_lateral)
