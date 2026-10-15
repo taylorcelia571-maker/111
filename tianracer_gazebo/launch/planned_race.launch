@@ -3,6 +3,8 @@
   <arg name="steering_preview_mode" default="legacy"/>
   <arg name="route_joint_polish" default="false"/>
   <arg name="route_polish_strength" default="0.5"/>
+  <arg name="route_speed_refine" default="false"/>
+  <arg name="route_speed_iterations" default="6"/>
   <arg name="startup_connector_length" default="2.5"/>
   <arg name="route_control_scoring" default="false"/>
   <arg name="cycle_log" default=""/>
@@ -44,6 +46,8 @@
     <param name="steering_preview_mode" value="$(arg steering_preview_mode)"/>
     <param name="route_joint_polish" value="$(arg route_joint_polish)" type="bool"/>
     <param name="route_polish_strength" value="$(arg route_polish_strength)" type="double"/>
+    <param name="route_speed_refine" value="$(arg route_speed_refine)" type="bool"/>
+    <param name="route_speed_iterations" value="$(arg route_speed_iterations)" type="int"/>
     <param name="startup_connector_length" value="$(arg startup_connector_length)" type="double"/>
     <param name="route_control_scoring" value="$(arg route_control_scoring)" type="bool"/>
     <param name="cycle_log" value="$(arg cycle_log)"/>

@@ -381,6 +381,7 @@ class ContinuousRace:
         result.update(require_prepared_start=self.require_prepared_start,
             route_control_scoring=rospy.get_param('~route_control_scoring',False),
             route_joint_polish=getattr(self,'route_polish_report',None),
+            route_speed_refine=getattr(self,'route_speed_refine_report',None),
             route_margin=rospy.get_param('~route_margin',.34))
         return result
 

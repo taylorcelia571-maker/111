@@ -45,6 +45,7 @@ def main():
                                ('steering_rate',2.0),('yaw_rate',3.2),('response_delay',0.0))})
     if optimize:
         rospy.loginfo('Time-based route selection (model only): %s',planner.selection)
+    unpolished_center = center
     polish_report = None
     if rospy.get_param('~route_joint_polish',False):
         if not optimize:
@@ -60,6 +61,21 @@ def main():
         if polish_report['accepted']:
             planner.selection.update(route_changed=True,route_sha256=polish_report['selected_route_sha256'])
         rospy.loginfo('Joint route polish (model only): %s',polish_report)
+    speed_refine_report = None
+    if rospy.get_param('~route_speed_refine',False):
+        if not optimize:
+            raise ValueError('Speed-aware route refinement requires optimize_time')
+        from speed_aware_line import refine_speed_line
+        center,speed_refine_report=refine_speed_line(planner,center,anchors,
+            {k:rospy.get_param('~'+k,v) for k,v in (
+                ('max_speed',2.0),('lateral_accel',5.0),('acceleration',2.0),('braking',3.0),
+                ('steering_rate',2.0),('yaw_rate',3.2),('response_delay',.25),('speed_planning','legacy'))},
+            iterations=rospy.get_param('~route_speed_iterations',6), source_seed=unpolished_center)
+        planner.selection.update(speed_refinement=speed_refine_report,
+            estimated_lap_seconds=speed_refine_report['selected_model_lap_seconds'])
+        if speed_refine_report['accepted']:
+            planner.selection.update(route_changed=True,route_sha256=speed_refine_report['selected_route_sha256'])
+        rospy.loginfo('Speed-aware route refinement (model only): %s',speed_refine_report)
     tangent = np.roll(center.points,-1,axis=0)-np.roll(center.points,1,axis=0)
     tangent /= np.linalg.norm(tangent,axis=1)[:,None]
     rear = center.points-0.13*tangent
@@ -76,6 +92,7 @@ def main():
         return bool(np.min(planner.clearance_at(np.asarray(centers)))>=planner.margin)
     controller = ContinuousRace(path, clearance_guard=guard,start_path_guard=start_guard)
     controller.route_polish_report=polish_report
+    controller.route_speed_refine_report=speed_refine_report
     # Persist the plan for inspection, never as an official result.
     output = os.path.expanduser(rospy.get_param('~output','~/ican_race_logs/planned_course.csv'))
     os.makedirs(os.path.dirname(os.path.abspath(output)),exist_ok=True)
@@ -87,6 +104,9 @@ def main():
                   nominal_wall_tracking_reserve=planner.margin-.23)
     report['route_control_scoring']=planner.control_scoring
     report['route_joint_polish']=polish_report
+    report['route_speed_refine']=speed_refine_report
+    from speed_aware_line import sector_speed_report
+    report['sector_speed_planning']=sector_speed_report(path)
     report['route_control_score_assumptions']= (
         'Perfect localization and current-reference steering, zero joint age; '
         'feedforward/compensation/slew proxy only, not actuator or tire validation'

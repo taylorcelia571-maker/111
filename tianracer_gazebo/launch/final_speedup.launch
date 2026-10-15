@@ -6,6 +6,8 @@
   <arg name="steering_preview_mode" default="legacy"/>
   <arg name="route_joint_polish" default="false"/>
   <arg name="route_polish_strength" default="0.5"/>
+  <arg name="route_speed_refine" default="false"/>
+  <arg name="route_speed_iterations" default="6"/>
   <arg name="log_dir" default="~/ican_race_logs/final71"/>
   <arg name="lateral_accel" default="9.94"/>
   <arg name="acceleration" default="7.3"/>
@@ -28,6 +30,8 @@
     <arg name="steering_preview_mode" value="$(eval 'legacy' if arg('legacy_control') else arg('steering_preview_mode'))"/>
     <arg name="route_joint_polish" value="$(eval False if arg('legacy_control') else arg('route_joint_polish'))"/>
     <arg name="route_polish_strength" value="$(arg route_polish_strength)"/>
+    <arg name="route_speed_refine" value="$(eval False if arg('legacy_control') else arg('route_speed_refine'))"/>
+    <arg name="route_speed_iterations" value="$(arg route_speed_iterations)"/>
     <arg name="lateral_accel" value="$(arg lateral_accel)"/>
     <arg name="acceleration" value="$(arg acceleration)"/>
     <arg name="braking" value="$(arg braking)"/>

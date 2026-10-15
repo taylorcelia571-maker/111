@@ -202,6 +202,7 @@ def make_bundle(session, root):
     # Deliberate allowlist: do not include credentials, arbitrary directories or
     # the potentially multi-GB raw bag. It remains untouched in its run folder.
     names = ['commit.txt', 'command.txt', 'params.yaml', 'status_ready.txt',
+             'trial_recipe.json', 'budget_trial.txt', 'library_versions.json',
              'status_prestart.txt', 'start_response.txt', 'stop_response.txt',
              'status_final.txt', 'run_report.json', 'planned_course_report.json',
              'planned_course.csv', 'C.log', 'record.log', 'analysis.json',

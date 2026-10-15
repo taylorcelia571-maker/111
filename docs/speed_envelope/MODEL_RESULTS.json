@@ -1,0 +1,1582 @@
+{
+  "official_result": false,
+  "official_under_60_verified": false,
+  "gazebo_tested": false,
+  "user_reported_best_seconds": 70,
+  "actual_70_second_session_available": false,
+  "baseline_is_model_proxy": true,
+  "planning": [
+    {
+      "name": "base_proxy",
+      "budgets": {
+        "max_speed": 10.0,
+        "lateral_accel": 9.94,
+        "acceleration": 7.3,
+        "braking": 3.7,
+        "yaw_rate": 4.4,
+        "steering_rate": 2.0
+      },
+      "joint_polish": {
+        "enabled": true,
+        "accepted": true,
+        "strength": 0.5,
+        "baseline_model_lap_seconds": 13.75634187224017,
+        "selected_model_lap_seconds": 13.306908556300911,
+        "route_margin": 0.34,
+        "launch_region_protected_m": 6.0,
+        "maximum_proposed_normal_offset": 0.18,
+        "knot_step": 0.6,
+        "curvature_variation_weight": 0.1,
+        "solver_success": true,
+        "official_result": false,
+        "model_is_not_actuator_or_tire_validation": true,
+        "solver_message": "Optimization terminated successfully",
+        "solver_iterations": 59,
+        "selected_scale": 0.5,
+        "maximum_normal_offset": 0.05025809041374872,
+        "protected_input_displacement": 0.0,
+        "candidates": [
+          {
+            "scale": 0.5,
+            "feasible": true,
+            "model_lap_seconds": 13.306908556300911
+          },
+          {
+            "scale": 0.3,
+            "feasible": false
+          },
+          {
+            "scale": 0.15,
+            "feasible": false
+          }
+        ],
+        "model_five_seconds_saved_without_startup": 2.247166579696298,
+        "selected_route_sha256": "d095093926981b0700d6f88025738f8a56dae2c2daa75913f043ecd160524f0e"
+      },
+      "speed_refinement": null,
+      "reference_sha256": "0c4de3226233f9a38242bcecebda5a77a7b7e6ca49e37167177cad0029833546",
+      "minimum_route_clearance": 0.34007681229468534,
+      "model_lap_seconds": 13.306908556300922,
+      "sectors": {
+        "model_only": true,
+        "reference_bins_are_disjoint": true,
+        "sectors": {
+          "straight_or_gentle": {
+            "length_m": 11.518686472364433,
+            "model_lap_seconds": 2.8201174775793865,
+            "minimum_planned_speed": 2.8516407686770195,
+            "median_planned_speed": 3.947218982344229,
+            "maximum_planned_speed": 6.3894960912491685
+          },
+          "transition": {
+            "length_m": 15.078280555838163,
+            "model_lap_seconds": 4.295886246734727,
+            "minimum_planned_speed": 2.633045448736452,
+            "median_planned_speed": 3.731999053959045,
+            "maximum_planned_speed": 5.398795427793439
+          },
+          "bend": {
+            "length_m": 18.157929369630043,
+            "model_lap_seconds": 6.190904831986798,
+            "minimum_planned_speed": 2.5096616057844017,
+            "median_planned_speed": 2.939790882488118,
+            "maximum_planned_speed": 3.9229183331864053
+          }
+        }
+      }
+    },
+    {
+      "name": "algorithm",
+      "budgets": {
+        "max_speed": 10.0,
+        "lateral_accel": 9.94,
+        "acceleration": 7.3,
+        "braking": 3.7,
+        "yaw_rate": 4.4,
+        "steering_rate": 2.0
+      },
+      "joint_polish": {
+        "enabled": true,
+        "accepted": true,
+        "strength": 0.5,
+        "baseline_model_lap_seconds": 13.75634187224017,
+        "selected_model_lap_seconds": 13.306908556300911,
+        "route_margin": 0.34,
+        "launch_region_protected_m": 6.0,
+        "maximum_proposed_normal_offset": 0.18,
+        "knot_step": 0.6,
+        "curvature_variation_weight": 0.1,
+        "solver_success": true,
+        "official_result": false,
+        "model_is_not_actuator_or_tire_validation": true,
+        "solver_message": "Optimization terminated successfully",
+        "solver_iterations": 59,
+        "selected_scale": 0.5,
+        "maximum_normal_offset": 0.05025809041374872,
+        "protected_input_displacement": 0.0,
+        "candidates": [
+          {
+            "scale": 0.5,
+            "feasible": true,
+            "model_lap_seconds": 13.306908556300911
+          },
+          {
+            "scale": 0.3,
+            "feasible": false
+          },
+          {
+            "scale": 0.15,
+            "feasible": false
+          }
+        ],
+        "model_five_seconds_saved_without_startup": 2.247166579696298,
+        "selected_route_sha256": "d095093926981b0700d6f88025738f8a56dae2c2daa75913f043ecd160524f0e"
+      },
+      "speed_refinement": {
+        "enabled": true,
+        "accepted": true,
+        "objective": "complete_cyclic_speed_envelope",
+        "baseline_model_lap_seconds": 13.306908556300911,
+        "selected_model_lap_seconds": 12.837417105914135,
+        "requested_iterations": 6,
+        "evaluations": 543,
+        "feasible_improvements": 6,
+        "route_margin": 0.34,
+        "launch_region_protected_m": 6.0,
+        "official_result": false,
+        "optimizer_convergence_is_not_geometry_validation": true,
+        "initial_reference_peak_limits": {
+          "curvature": 1.5781782403689093,
+          "steering_gradient": 0.5727877451294157
+        },
+        "portfolio": [
+          {
+            "pass_id": 1,
+            "solver_accepted": true,
+            "accepted": true,
+            "reference_peaks": {
+              "curvature": 1.570371380118763,
+              "steering_gradient": 0.5657708152267324
+            },
+            "quality_ok": true,
+            "model_lap_seconds": 12.950415684805797
+          },
+          {
+            "pass_id": 2,
+            "solver_accepted": true,
+            "accepted": true,
+            "reference_peaks": {
+              "curvature": 1.528060829110068,
+              "steering_gradient": 0.555837189570101
+            },
+            "quality_ok": true,
+            "model_lap_seconds": 12.889529931519082
+          }
+        ],
+        "local_reference_peak_limits": {
+          "curvature": 1.528060829110068,
+          "steering_gradient": 0.555837189570101
+        },
+        "maximum_normal_offset": 0.019722583293066906,
+        "protected_input_displacement": 0.0,
+        "solver_success": false,
+        "solver_message": "Iteration limit reached",
+        "solver_iterations": 6,
+        "selected_route_sha256": "d4baed7e8c6167fe9ffd5f8fa64f10fbfa55cc5f788d800b7da2b5b5bd372616",
+        "selected_reference_peaks": {
+          "curvature": 1.48915336911833,
+          "steering_gradient": 0.5482533207043122
+        },
+        "model_five_seconds_saved_without_startup": 2.347457251933882
+      },
+      "reference_sha256": "212a035c36fb2178a3ae30852c6033ba6f3cbe08e1da6e04707f194c04fd8d19",
+      "minimum_route_clearance": 0.3412858444482806,
+      "model_lap_seconds": 12.837417105914142,
+      "sectors": {
+        "model_only": true,
+        "reference_bins_are_disjoint": true,
+        "sectors": {
+          "straight_or_gentle": {
+            "length_m": 8.874821767948786,
+            "model_lap_seconds": 2.0517370919390507,
+            "minimum_planned_speed": 3.047625923458287,
+            "median_planned_speed": 4.251681267377002,
+            "maximum_planned_speed": 6.417193313404693
+          },
+          "transition": {
+            "length_m": 16.670273320876774,
+            "model_lap_seconds": 4.343888292995732,
+            "minimum_planned_speed": 2.8068778394043594,
+            "median_planned_speed": 3.9272211049459522,
+            "maximum_planned_speed": 6.336163342216229
+          },
+          "bend": {
+            "length_m": 19.308733846483168,
+            "model_lap_seconds": 6.441791720979352,
+            "minimum_planned_speed": 2.5835893045587146,
+            "median_planned_speed": 2.942144780975154,
+            "maximum_planned_speed": 3.9911174896423947
+          }
+        }
+      }
+    },
+    {
+      "name": "algorithm_accel75",
+      "budgets": {
+        "max_speed": 10.0,
+        "lateral_accel": 9.94,
+        "acceleration": 7.5,
+        "braking": 3.7,
+        "yaw_rate": 4.4,
+        "steering_rate": 2.0
+      },
+      "joint_polish": {
+        "enabled": true,
+        "accepted": true,
+        "strength": 0.5,
+        "baseline_model_lap_seconds": 13.750814270006273,
+        "selected_model_lap_seconds": 13.301808669888697,
+        "route_margin": 0.34,
+        "launch_region_protected_m": 6.0,
+        "maximum_proposed_normal_offset": 0.18,
+        "knot_step": 0.6,
+        "curvature_variation_weight": 0.1,
+        "solver_success": true,
+        "official_result": false,
+        "model_is_not_actuator_or_tire_validation": true,
+        "solver_message": "Optimization terminated successfully",
+        "solver_iterations": 59,
+        "selected_scale": 0.5,
+        "maximum_normal_offset": 0.05025809041374872,
+        "protected_input_displacement": 0.0,
+        "candidates": [
+          {
+            "scale": 0.5,
+            "feasible": true,
+            "model_lap_seconds": 13.301808669888697
+          },
+          {
+            "scale": 0.3,
+            "feasible": false
+          },
+          {
+            "scale": 0.15,
+            "feasible": false
+          }
+        ],
+        "model_five_seconds_saved_without_startup": 2.245028000587883,
+        "selected_route_sha256": "d095093926981b0700d6f88025738f8a56dae2c2daa75913f043ecd160524f0e"
+      },
+      "speed_refinement": {
+        "enabled": true,
+        "accepted": true,
+        "objective": "complete_cyclic_speed_envelope",
+        "baseline_model_lap_seconds": 13.301808669888697,
+        "selected_model_lap_seconds": 12.834156776391676,
+        "requested_iterations": 6,
+        "evaluations": 543,
+        "feasible_improvements": 6,
+        "route_margin": 0.34,
+        "launch_region_protected_m": 6.0,
+        "official_result": false,
+        "optimizer_convergence_is_not_geometry_validation": true,
+        "initial_reference_peak_limits": {
+          "curvature": 1.5781782403689093,
+          "steering_gradient": 0.5727877451294157
+        },
+        "portfolio": [
+          {
+            "pass_id": 1,
+            "solver_accepted": true,
+            "accepted": true,
+            "reference_peaks": {
+              "curvature": 1.570371380118763,
+              "steering_gradient": 0.5657708152267324
+            },
+            "quality_ok": true,
+            "model_lap_seconds": 12.946800113123007
+          },
+          {
+            "pass_id": 2,
+            "solver_accepted": true,
+            "accepted": true,
+            "reference_peaks": {
+              "curvature": 1.528060829110068,
+              "steering_gradient": 0.555837189570101
+            },
+            "quality_ok": true,
+            "model_lap_seconds": 12.88737813003776
+          }
+        ],
+        "local_reference_peak_limits": {
+          "curvature": 1.528060829110068,
+          "steering_gradient": 0.555837189570101
+        },
+        "maximum_normal_offset": 0.020308313349783634,
+        "protected_input_displacement": 0.0,
+        "solver_success": false,
+        "solver_message": "Iteration limit reached",
+        "solver_iterations": 6,
+        "selected_route_sha256": "91203cd5c0a016fba2e4a23af0edf615f49e12a1b68a14fd75b66954a3e3a89d",
+        "selected_reference_peaks": {
+          "curvature": 1.4893271805293147,
+          "steering_gradient": 0.5486632793702536
+        },
+        "model_five_seconds_saved_without_startup": 2.338259467485102
+      },
+      "reference_sha256": "5ec177dc0bb3426997763f9898f94bb702be592923c5caaa149403aed608b6f1",
+      "minimum_route_clearance": 0.3413278782228929,
+      "model_lap_seconds": 12.834156776391664,
+      "sectors": {
+        "model_only": true,
+        "reference_bins_are_disjoint": true,
+        "sectors": {
+          "straight_or_gentle": {
+            "length_m": 8.914599813963742,
+            "model_lap_seconds": 2.062688493439981,
+            "minimum_planned_speed": 3.046741610002576,
+            "median_planned_speed": 4.248534945310868,
+            "maximum_planned_speed": 6.437921455397064
+          },
+          "transition": {
+            "length_m": 16.669901894273007,
+            "model_lap_seconds": 4.339237294314872,
+            "minimum_planned_speed": 2.808464341543158,
+            "median_planned_speed": 3.923707734962272,
+            "maximum_planned_speed": 6.336784102638895
+          },
+          "bend": {
+            "length_m": 19.2683278490158,
+            "model_lap_seconds": 6.432230988636823,
+            "minimum_planned_speed": 2.583438541713977,
+            "median_planned_speed": 2.9421870319445613,
+            "maximum_planned_speed": 3.984671798275977
+          }
+        }
+      }
+    },
+    {
+      "name": "algorithm_lat101",
+      "budgets": {
+        "max_speed": 10.0,
+        "lateral_accel": 10.1,
+        "acceleration": 7.3,
+        "braking": 3.7,
+        "yaw_rate": 4.4,
+        "steering_rate": 2.0
+      },
+      "joint_polish": {
+        "enabled": true,
+        "accepted": true,
+        "strength": 0.5,
+        "baseline_model_lap_seconds": 13.67222456153986,
+        "selected_model_lap_seconds": 13.221483844517643,
+        "route_margin": 0.34,
+        "launch_region_protected_m": 6.0,
+        "maximum_proposed_normal_offset": 0.18,
+        "knot_step": 0.6,
+        "curvature_variation_weight": 0.1,
+        "solver_success": true,
+        "official_result": false,
+        "model_is_not_actuator_or_tire_validation": true,
+        "solver_message": "Optimization terminated successfully",
+        "solver_iterations": 59,
+        "selected_scale": 0.5,
+        "maximum_normal_offset": 0.05025809041374872,
+        "protected_input_displacement": 0.0,
+        "candidates": [
+          {
+            "scale": 0.5,
+            "feasible": true,
+            "model_lap_seconds": 13.221483844517643
+          },
+          {
+            "scale": 0.3,
+            "feasible": false
+          },
+          {
+            "scale": 0.15,
+            "feasible": false
+          }
+        ],
+        "model_five_seconds_saved_without_startup": 2.2537035851110865,
+        "selected_route_sha256": "d095093926981b0700d6f88025738f8a56dae2c2daa75913f043ecd160524f0e"
+      },
+      "speed_refinement": {
+        "enabled": true,
+        "accepted": true,
+        "objective": "complete_cyclic_speed_envelope",
+        "baseline_model_lap_seconds": 13.221483844517643,
+        "selected_model_lap_seconds": 12.753927087364021,
+        "requested_iterations": 6,
+        "evaluations": 543,
+        "feasible_improvements": 6,
+        "route_margin": 0.34,
+        "launch_region_protected_m": 6.0,
+        "official_result": false,
+        "optimizer_convergence_is_not_geometry_validation": true,
+        "initial_reference_peak_limits": {
+          "curvature": 1.5781782403689093,
+          "steering_gradient": 0.5727877451294157
+        },
+        "portfolio": [
+          {
+            "pass_id": 1,
+            "solver_accepted": true,
+            "accepted": true,
+            "reference_peaks": {
+              "curvature": 1.570371380118763,
+              "steering_gradient": 0.5657708152267324
+            },
+            "quality_ok": true,
+            "model_lap_seconds": 12.866240339478779
+          },
+          {
+            "pass_id": 2,
+            "solver_accepted": true,
+            "accepted": true,
+            "reference_peaks": {
+              "curvature": 1.528060829110068,
+              "steering_gradient": 0.555837189570101
+            },
+            "quality_ok": true,
+            "model_lap_seconds": 12.805122117941025
+          }
+        ],
+        "local_reference_peak_limits": {
+          "curvature": 1.528060829110068,
+          "steering_gradient": 0.555837189570101
+        },
+        "maximum_normal_offset": 0.01947883324364709,
+        "protected_input_displacement": 0.0,
+        "solver_success": false,
+        "solver_message": "Iteration limit reached",
+        "solver_iterations": 6,
+        "selected_route_sha256": "c060201c6eaca65bf708f552b7b53066d8d296b6cfcbd9cd38b8cacea4ac97cb",
+        "selected_reference_peaks": {
+          "curvature": 1.4871661076817717,
+          "steering_gradient": 0.5506968791047543
+        },
+        "model_five_seconds_saved_without_startup": 2.3377837857681083
+      },
+      "reference_sha256": "fad75cfc9d01c6dd780a5f4225cbf8d5cc546394f3b3c9b5a4dd2110e08d7b8c",
+      "minimum_route_clearance": 0.3412497582193564,
+      "model_lap_seconds": 12.753927087364046,
+      "sectors": {
+        "model_only": true,
+        "reference_bins_are_disjoint": true,
+        "sectors": {
+          "straight_or_gentle": {
+            "length_m": 8.915713348650732,
+            "model_lap_seconds": 2.05702912614841,
+            "minimum_planned_speed": 3.0708593714524026,
+            "median_planned_speed": 4.264309167794494,
+            "maximum_planned_speed": 6.447418626143709
+          },
+          "transition": {
+            "length_m": 16.39211871276592,
+            "model_lap_seconds": 4.251072532714007,
+            "minimum_planned_speed": 2.8265492503388265,
+            "median_planned_speed": 3.932392880897824,
+            "maximum_planned_speed": 6.346400665430763
+          },
+          "bend": {
+            "length_m": 19.550600123274474,
+            "model_lap_seconds": 6.445825428501603,
+            "minimum_planned_speed": 2.606039218802716,
+            "median_planned_speed": 2.9657142759811372,
+            "maximum_planned_speed": 4.045462307976028
+          }
+        }
+      }
+    },
+    {
+      "name": "algorithm_lat102",
+      "budgets": {
+        "max_speed": 10.0,
+        "lateral_accel": 10.2,
+        "acceleration": 7.3,
+        "braking": 3.7,
+        "yaw_rate": 4.4,
+        "steering_rate": 2.0
+      },
+      "joint_polish": {
+        "enabled": true,
+        "accepted": true,
+        "strength": 0.5,
+        "baseline_model_lap_seconds": 13.620533752633836,
+        "selected_model_lap_seconds": 13.169053686640947,
+        "route_margin": 0.34,
+        "launch_region_protected_m": 6.0,
+        "maximum_proposed_normal_offset": 0.18,
+        "knot_step": 0.6,
+        "curvature_variation_weight": 0.1,
+        "solver_success": true,
+        "official_result": false,
+        "model_is_not_actuator_or_tire_validation": true,
+        "solver_message": "Optimization terminated successfully",
+        "solver_iterations": 59,
+        "selected_scale": 0.5,
+        "maximum_normal_offset": 0.05025809041374872,
+        "protected_input_displacement": 0.0,
+        "candidates": [
+          {
+            "scale": 0.5,
+            "feasible": true,
+            "model_lap_seconds": 13.169053686640947
+          },
+          {
+            "scale": 0.3,
+            "feasible": false
+          },
+          {
+            "scale": 0.15,
+            "feasible": false
+          }
+        ],
+        "model_five_seconds_saved_without_startup": 2.2574003299644474,
+        "selected_route_sha256": "d095093926981b0700d6f88025738f8a56dae2c2daa75913f043ecd160524f0e"
+      },
+      "speed_refinement": {
+        "enabled": true,
+        "accepted": true,
+        "objective": "complete_cyclic_speed_envelope",
+        "baseline_model_lap_seconds": 13.169053686640947,
+        "selected_model_lap_seconds": 12.707541528296378,
+        "requested_iterations": 6,
+        "evaluations": 543,
+        "feasible_improvements": 6,
+        "route_margin": 0.34,
+        "launch_region_protected_m": 6.0,
+        "official_result": false,
+        "optimizer_convergence_is_not_geometry_validation": true,
+        "initial_reference_peak_limits": {
+          "curvature": 1.5781782403689093,
+          "steering_gradient": 0.5727877451294157
+        },
+        "portfolio": [
+          {
+            "pass_id": 1,
+            "solver_accepted": true,
+            "accepted": true,
+            "reference_peaks": {
+              "curvature": 1.570371380118763,
+              "steering_gradient": 0.5657708152267324
+            },
+            "quality_ok": true,
+            "model_lap_seconds": 12.814617450135838
+          },
+          {
+            "pass_id": 2,
+            "solver_accepted": true,
+            "accepted": true,
+            "reference_peaks": {
+              "curvature": 1.528060829110068,
+              "steering_gradient": 0.555837189570101
+            },
+            "quality_ok": true,
+            "model_lap_seconds": 12.753376308501274
+          }
+        ],
+        "local_reference_peak_limits": {
+          "curvature": 1.528060829110068,
+          "steering_gradient": 0.555837189570101
+        },
+        "maximum_normal_offset": 0.01697125502696671,
+        "protected_input_displacement": 0.0,
+        "solver_success": false,
+        "solver_message": "Iteration limit reached",
+        "solver_iterations": 6,
+        "selected_route_sha256": "ef513cd7a7aa8396ec0d3303427e83a3d1b8b5df334e5ed373e300ae21ddd72a",
+        "selected_reference_peaks": {
+          "curvature": 1.4877974596667969,
+          "steering_gradient": 0.5492486106259362
+        },
+        "model_five_seconds_saved_without_startup": 2.3075607917228425
+      },
+      "reference_sha256": "9badeb9710ff93095160abe4ac4b7175271800e3a52051348f5bbd86229f7948",
+      "minimum_route_clearance": 0.34121376625465094,
+      "model_lap_seconds": 12.707541528296355,
+      "sectors": {
+        "model_only": true,
+        "reference_bins_are_disjoint": true,
+        "sectors": {
+          "straight_or_gentle": {
+            "length_m": 9.353447596780219,
+            "model_lap_seconds": 2.143387731174681,
+            "minimum_planned_speed": 3.0896585934017593,
+            "median_planned_speed": 4.289792743777655,
+            "maximum_planned_speed": 6.4318676659559335
+          },
+          "transition": {
+            "length_m": 15.988799310735416,
+            "model_lap_seconds": 4.173331627332132,
+            "minimum_planned_speed": 2.842005544468098,
+            "median_planned_speed": 3.9149879336694577,
+            "maximum_planned_speed": 5.9516442843839785
+          },
+          "bend": {
+            "length_m": 19.50633515909721,
+            "model_lap_seconds": 6.3908221697895655,
+            "minimum_planned_speed": 2.618352896127205,
+            "median_planned_speed": 2.9802640699062057,
+            "maximum_planned_speed": 4.044666608266672
+          }
+        }
+      }
+    }
+  ],
+  "rows": [
+    {
+      "official_result": false,
+      "hypothetical_actuator_lag": 0.08,
+      "pose_age": 0.02,
+      "joint_transport_age": 0.0,
+      "reference_sha256": "0c4de3226233f9a38242bcecebda5a77a7b7e6ca49e37167177cad0029833546",
+      "options": {
+        "response_delay": 0.25,
+        "fast_start": true,
+        "start_blend": true,
+        "lateral_control": "race_feedback",
+        "steering_feedback_gain": 0.25,
+        "startup_release_early": true,
+        "startup_speed": 2.0,
+        "startup_acceleration": 2.5,
+        "steering_preview_time": 0.12,
+        "speed_planning": "delayed_braking",
+        "heading_feedback_gain": 0.8,
+        "cross_track_gain": 0.8
+      },
+      "budgets": {
+        "max_speed": 10.0,
+        "lateral_accel": 9.94,
+        "acceleration": 7.3,
+        "braking": 3.7,
+        "yaw_rate": 4.4,
+        "steering_rate": 2.0
+      },
+      "completed": true,
+      "total_seconds": 68.12,
+      "first_loop_seconds": 14.42,
+      "peak_reference_error": 0.0895738529969791,
+      "peak_actual_error": 0.0895738529969791,
+      "minimum_center_clearance": 0.2729148456094821,
+      "startup_release_seconds": 1.06,
+      "maximum_single_cycle_command_drop": 0.16626245091333658,
+      "name": "base_proxy"
+    },
+    {
+      "official_result": false,
+      "hypothetical_actuator_lag": 0.15,
+      "pose_age": 0.02,
+      "joint_transport_age": 0.0,
+      "reference_sha256": "0c4de3226233f9a38242bcecebda5a77a7b7e6ca49e37167177cad0029833546",
+      "options": {
+        "response_delay": 0.25,
+        "fast_start": true,
+        "start_blend": true,
+        "lateral_control": "race_feedback",
+        "steering_feedback_gain": 0.25,
+        "startup_release_early": true,
+        "startup_speed": 2.0,
+        "startup_acceleration": 2.5,
+        "steering_preview_time": 0.12,
+        "speed_planning": "delayed_braking",
+        "heading_feedback_gain": 0.8,
+        "cross_track_gain": 0.8
+      },
+      "budgets": {
+        "max_speed": 10.0,
+        "lateral_accel": 9.94,
+        "acceleration": 7.3,
+        "braking": 3.7,
+        "yaw_rate": 4.4,
+        "steering_rate": 2.0
+      },
+      "completed": true,
+      "total_seconds": 71.18,
+      "first_loop_seconds": 15.14,
+      "peak_reference_error": 0.08171036854609985,
+      "peak_actual_error": 0.08171036854609985,
+      "minimum_center_clearance": 0.3161507022037457,
+      "startup_release_seconds": 1.12,
+      "maximum_single_cycle_command_drop": 1.376842588523166,
+      "name": "base_proxy"
+    },
+    {
+      "official_result": false,
+      "hypothetical_actuator_lag": 0.15,
+      "pose_age": 0.04,
+      "joint_transport_age": 0.04,
+      "reference_sha256": "0c4de3226233f9a38242bcecebda5a77a7b7e6ca49e37167177cad0029833546",
+      "options": {
+        "response_delay": 0.25,
+        "fast_start": true,
+        "start_blend": true,
+        "lateral_control": "race_feedback",
+        "steering_feedback_gain": 0.25,
+        "startup_release_early": true,
+        "startup_speed": 2.0,
+        "startup_acceleration": 2.5,
+        "steering_preview_time": 0.12,
+        "speed_planning": "delayed_braking",
+        "heading_feedback_gain": 0.8,
+        "cross_track_gain": 0.8
+      },
+      "budgets": {
+        "max_speed": 10.0,
+        "lateral_accel": 9.94,
+        "acceleration": 7.3,
+        "braking": 3.7,
+        "yaw_rate": 4.4,
+        "steering_rate": 2.0
+      },
+      "completed": true,
+      "total_seconds": 73.78,
+      "first_loop_seconds": 15.68,
+      "peak_reference_error": 0.09228659715690603,
+      "peak_actual_error": 0.09228659715690603,
+      "minimum_center_clearance": 0.3358289723536062,
+      "startup_release_seconds": 1.1400000000000001,
+      "maximum_single_cycle_command_drop": 0.8871912664722905,
+      "name": "base_proxy"
+    },
+    {
+      "official_result": false,
+      "hypothetical_actuator_lag": 0.25,
+      "pose_age": 0.04,
+      "joint_transport_age": 0.04,
+      "reference_sha256": "0c4de3226233f9a38242bcecebda5a77a7b7e6ca49e37167177cad0029833546",
+      "options": {
+        "response_delay": 0.25,
+        "fast_start": true,
+        "start_blend": true,
+        "lateral_control": "race_feedback",
+        "steering_feedback_gain": 0.25,
+        "startup_release_early": true,
+        "startup_speed": 2.0,
+        "startup_acceleration": 2.5,
+        "steering_preview_time": 0.12,
+        "speed_planning": "delayed_braking",
+        "heading_feedback_gain": 0.8,
+        "cross_track_gain": 0.8
+      },
+      "budgets": {
+        "max_speed": 10.0,
+        "lateral_accel": 9.94,
+        "acceleration": 7.3,
+        "braking": 3.7,
+        "yaw_rate": 4.4,
+        "steering_rate": 2.0
+      },
+      "completed": false,
+      "fault": "Actual model tracking corridor exceeded",
+      "elapsed": 26.240000000000002,
+      "peak_reference_error": 0.14754002327707635,
+      "peak_actual_error": 0.1510648414938355,
+      "minimum_center_clearance": 0.2974084949790889,
+      "startup_release_seconds": 1.22,
+      "maximum_single_cycle_command_drop": 0.9487458859750078,
+      "name": "base_proxy"
+    },
+    {
+      "official_result": false,
+      "hypothetical_actuator_lag": 0.15,
+      "pose_age": 0.02,
+      "joint_transport_age": 0.12,
+      "reference_sha256": "0c4de3226233f9a38242bcecebda5a77a7b7e6ca49e37167177cad0029833546",
+      "options": {
+        "response_delay": 0.25,
+        "fast_start": true,
+        "start_blend": true,
+        "lateral_control": "race_feedback",
+        "steering_feedback_gain": 0.25,
+        "startup_release_early": true,
+        "startup_speed": 2.0,
+        "startup_acceleration": 2.5,
+        "steering_preview_time": 0.12,
+        "speed_planning": "delayed_braking",
+        "heading_feedback_gain": 0.8,
+        "cross_track_gain": 0.8
+      },
+      "budgets": {
+        "max_speed": 10.0,
+        "lateral_accel": 9.94,
+        "acceleration": 7.3,
+        "braking": 3.7,
+        "yaw_rate": 4.4,
+        "steering_rate": 2.0
+      },
+      "completed": true,
+      "total_seconds": 82.48,
+      "first_loop_seconds": 17.38,
+      "peak_reference_error": 0.08267670848004904,
+      "peak_actual_error": 0.08267670848004904,
+      "minimum_center_clearance": 0.31750118288162926,
+      "startup_release_seconds": 1.12,
+      "maximum_single_cycle_command_drop": 1.0905047794794847,
+      "name": "base_proxy"
+    },
+    {
+      "official_result": false,
+      "hypothetical_actuator_lag": 0.08,
+      "pose_age": 0.02,
+      "joint_transport_age": 0.0,
+      "reference_sha256": "212a035c36fb2178a3ae30852c6033ba6f3cbe08e1da6e04707f194c04fd8d19",
+      "options": {
+        "response_delay": 0.25,
+        "fast_start": true,
+        "start_blend": true,
+        "lateral_control": "race_feedback",
+        "steering_feedback_gain": 0.25,
+        "startup_release_early": true,
+        "startup_speed": 2.0,
+        "startup_acceleration": 2.5,
+        "steering_preview_time": 0.12,
+        "speed_planning": "delayed_braking",
+        "heading_feedback_gain": 0.8,
+        "cross_track_gain": 0.8
+      },
+      "budgets": {
+        "max_speed": 10.0,
+        "lateral_accel": 9.94,
+        "acceleration": 7.3,
+        "braking": 3.7,
+        "yaw_rate": 4.4,
+        "steering_rate": 2.0
+      },
+      "completed": true,
+      "total_seconds": 65.88,
+      "first_loop_seconds": 13.98,
+      "peak_reference_error": 0.08529135144717795,
+      "peak_actual_error": 0.08529135144717795,
+      "minimum_center_clearance": 0.2726500418212275,
+      "startup_release_seconds": 1.06,
+      "maximum_single_cycle_command_drop": 0.116635808599864,
+      "name": "algorithm"
+    },
+    {
+      "official_result": false,
+      "hypothetical_actuator_lag": 0.15,
+      "pose_age": 0.02,
+      "joint_transport_age": 0.0,
+      "reference_sha256": "212a035c36fb2178a3ae30852c6033ba6f3cbe08e1da6e04707f194c04fd8d19",
+      "options": {
+        "response_delay": 0.25,
+        "fast_start": true,
+        "start_blend": true,
+        "lateral_control": "race_feedback",
+        "steering_feedback_gain": 0.25,
+        "startup_release_early": true,
+        "startup_speed": 2.0,
+        "startup_acceleration": 2.5,
+        "steering_preview_time": 0.12,
+        "speed_planning": "delayed_braking",
+        "heading_feedback_gain": 0.8,
+        "cross_track_gain": 0.8
+      },
+      "budgets": {
+        "max_speed": 10.0,
+        "lateral_accel": 9.94,
+        "acceleration": 7.3,
+        "braking": 3.7,
+        "yaw_rate": 4.4,
+        "steering_rate": 2.0
+      },
+      "completed": true,
+      "total_seconds": 68.76,
+      "first_loop_seconds": 14.64,
+      "peak_reference_error": 0.08342435404593761,
+      "peak_actual_error": 0.08342435404593761,
+      "minimum_center_clearance": 0.2787474297204944,
+      "startup_release_seconds": 1.12,
+      "maximum_single_cycle_command_drop": 0.5339329022397994,
+      "name": "algorithm"
+    },
+    {
+      "official_result": false,
+      "hypothetical_actuator_lag": 0.15,
+      "pose_age": 0.04,
+      "joint_transport_age": 0.04,
+      "reference_sha256": "212a035c36fb2178a3ae30852c6033ba6f3cbe08e1da6e04707f194c04fd8d19",
+      "options": {
+        "response_delay": 0.25,
+        "fast_start": true,
+        "start_blend": true,
+        "lateral_control": "race_feedback",
+        "steering_feedback_gain": 0.25,
+        "startup_release_early": true,
+        "startup_speed": 2.0,
+        "startup_acceleration": 2.5,
+        "steering_preview_time": 0.12,
+        "speed_planning": "delayed_braking",
+        "heading_feedback_gain": 0.8,
+        "cross_track_gain": 0.8
+      },
+      "budgets": {
+        "max_speed": 10.0,
+        "lateral_accel": 9.94,
+        "acceleration": 7.3,
+        "braking": 3.7,
+        "yaw_rate": 4.4,
+        "steering_rate": 2.0
+      },
+      "completed": true,
+      "total_seconds": 71.60000000000001,
+      "first_loop_seconds": 15.200000000000001,
+      "peak_reference_error": 0.10375459777888037,
+      "peak_actual_error": 0.10375459777888037,
+      "minimum_center_clearance": 0.3047981549635025,
+      "startup_release_seconds": 1.1400000000000001,
+      "maximum_single_cycle_command_drop": 1.0457676534861964,
+      "name": "algorithm"
+    },
+    {
+      "official_result": false,
+      "hypothetical_actuator_lag": 0.25,
+      "pose_age": 0.04,
+      "joint_transport_age": 0.04,
+      "reference_sha256": "212a035c36fb2178a3ae30852c6033ba6f3cbe08e1da6e04707f194c04fd8d19",
+      "options": {
+        "response_delay": 0.25,
+        "fast_start": true,
+        "start_blend": true,
+        "lateral_control": "race_feedback",
+        "steering_feedback_gain": 0.25,
+        "startup_release_early": true,
+        "startup_speed": 2.0,
+        "startup_acceleration": 2.5,
+        "steering_preview_time": 0.12,
+        "speed_planning": "delayed_braking",
+        "heading_feedback_gain": 0.8,
+        "cross_track_gain": 0.8
+      },
+      "budgets": {
+        "max_speed": 10.0,
+        "lateral_accel": 9.94,
+        "acceleration": 7.3,
+        "braking": 3.7,
+        "yaw_rate": 4.4,
+        "steering_rate": 2.0
+      },
+      "completed": false,
+      "fault": "Actual model tracking corridor exceeded",
+      "elapsed": 13.68,
+      "peak_reference_error": 0.14753925378894317,
+      "peak_actual_error": 0.15347439151507503,
+      "minimum_center_clearance": 0.2526891282957027,
+      "startup_release_seconds": 1.22,
+      "maximum_single_cycle_command_drop": 0.849364651550593,
+      "name": "algorithm"
+    },
+    {
+      "official_result": false,
+      "hypothetical_actuator_lag": 0.15,
+      "pose_age": 0.02,
+      "joint_transport_age": 0.12,
+      "reference_sha256": "212a035c36fb2178a3ae30852c6033ba6f3cbe08e1da6e04707f194c04fd8d19",
+      "options": {
+        "response_delay": 0.25,
+        "fast_start": true,
+        "start_blend": true,
+        "lateral_control": "race_feedback",
+        "steering_feedback_gain": 0.25,
+        "startup_release_early": true,
+        "startup_speed": 2.0,
+        "startup_acceleration": 2.5,
+        "steering_preview_time": 0.12,
+        "speed_planning": "delayed_braking",
+        "heading_feedback_gain": 0.8,
+        "cross_track_gain": 0.8
+      },
+      "budgets": {
+        "max_speed": 10.0,
+        "lateral_accel": 9.94,
+        "acceleration": 7.3,
+        "braking": 3.7,
+        "yaw_rate": 4.4,
+        "steering_rate": 2.0
+      },
+      "completed": true,
+      "total_seconds": 77.48,
+      "first_loop_seconds": 16.38,
+      "peak_reference_error": 0.09284351652286998,
+      "peak_actual_error": 0.09284351652286998,
+      "minimum_center_clearance": 0.30810747970586655,
+      "startup_release_seconds": 1.12,
+      "maximum_single_cycle_command_drop": 1.6080563773741083,
+      "name": "algorithm"
+    },
+    {
+      "official_result": false,
+      "hypothetical_actuator_lag": 0.08,
+      "pose_age": 0.02,
+      "joint_transport_age": 0.0,
+      "reference_sha256": "5ec177dc0bb3426997763f9898f94bb702be592923c5caaa149403aed608b6f1",
+      "options": {
+        "response_delay": 0.25,
+        "fast_start": true,
+        "start_blend": true,
+        "lateral_control": "race_feedback",
+        "steering_feedback_gain": 0.25,
+        "startup_release_early": true,
+        "startup_speed": 2.0,
+        "startup_acceleration": 2.5,
+        "steering_preview_time": 0.12,
+        "speed_planning": "delayed_braking",
+        "heading_feedback_gain": 0.8,
+        "cross_track_gain": 0.8
+      },
+      "budgets": {
+        "max_speed": 10.0,
+        "lateral_accel": 9.94,
+        "acceleration": 7.5,
+        "braking": 3.7,
+        "yaw_rate": 4.4,
+        "steering_rate": 2.0
+      },
+      "completed": true,
+      "total_seconds": 65.86,
+      "first_loop_seconds": 13.96,
+      "peak_reference_error": 0.0852650283661767,
+      "peak_actual_error": 0.0852650283661767,
+      "minimum_center_clearance": 0.27256984208985147,
+      "startup_release_seconds": 1.06,
+      "maximum_single_cycle_command_drop": 0.12316626595521463,
+      "name": "algorithm_accel75"
+    },
+    {
+      "official_result": false,
+      "hypothetical_actuator_lag": 0.15,
+      "pose_age": 0.02,
+      "joint_transport_age": 0.0,
+      "reference_sha256": "5ec177dc0bb3426997763f9898f94bb702be592923c5caaa149403aed608b6f1",
+      "options": {
+        "response_delay": 0.25,
+        "fast_start": true,
+        "start_blend": true,
+        "lateral_control": "race_feedback",
+        "steering_feedback_gain": 0.25,
+        "startup_release_early": true,
+        "startup_speed": 2.0,
+        "startup_acceleration": 2.5,
+        "steering_preview_time": 0.12,
+        "speed_planning": "delayed_braking",
+        "heading_feedback_gain": 0.8,
+        "cross_track_gain": 0.8
+      },
+      "budgets": {
+        "max_speed": 10.0,
+        "lateral_accel": 9.94,
+        "acceleration": 7.5,
+        "braking": 3.7,
+        "yaw_rate": 4.4,
+        "steering_rate": 2.0
+      },
+      "completed": true,
+      "total_seconds": 68.74,
+      "first_loop_seconds": 14.64,
+      "peak_reference_error": 0.08367856478416043,
+      "peak_actual_error": 0.08367856478416043,
+      "minimum_center_clearance": 0.27828531306721904,
+      "startup_release_seconds": 1.12,
+      "maximum_single_cycle_command_drop": 0.5873146033702357,
+      "name": "algorithm_accel75"
+    },
+    {
+      "official_result": false,
+      "hypothetical_actuator_lag": 0.15,
+      "pose_age": 0.04,
+      "joint_transport_age": 0.04,
+      "reference_sha256": "5ec177dc0bb3426997763f9898f94bb702be592923c5caaa149403aed608b6f1",
+      "options": {
+        "response_delay": 0.25,
+        "fast_start": true,
+        "start_blend": true,
+        "lateral_control": "race_feedback",
+        "steering_feedback_gain": 0.25,
+        "startup_release_early": true,
+        "startup_speed": 2.0,
+        "startup_acceleration": 2.5,
+        "steering_preview_time": 0.12,
+        "speed_planning": "delayed_braking",
+        "heading_feedback_gain": 0.8,
+        "cross_track_gain": 0.8
+      },
+      "budgets": {
+        "max_speed": 10.0,
+        "lateral_accel": 9.94,
+        "acceleration": 7.5,
+        "braking": 3.7,
+        "yaw_rate": 4.4,
+        "steering_rate": 2.0
+      },
+      "completed": true,
+      "total_seconds": 71.56,
+      "first_loop_seconds": 15.18,
+      "peak_reference_error": 0.10396092656464138,
+      "peak_actual_error": 0.10396092656464138,
+      "minimum_center_clearance": 0.3034731623275144,
+      "startup_release_seconds": 1.1400000000000001,
+      "maximum_single_cycle_command_drop": 1.4558977697267244,
+      "name": "algorithm_accel75"
+    },
+    {
+      "official_result": false,
+      "hypothetical_actuator_lag": 0.25,
+      "pose_age": 0.04,
+      "joint_transport_age": 0.04,
+      "reference_sha256": "5ec177dc0bb3426997763f9898f94bb702be592923c5caaa149403aed608b6f1",
+      "options": {
+        "response_delay": 0.25,
+        "fast_start": true,
+        "start_blend": true,
+        "lateral_control": "race_feedback",
+        "steering_feedback_gain": 0.25,
+        "startup_release_early": true,
+        "startup_speed": 2.0,
+        "startup_acceleration": 2.5,
+        "steering_preview_time": 0.12,
+        "speed_planning": "delayed_braking",
+        "heading_feedback_gain": 0.8,
+        "cross_track_gain": 0.8
+      },
+      "budgets": {
+        "max_speed": 10.0,
+        "lateral_accel": 9.94,
+        "acceleration": 7.5,
+        "braking": 3.7,
+        "yaw_rate": 4.4,
+        "steering_rate": 2.0
+      },
+      "completed": false,
+      "fault": "Actual model tracking corridor exceeded",
+      "elapsed": 13.66,
+      "peak_reference_error": 0.148656761219416,
+      "peak_actual_error": 0.15163062266401278,
+      "minimum_center_clearance": 0.25200673500631043,
+      "startup_release_seconds": 1.22,
+      "maximum_single_cycle_command_drop": 1.013407958049763,
+      "name": "algorithm_accel75"
+    },
+    {
+      "official_result": false,
+      "hypothetical_actuator_lag": 0.15,
+      "pose_age": 0.02,
+      "joint_transport_age": 0.12,
+      "reference_sha256": "5ec177dc0bb3426997763f9898f94bb702be592923c5caaa149403aed608b6f1",
+      "options": {
+        "response_delay": 0.25,
+        "fast_start": true,
+        "start_blend": true,
+        "lateral_control": "race_feedback",
+        "steering_feedback_gain": 0.25,
+        "startup_release_early": true,
+        "startup_speed": 2.0,
+        "startup_acceleration": 2.5,
+        "steering_preview_time": 0.12,
+        "speed_planning": "delayed_braking",
+        "heading_feedback_gain": 0.8,
+        "cross_track_gain": 0.8
+      },
+      "budgets": {
+        "max_speed": 10.0,
+        "lateral_accel": 9.94,
+        "acceleration": 7.5,
+        "braking": 3.7,
+        "yaw_rate": 4.4,
+        "steering_rate": 2.0
+      },
+      "completed": true,
+      "total_seconds": 77.42,
+      "first_loop_seconds": 16.36,
+      "peak_reference_error": 0.09258409028629798,
+      "peak_actual_error": 0.09258409028629798,
+      "minimum_center_clearance": 0.3077780015541822,
+      "startup_release_seconds": 1.12,
+      "maximum_single_cycle_command_drop": 1.6063537742059664,
+      "name": "algorithm_accel75"
+    },
+    {
+      "official_result": false,
+      "hypothetical_actuator_lag": 0.08,
+      "pose_age": 0.02,
+      "joint_transport_age": 0.0,
+      "reference_sha256": "fad75cfc9d01c6dd780a5f4225cbf8d5cc546394f3b3c9b5a4dd2110e08d7b8c",
+      "options": {
+        "response_delay": 0.25,
+        "fast_start": true,
+        "start_blend": true,
+        "lateral_control": "race_feedback",
+        "steering_feedback_gain": 0.25,
+        "startup_release_early": true,
+        "startup_speed": 2.0,
+        "startup_acceleration": 2.5,
+        "steering_preview_time": 0.12,
+        "speed_planning": "delayed_braking",
+        "heading_feedback_gain": 0.8,
+        "cross_track_gain": 0.8
+      },
+      "budgets": {
+        "max_speed": 10.0,
+        "lateral_accel": 10.1,
+        "acceleration": 7.3,
+        "braking": 3.7,
+        "yaw_rate": 4.4,
+        "steering_rate": 2.0
+      },
+      "completed": true,
+      "total_seconds": 65.5,
+      "first_loop_seconds": 13.9,
+      "peak_reference_error": 0.08526840344069384,
+      "peak_actual_error": 0.08526840344069384,
+      "minimum_center_clearance": 0.27310030763629756,
+      "startup_release_seconds": 1.06,
+      "maximum_single_cycle_command_drop": 0.11340542352090299,
+      "name": "algorithm_lat101"
+    },
+    {
+      "official_result": false,
+      "hypothetical_actuator_lag": 0.15,
+      "pose_age": 0.02,
+      "joint_transport_age": 0.0,
+      "reference_sha256": "fad75cfc9d01c6dd780a5f4225cbf8d5cc546394f3b3c9b5a4dd2110e08d7b8c",
+      "options": {
+        "response_delay": 0.25,
+        "fast_start": true,
+        "start_blend": true,
+        "lateral_control": "race_feedback",
+        "steering_feedback_gain": 0.25,
+        "startup_release_early": true,
+        "startup_speed": 2.0,
+        "startup_acceleration": 2.5,
+        "steering_preview_time": 0.12,
+        "speed_planning": "delayed_braking",
+        "heading_feedback_gain": 0.8,
+        "cross_track_gain": 0.8
+      },
+      "budgets": {
+        "max_speed": 10.0,
+        "lateral_accel": 10.1,
+        "acceleration": 7.3,
+        "braking": 3.7,
+        "yaw_rate": 4.4,
+        "steering_rate": 2.0
+      },
+      "completed": true,
+      "total_seconds": 68.48,
+      "first_loop_seconds": 14.58,
+      "peak_reference_error": 0.08406465187991836,
+      "peak_actual_error": 0.08406465187991836,
+      "minimum_center_clearance": 0.27918211644065305,
+      "startup_release_seconds": 1.12,
+      "maximum_single_cycle_command_drop": 0.7678353328529166,
+      "name": "algorithm_lat101"
+    },
+    {
+      "official_result": false,
+      "hypothetical_actuator_lag": 0.15,
+      "pose_age": 0.04,
+      "joint_transport_age": 0.04,
+      "reference_sha256": "fad75cfc9d01c6dd780a5f4225cbf8d5cc546394f3b3c9b5a4dd2110e08d7b8c",
+      "options": {
+        "response_delay": 0.25,
+        "fast_start": true,
+        "start_blend": true,
+        "lateral_control": "race_feedback",
+        "steering_feedback_gain": 0.25,
+        "startup_release_early": true,
+        "startup_speed": 2.0,
+        "startup_acceleration": 2.5,
+        "steering_preview_time": 0.12,
+        "speed_planning": "delayed_braking",
+        "heading_feedback_gain": 0.8,
+        "cross_track_gain": 0.8
+      },
+      "budgets": {
+        "max_speed": 10.0,
+        "lateral_accel": 10.1,
+        "acceleration": 7.3,
+        "braking": 3.7,
+        "yaw_rate": 4.4,
+        "steering_rate": 2.0
+      },
+      "completed": true,
+      "total_seconds": 71.4,
+      "first_loop_seconds": 15.16,
+      "peak_reference_error": 0.10475473362039037,
+      "peak_actual_error": 0.10475473362039037,
+      "minimum_center_clearance": 0.30477738907664886,
+      "startup_release_seconds": 1.1400000000000001,
+      "maximum_single_cycle_command_drop": 1.4704791079257777,
+      "name": "algorithm_lat101"
+    },
+    {
+      "official_result": false,
+      "hypothetical_actuator_lag": 0.25,
+      "pose_age": 0.04,
+      "joint_transport_age": 0.04,
+      "reference_sha256": "fad75cfc9d01c6dd780a5f4225cbf8d5cc546394f3b3c9b5a4dd2110e08d7b8c",
+      "options": {
+        "response_delay": 0.25,
+        "fast_start": true,
+        "start_blend": true,
+        "lateral_control": "race_feedback",
+        "steering_feedback_gain": 0.25,
+        "startup_release_early": true,
+        "startup_speed": 2.0,
+        "startup_acceleration": 2.5,
+        "steering_preview_time": 0.12,
+        "speed_planning": "delayed_braking",
+        "heading_feedback_gain": 0.8,
+        "cross_track_gain": 0.8
+      },
+      "budgets": {
+        "max_speed": 10.0,
+        "lateral_accel": 10.1,
+        "acceleration": 7.3,
+        "braking": 3.7,
+        "yaw_rate": 4.4,
+        "steering_rate": 2.0
+      },
+      "completed": false,
+      "fault": "Actual model tracking corridor exceeded",
+      "elapsed": 13.82,
+      "peak_reference_error": 0.14919083425736088,
+      "peak_actual_error": 0.15126304594704795,
+      "minimum_center_clearance": 0.24914480760044488,
+      "startup_release_seconds": 1.22,
+      "maximum_single_cycle_command_drop": 0.7242771852229519,
+      "name": "algorithm_lat101"
+    },
+    {
+      "official_result": false,
+      "hypothetical_actuator_lag": 0.15,
+      "pose_age": 0.02,
+      "joint_transport_age": 0.12,
+      "reference_sha256": "fad75cfc9d01c6dd780a5f4225cbf8d5cc546394f3b3c9b5a4dd2110e08d7b8c",
+      "options": {
+        "response_delay": 0.25,
+        "fast_start": true,
+        "start_blend": true,
+        "lateral_control": "race_feedback",
+        "steering_feedback_gain": 0.25,
+        "startup_release_early": true,
+        "startup_speed": 2.0,
+        "startup_acceleration": 2.5,
+        "steering_preview_time": 0.12,
+        "speed_planning": "delayed_braking",
+        "heading_feedback_gain": 0.8,
+        "cross_track_gain": 0.8
+      },
+      "budgets": {
+        "max_speed": 10.0,
+        "lateral_accel": 10.1,
+        "acceleration": 7.3,
+        "braking": 3.7,
+        "yaw_rate": 4.4,
+        "steering_rate": 2.0
+      },
+      "completed": true,
+      "total_seconds": 77.3,
+      "first_loop_seconds": 16.34,
+      "peak_reference_error": 0.09345294573480102,
+      "peak_actual_error": 0.09345294573480102,
+      "minimum_center_clearance": 0.30827317810389476,
+      "startup_release_seconds": 1.12,
+      "maximum_single_cycle_command_drop": 1.7488865634004558,
+      "name": "algorithm_lat101"
+    },
+    {
+      "official_result": false,
+      "hypothetical_actuator_lag": 0.08,
+      "pose_age": 0.02,
+      "joint_transport_age": 0.0,
+      "reference_sha256": "9badeb9710ff93095160abe4ac4b7175271800e3a52051348f5bbd86229f7948",
+      "options": {
+        "response_delay": 0.25,
+        "fast_start": true,
+        "start_blend": true,
+        "lateral_control": "race_feedback",
+        "steering_feedback_gain": 0.25,
+        "startup_release_early": true,
+        "startup_speed": 2.0,
+        "startup_acceleration": 2.5,
+        "steering_preview_time": 0.12,
+        "speed_planning": "delayed_braking",
+        "heading_feedback_gain": 0.8,
+        "cross_track_gain": 0.8
+      },
+      "budgets": {
+        "max_speed": 10.0,
+        "lateral_accel": 10.2,
+        "acceleration": 7.3,
+        "braking": 3.7,
+        "yaw_rate": 4.4,
+        "steering_rate": 2.0
+      },
+      "completed": true,
+      "total_seconds": 65.26,
+      "first_loop_seconds": 13.86,
+      "peak_reference_error": 0.08514533749499616,
+      "peak_actual_error": 0.08514533749499616,
+      "minimum_center_clearance": 0.27285163085120795,
+      "startup_release_seconds": 1.06,
+      "maximum_single_cycle_command_drop": 0.12003748135473824,
+      "name": "algorithm_lat102"
+    },
+    {
+      "official_result": false,
+      "hypothetical_actuator_lag": 0.15,
+      "pose_age": 0.02,
+      "joint_transport_age": 0.0,
+      "reference_sha256": "9badeb9710ff93095160abe4ac4b7175271800e3a52051348f5bbd86229f7948",
+      "options": {
+        "response_delay": 0.25,
+        "fast_start": true,
+        "start_blend": true,
+        "lateral_control": "race_feedback",
+        "steering_feedback_gain": 0.25,
+        "startup_release_early": true,
+        "startup_speed": 2.0,
+        "startup_acceleration": 2.5,
+        "steering_preview_time": 0.12,
+        "speed_planning": "delayed_braking",
+        "heading_feedback_gain": 0.8,
+        "cross_track_gain": 0.8
+      },
+      "budgets": {
+        "max_speed": 10.0,
+        "lateral_accel": 10.2,
+        "acceleration": 7.3,
+        "braking": 3.7,
+        "yaw_rate": 4.4,
+        "steering_rate": 2.0
+      },
+      "completed": true,
+      "total_seconds": 68.24,
+      "first_loop_seconds": 14.540000000000001,
+      "peak_reference_error": 0.08601771214362527,
+      "peak_actual_error": 0.08601771214362527,
+      "minimum_center_clearance": 0.2764580185724871,
+      "startup_release_seconds": 1.12,
+      "maximum_single_cycle_command_drop": 0.46265460842985107,
+      "name": "algorithm_lat102"
+    },
+    {
+      "official_result": false,
+      "hypothetical_actuator_lag": 0.15,
+      "pose_age": 0.04,
+      "joint_transport_age": 0.04,
+      "reference_sha256": "9badeb9710ff93095160abe4ac4b7175271800e3a52051348f5bbd86229f7948",
+      "options": {
+        "response_delay": 0.25,
+        "fast_start": true,
+        "start_blend": true,
+        "lateral_control": "race_feedback",
+        "steering_feedback_gain": 0.25,
+        "startup_release_early": true,
+        "startup_speed": 2.0,
+        "startup_acceleration": 2.5,
+        "steering_preview_time": 0.12,
+        "speed_planning": "delayed_braking",
+        "heading_feedback_gain": 0.8,
+        "cross_track_gain": 0.8
+      },
+      "budgets": {
+        "max_speed": 10.0,
+        "lateral_accel": 10.2,
+        "acceleration": 7.3,
+        "braking": 3.7,
+        "yaw_rate": 4.4,
+        "steering_rate": 2.0
+      },
+      "completed": true,
+      "total_seconds": 71.10000000000001,
+      "first_loop_seconds": 15.1,
+      "peak_reference_error": 0.10435863613166213,
+      "peak_actual_error": 0.10435863613166213,
+      "minimum_center_clearance": 0.30194318904976886,
+      "startup_release_seconds": 1.1400000000000001,
+      "maximum_single_cycle_command_drop": 1.2641914105959473,
+      "name": "algorithm_lat102"
+    },
+    {
+      "official_result": false,
+      "hypothetical_actuator_lag": 0.25,
+      "pose_age": 0.04,
+      "joint_transport_age": 0.04,
+      "reference_sha256": "9badeb9710ff93095160abe4ac4b7175271800e3a52051348f5bbd86229f7948",
+      "options": {
+        "response_delay": 0.25,
+        "fast_start": true,
+        "start_blend": true,
+        "lateral_control": "race_feedback",
+        "steering_feedback_gain": 0.25,
+        "startup_release_early": true,
+        "startup_speed": 2.0,
+        "startup_acceleration": 2.5,
+        "steering_preview_time": 0.12,
+        "speed_planning": "delayed_braking",
+        "heading_feedback_gain": 0.8,
+        "cross_track_gain": 0.8
+      },
+      "budgets": {
+        "max_speed": 10.0,
+        "lateral_accel": 10.2,
+        "acceleration": 7.3,
+        "braking": 3.7,
+        "yaw_rate": 4.4,
+        "steering_rate": 2.0
+      },
+      "completed": false,
+      "fault": "Actual model tracking corridor exceeded",
+      "elapsed": 13.68,
+      "peak_reference_error": 0.14895214855336672,
+      "peak_actual_error": 0.15094104829166013,
+      "minimum_center_clearance": 0.24765938774172044,
+      "startup_release_seconds": 1.22,
+      "maximum_single_cycle_command_drop": 0.6190034964550164,
+      "name": "algorithm_lat102"
+    },
+    {
+      "official_result": false,
+      "hypothetical_actuator_lag": 0.15,
+      "pose_age": 0.02,
+      "joint_transport_age": 0.12,
+      "reference_sha256": "9badeb9710ff93095160abe4ac4b7175271800e3a52051348f5bbd86229f7948",
+      "options": {
+        "response_delay": 0.25,
+        "fast_start": true,
+        "start_blend": true,
+        "lateral_control": "race_feedback",
+        "steering_feedback_gain": 0.25,
+        "startup_release_early": true,
+        "startup_speed": 2.0,
+        "startup_acceleration": 2.5,
+        "steering_preview_time": 0.12,
+        "speed_planning": "delayed_braking",
+        "heading_feedback_gain": 0.8,
+        "cross_track_gain": 0.8
+      },
+      "budgets": {
+        "max_speed": 10.0,
+        "lateral_accel": 10.2,
+        "acceleration": 7.3,
+        "braking": 3.7,
+        "yaw_rate": 4.4,
+        "steering_rate": 2.0
+      },
+      "completed": true,
+      "total_seconds": 77.06,
+      "first_loop_seconds": 16.3,
+      "peak_reference_error": 0.09464613228888023,
+      "peak_actual_error": 0.09464613228888023,
+      "minimum_center_clearance": 0.30966240284327035,
+      "startup_release_seconds": 1.12,
+      "maximum_single_cycle_command_drop": 1.5460748058527596,
+      "name": "algorithm_lat102"
+    }
+  ],
+  "assumptions": "Official-map geometry with hypothetical bicycle/first-order actuators. Baseline proxy assumes joint polish strength .5; it is not the unprovided actual 70s session. Each budget profile replans as the real launch does. No tires, roll, laser/referee validation. Experimental budget bounds are not measured safe ranges."
+}

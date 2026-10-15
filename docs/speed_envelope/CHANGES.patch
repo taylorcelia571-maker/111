@@ -1,0 +1,812 @@
+diff --git a/tianracer_gazebo/launch/final_speedup.launch b/tianracer_gazebo/launch/final_speedup.launch
+index 6d3e2c8..3cfeef1 100644
+--- a/tianracer_gazebo/launch/final_speedup.launch
++++ b/tianracer_gazebo/launch/final_speedup.launch
+@@ -8,0 +9,2 @@
++  <arg name="route_speed_refine" default="false"/>
++  <arg name="route_speed_iterations" default="6"/>
+@@ -30,0 +33,2 @@
++    <arg name="route_speed_refine" value="$(eval False if arg('legacy_control') else arg('route_speed_refine'))"/>
++    <arg name="route_speed_iterations" value="$(arg route_speed_iterations)"/>
+diff --git a/tianracer_gazebo/launch/final_speedup_demo.launch b/tianracer_gazebo/launch/final_speedup_demo.launch
+index 09f6c14..1af7427 100644
+--- a/tianracer_gazebo/launch/final_speedup_demo.launch
++++ b/tianracer_gazebo/launch/final_speedup_demo.launch
+@@ -10,0 +11,2 @@
++  <arg name="route_speed_refine" default="false"/>
++  <arg name="route_speed_iterations" default="6"/>
+@@ -39,0 +42,2 @@
++    <arg name="route_speed_refine" value="$(arg route_speed_refine)"/>
++    <arg name="route_speed_iterations" value="$(arg route_speed_iterations)"/>
+diff --git a/tianracer_gazebo/launch/planned_race.launch b/tianracer_gazebo/launch/planned_race.launch
+index 825545d..9ae94a4 100644
+--- a/tianracer_gazebo/launch/planned_race.launch
++++ b/tianracer_gazebo/launch/planned_race.launch
+@@ -5,0 +6,2 @@
++  <arg name="route_speed_refine" default="false"/>
++  <arg name="route_speed_iterations" default="6"/>
+@@ -46,0 +49,2 @@
++    <param name="route_speed_refine" value="$(arg route_speed_refine)" type="bool"/>
++    <param name="route_speed_iterations" value="$(arg route_speed_iterations)" type="int"/>
+diff --git a/tianracer_gazebo/scripts/continuous_race.py b/tianracer_gazebo/scripts/continuous_race.py
+index c17cd61..97fe677 100755
+--- a/tianracer_gazebo/scripts/continuous_race.py
++++ b/tianracer_gazebo/scripts/continuous_race.py
+@@ -383,0 +384 @@ class ContinuousRace:
++            route_speed_refine=getattr(self,'route_speed_refine_report',None),
+diff --git a/tianracer_gazebo/scripts/planned_race.py b/tianracer_gazebo/scripts/planned_race.py
+index a7425e3..6b94ff1 100755
+--- a/tianracer_gazebo/scripts/planned_race.py
++++ b/tianracer_gazebo/scripts/planned_race.py
+@@ -47,0 +48 @@ def main():
++    unpolished_center = center
+@@ -62,0 +64,15 @@ def main():
++    speed_refine_report = None
++    if rospy.get_param('~route_speed_refine',False):
++        if not optimize:
++            raise ValueError('Speed-aware route refinement requires optimize_time')
++        from speed_aware_line import refine_speed_line
++        center,speed_refine_report=refine_speed_line(planner,center,anchors,
++            {k:rospy.get_param('~'+k,v) for k,v in (
++                ('max_speed',2.0),('lateral_accel',5.0),('acceleration',2.0),('braking',3.0),
++                ('steering_rate',2.0),('yaw_rate',3.2),('response_delay',.25),('speed_planning','legacy'))},
++            iterations=rospy.get_param('~route_speed_iterations',6), source_seed=unpolished_center)
++        planner.selection.update(speed_refinement=speed_refine_report,
++            estimated_lap_seconds=speed_refine_report['selected_model_lap_seconds'])
++        if speed_refine_report['accepted']:
++            planner.selection.update(route_changed=True,route_sha256=speed_refine_report['selected_route_sha256'])
++        rospy.loginfo('Speed-aware route refinement (model only): %s',speed_refine_report)
+@@ -78,0 +95 @@ def main():
++    controller.route_speed_refine_report=speed_refine_report
+@@ -89,0 +107,3 @@ def main():
++    report['route_speed_refine']=speed_refine_report
++    from speed_aware_line import sector_speed_report
++    report['sector_speed_planning']=sector_speed_report(path)
+diff --git a/tianracer_gazebo/scripts/review_final_runs.py b/tianracer_gazebo/scripts/review_final_runs.py
+index a045f8b..9f90a1f 100755
+--- a/tianracer_gazebo/scripts/review_final_runs.py
++++ b/tianracer_gazebo/scripts/review_final_runs.py
+@@ -204,0 +205 @@ def make_bundle(session, root):
++             'trial_recipe.json', 'budget_trial.txt', 'library_versions.json',
+diff --git a/tianracer_gazebo/scripts/run_final_speedup.sh b/tianracer_gazebo/scripts/run_final_speedup.sh
+index 9b1b110..3a90870 100755
+--- a/tianracer_gazebo/scripts/run_final_speedup.sh
++++ b/tianracer_gazebo/scripts/run_final_speedup.sh
+@@ -7,0 +8,2 @@ declare -A seen=()
++budget_trial=false
++launch_overrides=()
+@@ -11 +13 @@ for argument in "$@"; do
+-    startup_speed|startup_acceleration|startup_connector_length|steering_preview_time|steering_feedback_gain|heading_feedback_gain|cross_track_gain|acceleration|lateral_accel|braking|yaw_rate|line_search_level|predict_pose|route_control_scoring|speed_recovery_hold|legacy_control|runtime_path_cache|steering_preview_mode|route_joint_polish|route_polish_strength) ;;
++    startup_speed|startup_acceleration|startup_connector_length|steering_preview_time|steering_feedback_gain|heading_feedback_gain|cross_track_gain|acceleration|lateral_accel|braking|yaw_rate|line_search_level|predict_pose|route_control_scoring|speed_recovery_hold|legacy_control|runtime_path_cache|steering_preview_mode|route_joint_polish|route_polish_strength|route_speed_refine|route_speed_iterations|budget_trial) ;;
+@@ -17,0 +20,8 @@ for argument in "$@"; do
++  if [[ "$key" == budget_trial ]]; then
++    case "${argument#*:=}" in true|false) budget_trial="${argument#*:=}";; *) echo 'budget_trial must be true or false' >&2; exit 2;; esac
++  else
++    launch_overrides+=("$argument")
++  fi
++done
++for argument in "${launch_overrides[@]}"; do
++  key="${argument%%:=*}"
+@@ -19,0 +30 @@ for argument in "$@"; do
++    if [[ "$key" == lateral_accel && "$budget_trial" == true ]]; then limit=10.2; fi
+@@ -22 +33 @@ for argument in "$@"; do
+-      echo "$key above the user71 budget is blocked until measured evidence is reviewed." >&2
++      echo "$key exceeds the selected experiment bound ($limit); rejected." >&2
+@@ -26,0 +38,3 @@ done
++if [[ "$budget_trial" == true ]]; then
++  echo 'EXPERIMENTAL lateral budget opt-in: <=10.2, not a measured safe range; braking stays <=3.7.' >&2
++fi
+@@ -36,0 +51,11 @@ git -C "$package/.." rev-parse HEAD > "$run_dir/commit.txt"
++python3 - "$run_dir/library_versions.json" <<'PY'
++import json,sys
++import numpy,scipy
++with open(sys.argv[1], 'w') as stream:
++    json.dump(dict(python=sys.version, numpy=numpy.__version__, scipy=scipy.__version__), stream, indent=2)
++    stream.write('\n')
++PY
++printf '%s\n' "$budget_trial" > "$run_dir/budget_trial.txt"
++if [[ -n "${RACE_TRIAL_RECIPE_FILE:-}" ]]; then
++  cp -- "$RACE_TRIAL_RECIPE_FILE" "$run_dir/trial_recipe.json"
++fi
+@@ -38 +63 @@ command=(roslaunch tianracer_gazebo final_speedup_demo.launch
+-         "version:=$version" "log_dir:=$run_dir" "$@")
++         "version:=$version" "log_dir:=$run_dir" "${launch_overrides[@]}")
+diff --git a/tianracer_gazebo/scripts/speed_aware_line.py b/tianracer_gazebo/scripts/speed_aware_line.py
+new file mode 100644
+index 0000000..307e33a
+--- /dev/null
++++ b/tianracer_gazebo/scripts/speed_aware_line.py
+@@ -0,0 +1,160 @@
++"""Stationary racing-line refinement against the complete cyclic speed model.
++
++The optimizer proposes offsets; original geometry/checkpoint checks decide
++acceptance. No live limit, sensor, braking allowance or referee is modified.
++"""
++import hashlib
++import math
++import numpy as np
++from scipy.optimize import Bounds, LinearConstraint, minimize
++from race_line import ClosedPath
++
++
++def normal_search_space(planner, seed, anchors):
++    p = seed.points
++    length = float(np.linalg.norm(np.roll(p, -1, axis=0) - p, axis=1).sum())
++    ds = length / len(p)
++    tangent = np.roll(p, -1, axis=0) - np.roll(p, 1, axis=0)
++    tangent /= np.maximum(np.linalg.norm(tangent, axis=1)[:, None], 1e-12)
++    normal = np.column_stack((-tangent[:, 1], tangent[:, 0]))
++    arc = np.arange(len(p)) * ds
++    launch = anchors[int(np.argmin(np.linalg.norm(anchors, axis=1)))]
++    relative = (arc - seed.project(*launch)[0]) % length
++    weight = np.clip((relative - 6.) / 1., 0, 1) * np.clip((length - relative - 1.) / .8, 0, 1)
++    weight = weight ** 3 * (10 - 15 * weight + 6 * weight ** 2)
++    extents = []
++    for sign in (-1., 1.):
++        extent = np.zeros(len(p))
++        active = np.ones(len(p), dtype=bool)
++        for offset in np.arange(.003, .181, .003):
++            active &= planner.clearance_at(p + sign * offset * normal) >= planner.margin + 1e-6
++            extent[active] = offset
++        extents.append(sign * extent)
++    knots = np.arange(0., length, .6)
++    distance = np.abs(arc[:, None] - knots[None, :])
++    distance = np.minimum(distance, length - distance)
++    basis = np.exp(-.5 * (distance / (.6 * .7)) ** 2)
++    basis /= basis.sum(axis=1)[:, None]
++    basis *= weight[:, None]
++    return normal, basis, weight, LinearConstraint(basis, extents[0], extents[1])
++
++
++def reference_peaks(center):
++    tangent = np.roll(center.points, -1, axis=0) - np.roll(center.points, 1, axis=0)
++    tangent /= np.maximum(np.linalg.norm(tangent, axis=1)[:, None], 1e-12)
++    rear = center.points - .13 * tangent
++    path = ClosedPath(np.vstack([rear, rear[0]]), spacing=.04)
++    angle = np.arctan(.26 * path.curvature)
++    return dict(curvature=float(np.max(np.abs(path.curvature))),
++                steering_gradient=float(np.max(np.abs(np.roll(angle, -1) - angle)) / path.ds))
++
++
++def refine_speed_line(planner, seed, anchors, budgets, iterations=6, source_seed=None):
++    if isinstance(iterations, bool) or not isinstance(iterations, int) or not 1 <= iterations <= 10:
++        raise ValueError('route_speed_iterations must be an integer between 1 and 10')
++    anchors = np.asarray(anchors, dtype=float)
++    if anchors.ndim != 2 or anchors.shape[1] != 2 or len(anchors) < 3 or not np.isfinite(anchors).all():
++        raise ValueError('Invalid speed-refinement anchors')
++    args = tuple(budgets[k] for k in ('max_speed', 'lateral_accel', 'acceleration', 'braking',
++                                    'steering_rate', 'yaw_rate', 'response_delay', 'speed_planning'))
++    baseline = planner.score(seed, *args)
++    best = [baseline, seed]
++    quality_limits = reference_peaks(seed)
++    report = dict(enabled=True, accepted=False, objective='complete_cyclic_speed_envelope',
++                  baseline_model_lap_seconds=baseline, selected_model_lap_seconds=baseline,
++                  requested_iterations=iterations, evaluations=0, feasible_improvements=0,
++                  route_margin=planner.margin, launch_region_protected_m=6.,
++                  official_result=False, optimizer_convergence_is_not_geometry_validation=True,
++                  initial_reference_peak_limits=dict(quality_limits), portfolio=[])
++    # Restart from the unpolished Level-3 line: optimizing only the already
++    # half-shifted incumbent can get trapped at a different local solution.
++    if source_seed is not None:
++        from joint_line_polish import polish_line
++        proposal = source_seed
++        for pass_id in range(2):
++            proposal, stage = polish_line(planner, proposal, anchors, budgets, strength=1.)
++            item = dict(pass_id=pass_id + 1, solver_accepted=stage['accepted'], accepted=False)
++            if stage['accepted']:
++                feasible = planner.feasible(proposal.points, anchors)
++                if feasible is not None:
++                    peaks = reference_peaks(feasible)
++                    quality_ok = all(peaks[k] <= quality_limits[k] * 1.001 + 1e-9 for k in peaks)
++                    score = planner.score(feasible, *args)
++                    item.update(reference_peaks=peaks, quality_ok=quality_ok, model_lap_seconds=score)
++                    if quality_ok and score < best[0] - .002:
++                        best[:] = [score, feasible]
++                        item['accepted'] = True
++                        report.update(accepted=True, selected_model_lap_seconds=score)
++            report['portfolio'].append(item)
++            if not stage['accepted']:
++                break
++    search_seed = best[1]
++    quality_limits = reference_peaks(search_seed)
++    report['local_reference_peak_limits'] = dict(quality_limits)
++    normal, basis, weight, constraint = normal_search_space(planner, search_seed, anchors)
++
++    def objective(z):
++        report['evaluations'] += 1
++        if not np.isfinite(z).all():
++            return 1e6
++        offset = basis @ z
++        points = search_seed.points + offset[:, None] * normal
++        try:
++            trial = ClosedPath(np.vstack([points, points[0]]), spacing=.04)
++            score = planner.score(trial, *args)
++            clearance = planner.segment_check(trial.points)
++            penalty = 1e4 * max(0., planner.margin - clearance) ** 2
++            direction = np.roll(trial.points, -1, axis=0) - trial.points
++            yaw = np.arctan2(direction[:, 1], direction[:, 0])
++            turn = np.arctan2(np.sin(np.roll(yaw, -1) - yaw),
++                              np.cos(np.roll(yaw, -1) - yaw)) / trial.ds
++            penalty += 10 * max(0., float(np.max(np.abs(turn))) - math.tan(.48) / .26 * .95) ** 2
++            peaks = reference_peaks(trial)
++            penalty += sum(200 * max(0., peaks[k] - quality_limits[k] * .995) ** 2 for k in peaks)
++            # Penalties only guide the search. They NEVER replace feasible().
++            if score + penalty < best[0] - .002:
++                feasible = planner.feasible(points, anchors)
++                if feasible is not None:
++                    actual_peaks = reference_peaks(feasible)
++                    if any(actual_peaks[k] > quality_limits[k] * 1.001 + 1e-9 for k in actual_peaks):
++                        return score + penalty
++                    exact = planner.score(feasible, *args)
++                    if exact < best[0] - .002:
++                        best[:] = [exact, feasible]
++                        report.update(accepted=True, selected_model_lap_seconds=exact,
++                                      maximum_normal_offset=float(np.max(np.abs(offset))),
++                                      protected_input_displacement=float(np.max(np.abs(offset[weight == 0]))))
++                        report['feasible_improvements'] += 1
++            return score + penalty
++        except (ValueError, FloatingPointError):
++            return 1e6
++
++    try:
++        result = minimize(objective, np.zeros(basis.shape[1]), method='SLSQP',
++                          bounds=Bounds(-.18, .18), constraints=[constraint],
++                          options=dict(maxiter=iterations, ftol=2e-4, eps=.002))
++        report.update(solver_success=bool(result.success), solver_message=str(result.message),
++                      solver_iterations=int(result.nit))
++    except (ValueError, FloatingPointError, np.linalg.LinAlgError) as error:
++        report.update(solver_success=False, solver_message=str(error))
++    # Finite iterates can be retained after an iteration limit only because each
++    # retained candidate independently passed original geometry and exact score.
++    report.update(selected_route_sha256=hashlib.sha256(np.round(best[1].points, 4).tobytes()).hexdigest(),
++                  selected_reference_peaks=reference_peaks(best[1]),
++                  model_five_seconds_saved_without_startup=5 * (baseline - best[0]))
++    return best[1], report
++
++
++def sector_speed_report(path):
++    """Planning diagnostics only. Time bins below partition reference geometry."""
++    curve = np.abs(path.curvature)
++    masks = dict(straight_or_gentle=curve < .15, transition=(curve >= .15) & (curve < .6), bend=curve >= .6)
++    result = {}
++    for name, mask in masks.items():
++        speed = path.speeds[mask]
++        result[name] = dict(length_m=float(mask.sum() * path.ds),
++            model_lap_seconds=float(np.sum(path.ds / speed)),
++            minimum_planned_speed=float(speed.min()) if len(speed) else None,
++            median_planned_speed=float(np.median(speed)) if len(speed) else None,
++            maximum_planned_speed=float(speed.max()) if len(speed) else None)
++    return dict(model_only=True, reference_bins_are_disjoint=True, sectors=result)
+diff --git a/tianracer_gazebo/scripts/speed_envelope_audit.py b/tianracer_gazebo/scripts/speed_envelope_audit.py
+new file mode 100755
+index 0000000..efec0a6
+--- /dev/null
++++ b/tianracer_gazebo/scripts/speed_envelope_audit.py
+@@ -0,0 +1,71 @@
++#!/usr/bin/env python3
++"""Read-only model audit: same-budget algorithm, then one budget change at a time."""
++import argparse
++import json
++from pathlib import Path
++from race60_audit import load_course, rear_path
++from final_speedup_audit import BUDGETS, OPTIONS, simulate
++from predictive_follower import PredictiveFollower
++from joint_line_polish import polish_line
++from speed_aware_line import refine_speed_line, sector_speed_report
++
++
++def main():
++    parser = argparse.ArgumentParser(description=__doc__)
++    parser.add_argument('--output', type=Path, required=True)
++    parser.add_argument('--quick', action='store_true')
++    args = parser.parse_args()
++    package = Path(__file__).resolve().parents[1]
++    planner, anchors = load_course(package)
++    planner.margin = .34
++    planner.allowed = planner.clearance >= .34
++    profiles = [('base_proxy', {}, False), ('algorithm', {}, True),
++                ('algorithm_accel75', {'acceleration': 7.5}, True),
++                ('algorithm_lat101', {'lateral_accel': 10.1}, True),
++                ('algorithm_lat102', {'lateral_accel': 10.2}, True)]
++    responses = [(.08, .02, 0.), (.15, .02, 0.), (.15, .04, .04),
++                 (.25, .04, .04), (.15, .02, .12)]
++    if args.quick:
++        responses = responses[:2]
++    planning, rows = [], []
++    for name, delta, enabled in profiles:
++        budgets = dict(BUDGETS, **delta)
++        center = planner.build(anchors, optimize_time=True, refine_line=True, line_search_level=3,
++            response_delay=.25, speed_planning='delayed_braking', **budgets)
++        unpolished = center
++        motion = dict(budgets, response_delay=.25, speed_planning='delayed_braking')
++        center, polish = polish_line(planner, center, anchors, motion, strength=.5)
++        refinement = None
++        if enabled:
++            center, refinement = refine_speed_line(planner, center, anchors, motion, iterations=6, source_seed=unpolished)
++        follower = PredictiveFollower(rear_path(center), **budgets, **OPTIONS)
++        record = dict(name=name, budgets=budgets, joint_polish=polish, speed_refinement=refinement,
++                      reference_sha256=follower.path.fingerprint(),
++                      minimum_route_clearance=planner.segment_check(center.points),
++                      model_lap_seconds=float(sum(follower.path.ds / follower.path.speeds)),
++                      sectors=sector_speed_report(follower.path))
++        planning.append(record)
++        print(json.dumps(dict(name=name, model_lap_seconds=record['model_lap_seconds'],
++            accepted=refinement['accepted'] if refinement else None)), flush=True)
++        for lag, pose, joint in responses:
++            row = simulate(center, planner, OPTIONS, lag, pose, joint, budgets=budgets)
++            row['name'] = name
++            rows.append(row)
++            print(json.dumps({k: row.get(k) for k in ('name', 'hypothetical_actuator_lag', 'pose_age',
++                'joint_transport_age', 'completed', 'total_seconds', 'peak_reference_error',
++                'maximum_single_cycle_command_drop', 'fault')}), flush=True)
++    result = dict(official_result=False, official_under_60_verified=False, gazebo_tested=False,
++                  user_reported_best_seconds=70, actual_70_second_session_available=False,
++                  baseline_is_model_proxy=True, planning=planning, rows=rows,
++                  assumptions='Official-map geometry with hypothetical bicycle/first-order actuators. '
++                    'Baseline proxy assumes joint polish strength .5; it is not the unprovided actual 70s session. '
++                    'Each budget profile replans as the real launch does. No tires, roll, laser/referee validation. '
++                    'Experimental budget bounds are not measured safe ranges.')
++    output = args.output.expanduser()
++    output.parent.mkdir(parents=True, exist_ok=True)
++    output.write_text(json.dumps(result, indent=2, allow_nan=False) + '\n')
++    print('Saved model-only audit: ' + str(output), flush=True)
++
++
++if __name__ == '__main__':
++    main()
+diff --git a/tianracer_gazebo/scripts/speed_trial.py b/tianracer_gazebo/scripts/speed_trial.py
+new file mode 100755
+index 0000000..03e62fe
+--- /dev/null
++++ b/tianracer_gazebo/scripts/speed_trial.py
+@@ -0,0 +1,183 @@
++#!/usr/bin/env python3
++"""Inherit a completed local session; change one setting; never calls start.
++
++Dry-run is default. --run starts the existing scene/referee/recorder workflow,
++with manual prepare/status/start still required. No result is certified here.
++"""
++import argparse
++from datetime import datetime, timezone
++import json
++import math
++import os
++from pathlib import Path
++import subprocess
++import sys
++import yaml
++
++
++PROFILES = {'baseline': None, 'algorithm': ('route_speed_refine', True),
++            'accel_75': ('acceleration', 7.5),
++            'lateral_101': ('lateral_accel', 10.1), 'lateral_102': ('lateral_accel', 10.2)}
++FORWARD = ('lateral_accel', 'acceleration', 'braking', 'yaw_rate', 'startup_speed',
++           'startup_acceleration', 'steering_feedback_gain', 'steering_preview_time',
++           'heading_feedback_gain', 'cross_track_gain', 'line_search_level', 'predict_pose',
++           'startup_connector_length', 'speed_recovery_hold', 'route_control_scoring',
++           'runtime_path_cache', 'steering_preview_mode', 'route_joint_polish',
++           'route_polish_strength', 'route_speed_refine', 'route_speed_iterations')
++
++
++def read_object(path):
++    data = json.loads(path.read_text())
++    if not isinstance(data, dict):
++        raise ValueError('Expected JSON object: ' + str(path))
++    return data
++
++
++def choose_session(root, selection):
++    if selection not in ('best', 'latest'):
++        session = Path(selection).expanduser().resolve()
++    else:
++        pointer = root / ('best_race_session.txt' if selection == 'best' else 'final_last_session.txt')
++        if selection == 'best' and not pointer.exists() and (root / 'best70_session.txt').exists():
++            pointer = root / 'best70_session.txt'
++        if selection == 'best' and not pointer.exists():
++            candidates = []
++            for note in (root / 'final71').glob('*/referee_observation.json'):
++                try:
++                    item = read_object(note)
++                    run = read_object(note.parent / 'run_report.json')
++                    total = item.get('displayed_total_seconds')
++                    if (item.get('valid_5_of_5') is True and item.get('any_incident') is False and
++                            'last_fault' in run and run['last_fault'] is None and
++                            isinstance(total, (int, float)) and not isinstance(total, bool) and
++                            math.isfinite(total) and total > 0):
++                        candidates.append((total, note.parent))
++                except (OSError, ValueError):
++                    continue
++            if not candidates:
++                raise ValueError('No saved best session. If the latest completed session is your valid 70s run, use --base latest; no file hunting required.')
++            session = min(candidates, key=lambda item: item[0])[1].resolve()
++        else:
++            session = Path(pointer.read_text().strip()).expanduser().resolve()
++    if not session.is_dir():
++        raise ValueError('Session not found: ' + str(session))
++    if (session / 'control.bag.active').exists():
++        raise ValueError('Source recording is still active; stop and close the old launch first')
++    return session
++
++
++def inherited_parameters(session):
++    run = read_object(session / 'run_report.json')
++    if 'last_fault' not in run or run['last_fault'] is not None:
++        raise ValueError('Source must explicitly record last_fault=null')
++    if run.get('run_sequence', 1) != 1:
++        raise ValueError('Source contains multiple starts; do not use it as an isolated baseline')
++    parameters = yaml.safe_load((session / 'params.yaml').read_text())
++    if not isinstance(parameters, dict):
++        raise ValueError('Missing source parameter dictionary')
++    for name, expected in {'route_margin': .34, 'response_delay': .25, 'max_error': .15,
++                           'max_speed': 10., 'steering_rate': 2.}.items():
++        actual = parameters.get(name)
++        if isinstance(actual, bool) or not isinstance(actual, (int, float)) or actual != expected:
++            raise ValueError('Source boundary differs: ' + name)
++    if parameters.get('lateral_control') != 'race_feedback' or parameters.get('speed_planning') != 'delayed_braking':
++        raise ValueError('This trial runner requires the recorded race_feedback/delayed_braking baseline')
++    if not 0 < parameters.get('braking', 0) <= 3.7:
++        raise ValueError('Source braking exceeds the measured-review gate')
++    observation = None
++    if (session / 'referee_observation.json').exists():
++        observation = read_object(session / 'referee_observation.json')
++        if observation.get('any_incident') is True or observation.get('valid_5_of_5') is False:
++            raise ValueError('Source observation records an invalid run or incident')
++    defaults = dict(runtime_path_cache=False, steering_preview_mode='legacy',
++                    route_joint_polish=False, route_polish_strength=.5,
++                    route_speed_refine=False, route_speed_iterations=6)
++    result = {}
++    for name in FORWARD:
++        if name in parameters:
++            result[name] = parameters[name]
++        elif name in defaults:
++            result[name] = defaults[name]
++        else:
++            raise ValueError('Source parameters incomplete: ' + name)
++    config = run.get('configuration') or {}
++    if (session / 'planned_course_report.json').exists():
++        plan = read_object(session / 'planned_course_report.json')
++        if run.get('reference_sha256') != plan.get('reference_sha256'):
++            raise ValueError('Source route/report checksum mismatch')
++    for name in FORWARD:
++        value = config.get(name)
++        if value is not None and not isinstance(value, dict) and name in parameters and value != parameters[name]:
++            raise ValueError('Parameter/report mismatch: ' + name)
++    return result, observation
++
++
++def make_recipe(session, profile):
++    original, observation = inherited_parameters(session)
++    parameters = dict(original)
++    change = PROFILES[profile]
++    changed = {}
++    if change:
++        name, value = change
++        old = parameters[name]
++        if old == value:
++            raise ValueError('Selected profile would not change anything: ' + name)
++        if name == 'lateral_accel' and not (0 < value - old <= .201 and value <= 10.2):
++            raise ValueError('Lateral trial must increase by at most 0.2 and stay <=10.2')
++        if name == 'acceleration' and not (0 < value - old <= .201):
++            raise ValueError('Acceleration trial must increase by at most 0.2')
++        parameters[name] = value
++        changed[name] = dict(before=old, after=value)
++    if not 0 < parameters['lateral_accel'] <= 10.2:
++        raise ValueError('Lateral budget outside this experiment envelope')
++    return dict(source_session=str(session), source_commit=(session / 'commit.txt').read_text().strip(),
++                source_official_observation=observation, source_official_file_verified=False,
++                profile=profile, changed=changed, parameters=parameters,
++                budget_trial=parameters['lateral_accel'] > 9.94,
++                official_result_verified=False, official_under_60_verified=False)
++
++
++def launch_arguments(recipe):
++    def text(value):
++        return str(value).lower() if isinstance(value, bool) else str(value)
++    arguments = ['baseline', 'legacy_control:=false']
++    arguments += [name + ':=' + text(value) for name, value in recipe['parameters'].items()]
++    arguments += ['budget_trial:=' + text(recipe['budget_trial'])]
++    return arguments
++
++
++def main():
++    parser = argparse.ArgumentParser(description=__doc__)
++    parser.add_argument('--base', default='best', help='best, latest or an explicit completed session directory')
++    parser.add_argument('--profile', choices=PROFILES, default='baseline')
++    parser.add_argument('--log-root', type=Path, default=Path.home() / 'ican_race_logs')
++    parser.add_argument('--run', action='store_true', help='Without this flag, only print the inherited recipe')
++    args = parser.parse_args()
++    try:
++        root = args.log_root.expanduser().resolve()
++        session = choose_session(root, args.base)
++        recipe = make_recipe(session, args.profile)
++        print(json.dumps(recipe, ensure_ascii=False, indent=2, allow_nan=False), flush=True)
++        print('Original official result is not certified here. Manual prepare/status/start required.', flush=True)
++        if not args.run:
++            print('Dry-run only; no ROS command issued. Add --run for the selected single trial.')
++            return
++        folder = root / 'speed_trial_recipes'
++        folder.mkdir(parents=True, exist_ok=True)
++        stamp = datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%S_%fZ')
++        path = folder / (stamp + '_' + args.profile + '.json')
++        with path.open('x') as stream:
++            json.dump(recipe, stream, ensure_ascii=False, indent=2, allow_nan=False)
++            stream.write('\n')
++        env = dict(os.environ, RACE_TRIAL_RECIPE_FILE=str(path))
++        script = Path(__file__).resolve().with_name('run_final_speedup.sh')
++        result = subprocess.run(['bash', str(script)] + launch_arguments(recipe), env=env)
++        sys.exit(result.returncode)
++    except KeyboardInterrupt:
++        sys.exit(130)
++    except (OSError, ValueError, TypeError, KeyError, yaml.YAMLError) as error:
++        parser.error(str(error))
++
++
++if __name__ == '__main__':
++    main()
+diff --git a/tianracer_gazebo/test/test_speed_aware_line.py b/tianracer_gazebo/test/test_speed_aware_line.py
+new file mode 100644
+index 0000000..4fc1ec3
+--- /dev/null
++++ b/tianracer_gazebo/test/test_speed_aware_line.py
+@@ -0,0 +1,112 @@
++import math
++from pathlib import Path
++from types import SimpleNamespace
++import sys
++import unittest
++from unittest.mock import Mock, patch
++from xml.etree import ElementTree as ET
++import numpy as np
++
++PACKAGE = Path(__file__).resolve().parents[1]
++sys.path.insert(0, str(PACKAGE / 'scripts'))
++from race_line import ClosedPath
++from speed_aware_line import refine_speed_line, sector_speed_report
++
++
++class SpeedLineTests(unittest.TestCase):
++    def setUp(self):
++        angle = np.linspace(0, 2 * math.pi, 200)
++        self.seed = ClosedPath(np.column_stack((6 * np.cos(angle), 6 * np.sin(angle))), spacing=.1)
++        self.anchors = self.seed.points[::100]
++        self.alternative = ClosedPath(np.vstack([self.seed.points, self.seed.points[0]]), spacing=.1)
++        self.planner = SimpleNamespace(margin=.34, score=Mock(return_value=20.),
++            clearance_at=lambda points: np.full(len(points), 1.),
++            segment_check=lambda points: 1., feasible=Mock(return_value=None))
++        self.budgets = dict(max_speed=10., lateral_accel=9.94, acceleration=7.3,
++            braking=3.7, steering_rate=2., yaw_rate=4.4, response_delay=.25, speed_planning='delayed_braking')
++
++    def solver(self, objective, initial, **kwargs):
++        self.assertEqual(kwargs['options']['eps'], .002)
++        objective(initial)
++        objective(np.full(len(initial), .01))
++        return SimpleNamespace(success=False, message='Iteration limit reached', nit=1)
++
++    def test_invalid_iteration_budgets_rejected(self):
++        for value in (0, 11, 1.5, True):
++            with self.assertRaises(ValueError):
++                refine_speed_line(self.planner, self.seed, self.anchors, self.budgets, value)
++
++    def test_no_gain_keeps_original_identity(self):
++        with patch('speed_aware_line.minimize', side_effect=self.solver):
++            result, report = refine_speed_line(self.planner, self.seed, self.anchors, self.budgets)
++        self.assertIs(result, self.seed)
++        self.assertFalse(report['accepted'])
++        self.planner.feasible.assert_not_called()
++
++    def test_faster_surrogate_never_bypasses_geometry(self):
++        self.planner.score.side_effect = lambda route, *args: 20. if route is self.seed else 10.
++        with patch('speed_aware_line.minimize', side_effect=self.solver):
++            result, report = refine_speed_line(self.planner, self.seed, self.anchors, self.budgets)
++        self.assertIs(result, self.seed)
++        self.assertFalse(report['accepted'])
++        self.assertGreater(self.planner.feasible.call_count, 0)
++
++    def test_validated_iterate_can_survive_iteration_limit_without_changing_budget(self):
++        self.planner.score.side_effect = lambda route, *args: 20. if route is self.seed else 10.
++        self.planner.feasible.return_value = self.alternative
++        original = self.seed.points.copy()
++        budgets = dict(self.budgets)
++        with patch('speed_aware_line.minimize', side_effect=self.solver):
++            result, report = refine_speed_line(self.planner, self.seed, self.anchors, self.budgets)
++        self.assertIs(result, self.alternative)
++        self.assertTrue(report['accepted'])
++        self.assertFalse(report['solver_success'])
++        self.assertFalse(report['official_result'])
++        self.assertEqual(report['protected_input_displacement'], 0.)
++        self.assertEqual(self.budgets, budgets)
++        np.testing.assert_array_equal(self.seed.points, original)
++
++    def test_optimizer_exception_falls_back_to_valid_original(self):
++        with patch('speed_aware_line.minimize', side_effect=ValueError('synthetic solver failure')):
++            result, report = refine_speed_line(self.planner, self.seed, self.anchors, self.budgets)
++        self.assertIs(result, self.seed)
++        self.assertFalse(report['accepted'])
++
++    def test_faster_but_sharper_reference_is_not_accepted(self):
++        self.planner.score.side_effect = lambda route, *args: 20. if route is self.seed else 10.
++        self.planner.feasible.return_value = self.alternative
++        metrics = lambda route: dict(curvature=.2, steering_gradient=.1) if route is self.seed else dict(curvature=2., steering_gradient=1.)
++        with patch('speed_aware_line.reference_peaks', side_effect=metrics), patch('speed_aware_line.minimize', side_effect=self.solver):
++            result, report = refine_speed_line(self.planner, self.seed, self.anchors, self.budgets)
++        self.assertIs(result, self.seed)
++        self.assertFalse(report['accepted'])
++
++    def test_restart_portfolio_cannot_bypass_original_feasibility(self):
++        self.planner.score.side_effect = lambda route, *args: 20. if route is self.seed else 10.
++        with patch('joint_line_polish.polish_line', return_value=(self.alternative, {'accepted': True})), patch('speed_aware_line.minimize', side_effect=self.solver):
++            result, report = refine_speed_line(self.planner, self.seed, self.anchors, self.budgets,
++                                               source_seed=self.seed)
++        self.assertIs(result, self.seed)
++        self.assertTrue(all(not item['accepted'] for item in report['portfolio']))
++
++    def test_sector_time_and_length_are_disjoint_model_diagnostics(self):
++        path = SimpleNamespace(curvature=np.array([0., .149, .15, .59, .6, 1.]),
++                               speeds=np.array([4., 4., 3., 3., 2., 2.]), ds=.1)
++        report = sector_speed_report(path)
++        self.assertTrue(report['model_only'])
++        self.assertAlmostEqual(sum(row['length_m'] for row in report['sectors'].values()), .6)
++        self.assertAlmostEqual(sum(row['model_lap_seconds'] for row in report['sectors'].values()),
++                               float(sum(path.ds / path.speeds)))
++
++    def test_launch_defaults_and_legacy_keep_new_optimizer_off(self):
++        for filename in ('planned_race.launch', 'final_speedup.launch', 'final_speedup_demo.launch'):
++            root = ET.parse(PACKAGE / 'launch' / filename).getroot()
++            args = {item.attrib['name']: item.attrib.get('default') for item in root.findall('arg')}
++            self.assertEqual(args['route_speed_refine'], 'false')
++        root = ET.parse(PACKAGE / 'launch' / 'final_speedup.launch').getroot()
++        forwarded = {item.attrib['name']: item.attrib['value'] for item in root.find('include').findall('arg')}
++        self.assertIn("arg('legacy_control')", forwarded['route_speed_refine'])
++
++
++if __name__ == '__main__':
++    unittest.main()
+diff --git a/tianracer_gazebo/test/test_speed_trial.py b/tianracer_gazebo/test/test_speed_trial.py
+new file mode 100644
+index 0000000..c53a7c5
+--- /dev/null
++++ b/tianracer_gazebo/test/test_speed_trial.py
+@@ -0,0 +1,143 @@
++import json
++from pathlib import Path
++import subprocess
++import sys
++import tempfile
++import unittest
++import yaml
++
++PACKAGE = Path(__file__).resolve().parents[1]
++sys.path.insert(0, str(PACKAGE / 'scripts'))
++from speed_trial import choose_session, inherited_parameters, launch_arguments, make_recipe
++
++
++class TrialTests(unittest.TestCase):
++    def setUp(self):
++        self.temp = tempfile.TemporaryDirectory()
++        self.addCleanup(self.temp.cleanup)
++        self.root = Path(self.temp.name)
++        self.session = self.root / 'final71' / 'source70'
++        self.session.mkdir(parents=True)
++        self.parameters = dict(route_margin=.34, response_delay=.25, max_error=.15,
++            max_speed=10., steering_rate=2., lateral_control='race_feedback', speed_planning='delayed_braking',
++            lateral_accel=9.94, acceleration=7.3, braking=3.7, yaw_rate=4.4,
++            startup_speed=2., startup_acceleration=2.5, steering_feedback_gain=.25,
++            steering_preview_time=.12, heading_feedback_gain=.8, cross_track_gain=.8,
++            line_search_level=3, predict_pose=False, startup_connector_length=2.5,
++            speed_recovery_hold=0., route_control_scoring=False,
++            route_joint_polish=True, route_polish_strength=.6)
++        self.run = dict(last_fault=None, run_sequence=1, configuration={})
++        self.save()
++        (self.session / 'commit.txt').write_text('source-commit')
++        (self.root / 'final_last_session.txt').write_text(str(self.session))
++
++    def save(self):
++        (self.session / 'run_report.json').write_text(json.dumps(self.run))
++        (self.session / 'params.yaml').write_text(yaml.safe_dump(self.parameters))
++
++    def test_baseline_inherits_actual_strength_instead_of_assuming_half(self):
++        recipe = make_recipe(self.session, 'baseline')
++        self.assertEqual(recipe['parameters']['route_polish_strength'], .6)
++        self.assertEqual(recipe['changed'], {})
++        self.assertFalse(recipe['official_under_60_verified'])
++
++    def test_algorithm_changes_only_one_setting(self):
++        recipe = make_recipe(self.session, 'algorithm')
++        self.assertEqual(list(recipe['changed']), ['route_speed_refine'])
++        self.assertEqual(recipe['parameters']['lateral_accel'], 9.94)
++        self.assertEqual(recipe['parameters']['braking'], 3.7)
++
++    def test_lateral_steps_are_small_and_explicit_opt_in(self):
++        first = make_recipe(self.session, 'lateral_101')
++        self.assertTrue(first['budget_trial'])
++        self.assertEqual(list(first['changed']), ['lateral_accel'])
++        self.assertIn('budget_trial:=true', launch_arguments(first))
++        with self.assertRaisesRegex(ValueError, 'at most 0.2'):
++            make_recipe(self.session, 'lateral_102')
++        self.parameters['lateral_accel'] = 10.1
++        self.save()
++        self.assertEqual(make_recipe(self.session, 'lateral_102')['parameters']['lateral_accel'], 10.2)
++
++    def test_acceleration_is_one_small_change(self):
++        recipe = make_recipe(self.session, 'accel_75')
++        self.assertEqual(list(recipe['changed']), ['acceleration'])
++        self.assertEqual(recipe['parameters']['acceleration'], 7.5)
++
++    def test_fault_and_multiple_starts_rejected(self):
++        for run in ({'last_fault': {'reason': 'stop'}}, {}, {'last_fault': None, 'run_sequence': 2}):
++            self.run = run
++            self.save()
++            with self.assertRaises(ValueError):
++                inherited_parameters(self.session)
++
++    def test_boundary_or_report_mismatch_rejected(self):
++        self.parameters['response_delay'] = .2
++        self.save()
++        with self.assertRaisesRegex(ValueError, 'boundary'):
++            inherited_parameters(self.session)
++        self.parameters['response_delay'] = .25
++        self.run['configuration']['acceleration'] = 8.
++        self.save()
++        with self.assertRaisesRegex(ValueError, 'mismatch'):
++            inherited_parameters(self.session)
++
++    def test_invalid_observation_not_promoted_to_baseline(self):
++        (self.session / 'referee_observation.json').write_text(json.dumps(dict(valid_5_of_5=True, any_incident=True)))
++        with self.assertRaisesRegex(ValueError, 'incident'):
++            inherited_parameters(self.session)
++
++    def test_source_route_checksum_mismatch_rejected(self):
++        self.run['reference_sha256'] = 'run-a'
++        self.save()
++        (self.session / 'planned_course_report.json').write_text(json.dumps({'reference_sha256': 'plan-b'}))
++        with self.assertRaisesRegex(ValueError, 'checksum'):
++            inherited_parameters(self.session)
++
++    def test_best_pointer_and_active_recording(self):
++        (self.root / 'best_race_session.txt').write_text(str(self.session))
++        self.assertEqual(choose_session(self.root, 'best'), self.session)
++        (self.session / 'control.bag.active').write_bytes(b'x')
++        with self.assertRaisesRegex(ValueError, 'active'):
++            choose_session(self.root, 'best')
++
++    def test_no_manual_best_is_inferred_from_reference_time(self):
++        with self.assertRaisesRegex(ValueError, 'No saved best'):
++            choose_session(self.root, 'best')
++
++    def test_default_cli_is_dry_and_does_not_launch_ros(self):
++        script = PACKAGE / 'scripts' / 'speed_trial.py'
++        result = subprocess.run([sys.executable, str(script), '--base', 'latest', '--profile', 'algorithm',
++                                 '--log-root', str(self.root)], text=True, capture_output=True)
++        self.assertEqual(result.returncode, 0, result.stderr)
++        self.assertIn('Dry-run only', result.stdout)
++        self.assertFalse((self.root / 'speed_trial_recipes').exists())
++
++
++class ShellBudgetTests(unittest.TestCase):
++    def parse_only(self, *args):
++        source = (PACKAGE / 'scripts' / 'run_final_speedup.sh').read_text()
++        prefix = source.split('\nset +u\n', 1)[0]
++        # Execute actual argument validation only; never source ROS or launch.
++        code = prefix + '\nprintf "%s\\n" "${launch_overrides[@]}"\n'
++        return subprocess.run(['bash', '-c', code, 'budget-parser', 'baseline', *args],
++                              text=True, capture_output=True)
++
++    def test_default_gate_preserved(self):
++        self.assertEqual(self.parse_only('lateral_accel:=10.1').returncode, 2)
++
++    def test_opt_in_is_order_independent_and_not_forwarded_to_ros(self):
++        for args in (('budget_trial:=true', 'lateral_accel:=10.1'),
++                     ('lateral_accel:=10.1', 'budget_trial:=true')):
++            result = self.parse_only(*args)
++            self.assertEqual(result.returncode, 0, result.stderr)
++            self.assertNotIn('budget_trial:=', result.stdout)
++
++    def test_upper_bound_and_braking_gate_cannot_be_bypassed(self):
++        for args in (('budget_trial:=true', 'lateral_accel:=10.21'),
++                     ('budget_trial:=true', 'braking:=3.8'), ('response_delay:=0.1',),
++                     ('route_margin:=0.2',), ('budget_trial:=true', 'budget_trial:=false')):
++            self.assertEqual(self.parse_only(*args).returncode, 2, args)
++
++
++if __name__ == '__main__':
++    unittest.main()
