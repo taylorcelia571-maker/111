@@ -61,6 +61,8 @@ class ContinuousRace:
                            startup_speed=rospy.get_param('~startup_speed',1.2),
                            startup_acceleration=rospy.get_param('~startup_acceleration',1.5),
                            startup_connector_length=rospy.get_param('~startup_connector_length',2.5),
+                           runtime_path_cache=rospy.get_param('~runtime_path_cache',False),
+                           steering_preview_mode=rospy.get_param('~steering_preview_mode','legacy'),
                            steering_rate=rospy.get_param('~steering_rate',2.0),
                            yaw_rate=rospy.get_param('~yaw_rate',3.2))
         self.follower = follower_type(self.path, **options)
@@ -373,10 +375,12 @@ class ContinuousRace:
                'yaw_rate','steering_rate','response_delay','steering_feedback_gain',
                'steering_preview_time','heading_feedback_gain','cross_track_gain',
                'startup_speed','startup_acceleration','connector_length',
-               'startup_release_early','lateral_control','speed_planning')
+               'startup_release_early','lateral_control','speed_planning',
+               'runtime_path_cache','steering_preview_mode')
         result={name:getattr(self.follower,name) for name in names if hasattr(self.follower,name)}
         result.update(require_prepared_start=self.require_prepared_start,
             route_control_scoring=rospy.get_param('~route_control_scoring',False),
+            route_joint_polish=getattr(self,'route_polish_report',None),
             route_margin=rospy.get_param('~route_margin',.34))
         return result
 

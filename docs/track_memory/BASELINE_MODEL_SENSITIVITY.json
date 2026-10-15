@@ -1,0 +1,80 @@
+{
+  "response_preview_proxy_five_seconds": 68.78152542789793,
+  "response_preview_proxy_includes_startup": false,
+  "response_preview_proxy_uses_nominal_speed": true,
+  "reference_sha256": "912e58b64b81f91220251f827ab7a0009032d0c5b56a1542c53f4f9da957e3a0",
+  "steering_feedback_gain": 0.25,
+  "steering_preview_time": 0.12,
+  "curvature_feedforward_gain": 0.4,
+  "pursuit_lookahead_scale": 1.0,
+  "heading_feedback_gain": 0.8,
+  "cross_track_gain": 0.8,
+  "speed_planning": "delayed_braking",
+  "startup_release_early": true,
+  "length": 44.846127380448706,
+  "model_lap_seconds": 13.756305085579585,
+  "model_five_seconds": 68.78152542789793,
+  "model_includes_startup": false,
+  "required_mean_speed_for_60s": 3.7371772817040587,
+  "response_delay_seconds": 0.25,
+  "response_delay_is_measured": false,
+  "model_includes_response_preview": true,
+  "lateral_control": "race_feedback",
+  "startup_limits": {
+    "speed": 2.0,
+    "acceleration": 2.5,
+    "connector_length": 2.5,
+    "acceleration_guard_distance": null,
+    "minimum_release_distance": 0.6,
+    "release_hold_seconds": 0.3
+  },
+  "peak_planned_speed": 6.353922128692271,
+  "runtime_path_cache": false,
+  "track_memory": {
+    "enabled": false
+  },
+  "steering_preview_mode": "legacy",
+  "speed_ceiling_binding": false,
+  "same_route_parameter_sensitivity": {
+    "max_speed_plus_1": {
+      "parameter": "max_speed",
+      "value": 11.0,
+      "model_five_seconds": 68.78152542789793,
+      "model_seconds_saved": 0.0
+    },
+    "lateral_plus_10_percent": {
+      "parameter": "lateral_accel",
+      "value": 10.934000000000001,
+      "model_five_seconds": 66.31428933816773,
+      "model_seconds_saved": 2.467236089730207
+    },
+    "acceleration_plus_20_percent": {
+      "parameter": "acceleration",
+      "value": 8.76,
+      "model_five_seconds": 68.61252313094997,
+      "model_seconds_saved": 0.16900229694796565
+    },
+    "braking_plus_20_percent": {
+      "parameter": "braking",
+      "value": 4.44,
+      "model_five_seconds": 68.28846730473252,
+      "model_seconds_saved": 0.49305812316541164
+    }
+  },
+  "sensitivity_is_physical_validation": false,
+  "limits": {
+    "max_speed": 10.0,
+    "lateral_accel": 9.94,
+    "acceleration": 7.3,
+    "braking": 3.7,
+    "steering_rate": 2.0,
+    "yaw_rate": 4.4
+  },
+  "time_fraction_by_limit": {
+    "straight": 0.0,
+    "lateral": 0.2011823176887669,
+    "yaw_rate": 0.0,
+    "steering_rate": 0.003567918709041398,
+    "acceleration_braking": 0.7952497636021917
+  }
+}

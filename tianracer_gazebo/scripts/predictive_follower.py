@@ -14,7 +14,8 @@ class PredictiveFollower(LineFollower):
                  speed_planning="legacy", startup_release_early=False,
                  steering_preview_time=.10, curvature_feedforward_gain=.4,
                  pursuit_lookahead_scale=1.0, heading_feedback_gain=.8,
-                 cross_track_gain=.8, startup_connector_length=2.5):
+                 cross_track_gain=.8, startup_connector_length=2.5,
+                 runtime_path_cache=False, steering_preview_mode='legacy'):
         super().__init__(path, max_speed, lateral_accel, acceleration, braking,
                          wheelbase, max_steer, max_error)
         self.steering_rate = positive('steering_rate', steering_rate)
@@ -49,6 +50,15 @@ class PredictiveFollower(LineFollower):
         if lateral_control == 'curvature_feedback' and start_blend:
             raise ValueError('Selected lateral controller requires the unmodified reference path')
         self.lateral_control = lateral_control
+        if not isinstance(runtime_path_cache, bool):
+            raise ValueError('runtime_path_cache must be boolean')
+        if steering_preview_mode not in ('legacy', 'curvature_adaptive'):
+            raise ValueError('Unknown steering_preview_mode')
+        if steering_preview_mode != 'legacy' and lateral_control != 'race_feedback':
+            raise ValueError('Adaptive steering preview requires race_feedback')
+        self.runtime_path_cache = runtime_path_cache
+        self.steering_preview_mode = steering_preview_mode
+        self.last_preview_advance = None
         self.measured_steer = None
         self.measured_steer_age = 0.0
         self.startup_speed=positive('startup_speed',startup_speed)
@@ -86,6 +96,31 @@ class PredictiveFollower(LineFollower):
             raise ValueError('startup_connector_length must be between 2.0 and 3.0 meters')
         self.connector_length = float(startup_connector_length)
         self.last_report = {}
+        self.track_memory = None
+        if runtime_path_cache:
+            from track_memory import CyclicTrackMemory
+            self.track_memory = CyclicTrackMemory(path)
+
+    def steering_advance(self, distance, speed, dt):
+        legacy = min(2.5 * self.steering_preview_time, max(0., speed) * self.steering_preview_time)
+        # Keep departure, connector and readiness logic identical. No learning
+        # or mode reset at a lap seam; live pose/joints remain the feedback.
+        if (self.steering_preview_mode == 'legacy' or self.departure or
+                self.launch_limited or self.connector_active()):
+            self.last_preview_advance = legacy
+            return legacy
+        horizon = min(.60, max(0., speed) * self.steering_preview_time)
+        i = int(math.floor(distance / self.path.ds)) % self.path.n
+        count = min(self.path.n - 1, int(math.ceil(horizon / self.path.ds)))
+        curve = (self.track_memory.maximum_curvature(i, count) if self.track_memory else
+                 float(np.max(np.abs(self.path.curvature[(i + np.arange(count + 1)) % self.path.n]))))
+        # Limit the adaptive target to 0.60m / ~0.60rad of reference turn;
+        # transition toward it at a bounded rate. Existing safety limits remain.
+        target = min(horizon, .60 / max(curve, 1e-6))
+        previous = legacy if self.last_preview_advance is None else self.last_preview_advance
+        advance = previous + float(np.clip(target - previous, -2. * dt, 2. * dt))
+        self.last_preview_advance = advance
+        return advance
 
     def preview_speed_profile(self):
         """Conservative scoring profile using nominal speed for response travel.
@@ -152,6 +187,9 @@ class PredictiveFollower(LineFollower):
                                         minimum_release_distance=.6 if self.startup_release_early else self.connector_length,
                                         release_hold_seconds=.3),
                     peak_planned_speed=float(self.path.speeds.max()),
+                    runtime_path_cache=self.runtime_path_cache,
+                    track_memory=self.track_memory.report() if self.track_memory else dict(enabled=False),
+                    steering_preview_mode=self.steering_preview_mode,
                     speed_ceiling_binding=bool(np.any(self.path.speeds>=self.max_speed-1e-6)),
                     same_route_parameter_sensitivity=sensitivity,
                     sensitivity_is_physical_validation=False,
@@ -169,6 +207,7 @@ class PredictiveFollower(LineFollower):
         self.launch_ready=0.0
         self.start_diagnostics = dict(mode='alignment',reason='connector_disabled_or_geometry_not_eligible')
         self.last_report = {}
+        self.last_preview_advance = None
         tangent=self.path.sample(self.origin+.08)-self.path.sample(self.origin)
         difference=math.atan2(math.sin(math.atan2(tangent[1],tangent[0])-yaw),
                               math.cos(math.atan2(tangent[1],tangent[0])-yaw))
@@ -222,7 +261,8 @@ class PredictiveFollower(LineFollower):
         if measured_speed < -0.1:
             self.stop(); raise ValueError('Unexpected backward vehicle motion: measured_speed=%.4fm/s' % measured_speed)
         if self.progress is None: self.start(x,y,yaw)
-        s,self.error = self.path.project(x,y,self.progress-0.1,self.progress+self.max_speed*elapsed*2+0.20)
+        project = self.track_memory.project if self.track_memory else self.path.project
+        s,self.error = project(x,y,self.progress-0.1,self.progress+self.max_speed*elapsed*2+0.20)
         if self.connector_active():
             begin=self.progress-.1
             end=min(self.origin+self.connector_length,self.progress+self.max_speed*elapsed*2+.2)
@@ -289,8 +329,8 @@ class PredictiveFollower(LineFollower):
         k = 2*(-math.sin(yaw)*dx+math.cos(yaw)*dy)/max(dx*dx+dy*dy,1e-6)
         desired_steer = float(np.clip(math.atan(self.wheelbase*k),-self.max_steer,self.max_steer))
         feedforward=None
+        advance = self.steering_advance(tracking_s, measured_speed, dt)
         if self.lateral_control=='smooth_pursuit':
-            advance=min(2.5*self.steering_preview_time,max(0,measured_speed)*self.steering_preview_time)
             index=(tracking_s+advance)/self.path.ds
             a=int(math.floor(index));fraction=index-a
             ahead=float((1-fraction)*self.path.curvature[a%self.path.n]+
@@ -315,7 +355,6 @@ class PredictiveFollower(LineFollower):
             # Curvature feedforward plus continuous heading/cross-track feedback.
             # Avoid switching to a short pursuit target during an outward drift:
             # that switch amplifies tiny pose errors into large alternating turns.
-            advance=min(2.5*self.steering_preview_time,max(0,measured_speed)*self.steering_preview_time)
             index=(tracking_s+advance)/self.path.ds
             a=int(math.floor(index)); fraction=index-a
             feedforward=float((1-fraction)*self.path.curvature[a%self.path.n]+
@@ -363,7 +402,8 @@ class PredictiveFollower(LineFollower):
             # the same response delay twice.
             preview_distance=max(0,measured_speed-self.path.speeds[i])*self.response_delay
         count=min(self.path.n-1,int(math.ceil(preview_distance/self.path.ds)))
-        envelope=float(np.min(self.path.speeds[(i+np.arange(count+1))%self.path.n]))
+        envelope=(self.track_memory.minimum_speed(i,count) if self.track_memory else
+                  float(np.min(self.path.speeds[(i+np.arange(count+1))%self.path.n])))
         desired = min(envelope,live_lateral,live_yaw)
         reason = 'planned_envelope'
         if envelope < self.path.speeds[i]-1e-6: reason='response_preview'
@@ -525,6 +565,9 @@ class PredictiveFollower(LineFollower):
             startup=self.startup_speed if self.launch_limited else None,
             acceleration=acceleration_limit)
         self.last_report['reference_curvature'] = float(self.path.curvature[i])
+        self.last_report.update(runtime_path_cache=self.runtime_path_cache,
+                                steering_preview_mode=self.steering_preview_mode,
+                                steering_preview_distance=advance)
         return self.speed,self.steer
 
 

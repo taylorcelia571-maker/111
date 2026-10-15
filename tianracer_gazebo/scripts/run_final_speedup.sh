@@ -8,7 +8,7 @@ declare -A seen=()
 for argument in "$@"; do
   key="${argument%%:=*}"
   case "$key" in
-    startup_speed|startup_acceleration|startup_connector_length|steering_preview_time|steering_feedback_gain|heading_feedback_gain|cross_track_gain|acceleration|lateral_accel|braking|yaw_rate|line_search_level|predict_pose|route_control_scoring|speed_recovery_hold|legacy_control) ;;
+    startup_speed|startup_acceleration|startup_connector_length|steering_preview_time|steering_feedback_gain|heading_feedback_gain|cross_track_gain|acceleration|lateral_accel|braking|yaw_rate|line_search_level|predict_pose|route_control_scoring|speed_recovery_hold|legacy_control|runtime_path_cache|steering_preview_mode|route_joint_polish|route_polish_strength) ;;
     *) echo "Unsupported/protected override: $argument" >&2; exit 2;;
   esac
   if [[ "$argument" != *":="* || -n "${seen[$key]:-}" ]]; then

@@ -2,6 +2,10 @@
   <!-- Frozen user71 budgets; optional geometry/score changes, manual start only. -->
   <arg name="version" default="baseline"/>
   <arg name="legacy_control" default="false"/>
+  <arg name="runtime_path_cache" default="false"/>
+  <arg name="steering_preview_mode" default="legacy"/>
+  <arg name="route_joint_polish" default="false"/>
+  <arg name="route_polish_strength" default="0.5"/>
   <arg name="log_dir" default="~/ican_race_logs/final71"/>
   <arg name="lateral_accel" default="9.94"/>
   <arg name="acceleration" default="7.3"/>
@@ -20,6 +24,10 @@
   <arg name="require_prepared_start" default="true"/>
   <arg name="route_control_scoring" default="$(eval arg('version') == 'v2')"/>
   <include file="$(find tianracer_gazebo)/launch/planned_race.launch">
+    <arg name="runtime_path_cache" value="$(eval False if arg('legacy_control') else arg('runtime_path_cache'))"/>
+    <arg name="steering_preview_mode" value="$(eval 'legacy' if arg('legacy_control') else arg('steering_preview_mode'))"/>
+    <arg name="route_joint_polish" value="$(eval False if arg('legacy_control') else arg('route_joint_polish'))"/>
+    <arg name="route_polish_strength" value="$(arg route_polish_strength)"/>
     <arg name="lateral_accel" value="$(arg lateral_accel)"/>
     <arg name="acceleration" value="$(arg acceleration)"/>
     <arg name="braking" value="$(arg braking)"/>

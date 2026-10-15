@@ -45,6 +45,21 @@ def main():
                                ('steering_rate',2.0),('yaw_rate',3.2),('response_delay',0.0))})
     if optimize:
         rospy.loginfo('Time-based route selection (model only): %s',planner.selection)
+    polish_report = None
+    if rospy.get_param('~route_joint_polish',False):
+        if not optimize:
+            raise ValueError('Joint line polish requires optimize_time')
+        from joint_line_polish import polish_line
+        center,polish_report=polish_line(planner,center,anchors,
+            {k:rospy.get_param('~'+k,v) for k,v in (
+                ('max_speed',2.0),('lateral_accel',5.0),('acceleration',2.0),('braking',3.0),
+                ('steering_rate',2.0),('yaw_rate',3.2),('response_delay',.25),('speed_planning','legacy'))},
+            strength=rospy.get_param('~route_polish_strength',.5))
+        planner.selection.update(joint_polish=polish_report,
+            estimated_lap_seconds=polish_report['selected_model_lap_seconds'])
+        if polish_report['accepted']:
+            planner.selection.update(route_changed=True,route_sha256=polish_report['selected_route_sha256'])
+        rospy.loginfo('Joint route polish (model only): %s',polish_report)
     tangent = np.roll(center.points,-1,axis=0)-np.roll(center.points,1,axis=0)
     tangent /= np.linalg.norm(tangent,axis=1)[:,None]
     rear = center.points-0.13*tangent
@@ -60,6 +75,7 @@ def main():
             centers.append(follower.sample_tracking(distance)+.13*tangent)
         return bool(np.min(planner.clearance_at(np.asarray(centers)))>=planner.margin)
     controller = ContinuousRace(path, clearance_guard=guard,start_path_guard=start_guard)
+    controller.route_polish_report=polish_report
     # Persist the plan for inspection, never as an official result.
     output = os.path.expanduser(rospy.get_param('~output','~/ican_race_logs/planned_course.csv'))
     os.makedirs(os.path.dirname(os.path.abspath(output)),exist_ok=True)
@@ -70,6 +86,7 @@ def main():
                   route_margin=planner.margin,wall_stop_clearance=.23,
                   nominal_wall_tracking_reserve=planner.margin-.23)
     report['route_control_scoring']=planner.control_scoring
+    report['route_joint_polish']=polish_report
     report['route_control_score_assumptions']= (
         'Perfect localization and current-reference steering, zero joint age; '
         'feedforward/compensation/slew proxy only, not actuator or tire validation'

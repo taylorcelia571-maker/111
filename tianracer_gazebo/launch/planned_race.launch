@@ -1,4 +1,8 @@
 <launch>
+  <arg name="runtime_path_cache" default="false"/>
+  <arg name="steering_preview_mode" default="legacy"/>
+  <arg name="route_joint_polish" default="false"/>
+  <arg name="route_polish_strength" default="0.5"/>
   <arg name="startup_connector_length" default="2.5"/>
   <arg name="route_control_scoring" default="false"/>
   <arg name="cycle_log" default=""/>
@@ -36,6 +40,10 @@
   <arg name="startup_acceleration" default="1.5"/>
   <node pkg="tianracer_gazebo" type="planned_race.py" name="continuous_race"
         ns="tianracer" output="screen" required="true">
+    <param name="runtime_path_cache" value="$(arg runtime_path_cache)" type="bool"/>
+    <param name="steering_preview_mode" value="$(arg steering_preview_mode)"/>
+    <param name="route_joint_polish" value="$(arg route_joint_polish)" type="bool"/>
+    <param name="route_polish_strength" value="$(arg route_polish_strength)" type="double"/>
     <param name="startup_connector_length" value="$(arg startup_connector_length)" type="double"/>
     <param name="route_control_scoring" value="$(arg route_control_scoring)" type="bool"/>
     <param name="cycle_log" value="$(arg cycle_log)"/>

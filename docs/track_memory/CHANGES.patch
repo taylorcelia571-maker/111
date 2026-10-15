@@ -1,0 +1,708 @@
+diff --git a/tianracer_gazebo/launch/final_speedup.launch b/tianracer_gazebo/launch/final_speedup.launch
+index 5a50dcc..6d3e2c8 100644
+--- a/tianracer_gazebo/launch/final_speedup.launch
++++ b/tianracer_gazebo/launch/final_speedup.launch
+@@ -4,0 +5,4 @@
++  <arg name="runtime_path_cache" default="false"/>
++  <arg name="steering_preview_mode" default="legacy"/>
++  <arg name="route_joint_polish" default="false"/>
++  <arg name="route_polish_strength" default="0.5"/>
+@@ -22,0 +27,4 @@
++    <arg name="runtime_path_cache" value="$(eval False if arg('legacy_control') else arg('runtime_path_cache'))"/>
++    <arg name="steering_preview_mode" value="$(eval 'legacy' if arg('legacy_control') else arg('steering_preview_mode'))"/>
++    <arg name="route_joint_polish" value="$(eval False if arg('legacy_control') else arg('route_joint_polish'))"/>
++    <arg name="route_polish_strength" value="$(arg route_polish_strength)"/>
+diff --git a/tianracer_gazebo/launch/final_speedup_demo.launch b/tianracer_gazebo/launch/final_speedup_demo.launch
+index 99fbe72..09f6c14 100644
+--- a/tianracer_gazebo/launch/final_speedup_demo.launch
++++ b/tianracer_gazebo/launch/final_speedup_demo.launch
+@@ -6,0 +7,4 @@
++  <arg name="runtime_path_cache" default="false"/>
++  <arg name="steering_preview_mode" default="legacy"/>
++  <arg name="route_joint_polish" default="false"/>
++  <arg name="route_polish_strength" default="0.5"/>
+@@ -31,0 +36,4 @@
++    <arg name="runtime_path_cache" value="$(arg runtime_path_cache)"/>
++    <arg name="steering_preview_mode" value="$(arg steering_preview_mode)"/>
++    <arg name="route_joint_polish" value="$(arg route_joint_polish)"/>
++    <arg name="route_polish_strength" value="$(arg route_polish_strength)"/>
+diff --git a/tianracer_gazebo/launch/planned_race.launch b/tianracer_gazebo/launch/planned_race.launch
+index fbd9fcf..825545d 100644
+--- a/tianracer_gazebo/launch/planned_race.launch
++++ b/tianracer_gazebo/launch/planned_race.launch
+@@ -1,0 +2,4 @@
++  <arg name="runtime_path_cache" default="false"/>
++  <arg name="steering_preview_mode" default="legacy"/>
++  <arg name="route_joint_polish" default="false"/>
++  <arg name="route_polish_strength" default="0.5"/>
+@@ -38,0 +43,4 @@
++    <param name="runtime_path_cache" value="$(arg runtime_path_cache)" type="bool"/>
++    <param name="steering_preview_mode" value="$(arg steering_preview_mode)"/>
++    <param name="route_joint_polish" value="$(arg route_joint_polish)" type="bool"/>
++    <param name="route_polish_strength" value="$(arg route_polish_strength)" type="double"/>
+diff --git a/tianracer_gazebo/scripts/continuous_race.py b/tianracer_gazebo/scripts/continuous_race.py
+index e967716..c17cd61 100755
+--- a/tianracer_gazebo/scripts/continuous_race.py
++++ b/tianracer_gazebo/scripts/continuous_race.py
+@@ -63,0 +64,2 @@ class ContinuousRace:
++                           runtime_path_cache=rospy.get_param('~runtime_path_cache',False),
++                           steering_preview_mode=rospy.get_param('~steering_preview_mode','legacy'),
+@@ -376 +378,2 @@ class ContinuousRace:
+-               'startup_release_early','lateral_control','speed_planning')
++               'startup_release_early','lateral_control','speed_planning',
++               'runtime_path_cache','steering_preview_mode')
+@@ -379,0 +383 @@ class ContinuousRace:
++            route_joint_polish=getattr(self,'route_polish_report',None),
+diff --git a/tianracer_gazebo/scripts/joint_line_polish.py b/tianracer_gazebo/scripts/joint_line_polish.py
+new file mode 100644
+index 0000000..8a5e4c0
+--- /dev/null
++++ b/tianracer_gazebo/scripts/joint_line_polish.py
+@@ -0,0 +1,99 @@
++"""Optional stationary constrained racing-line polish; no guard is relaxed.
++
++The quadratic approximation proposes smooth normal offsets. The original
++nonlinear clearance, turn, checkpoint-order and full speed-envelope checks
++decide acceptance; solver success alone never makes a motion plan.
++"""
++import hashlib
++import math
++import numpy as np
++from scipy.optimize import Bounds, LinearConstraint, minimize
++
++
++def polish_line(planner, seed, anchors, budgets, strength=.5):
++    if isinstance(strength, bool) or not math.isfinite(strength) or not .1 <= strength <= 1.:
++        raise ValueError('route_polish_strength must be between .1 and 1.0')
++    anchors = np.asarray(anchors, dtype=float)
++    if anchors.ndim != 2 or anchors.shape[1] != 2 or not np.isfinite(anchors).all() or len(anchors) < 3:
++        raise ValueError('Invalid polish anchors')
++    args = tuple(budgets[k] for k in ('max_speed', 'lateral_accel', 'acceleration',
++                                    'braking', 'steering_rate', 'yaw_rate',
++                                    'response_delay', 'speed_planning'))
++    baseline = planner.score(seed, *args)
++    report = dict(enabled=True, accepted=False, strength=strength,
++                  baseline_model_lap_seconds=baseline, selected_model_lap_seconds=baseline,
++                  route_margin=planner.margin, launch_region_protected_m=6.,
++                  maximum_proposed_normal_offset=.18, knot_step=.6,
++                  curvature_variation_weight=.1, solver_success=False,
++                  official_result=False, model_is_not_actuator_or_tire_validation=True)
++    p = seed.points
++    length = float(np.linalg.norm(np.roll(p, -1, axis=0) - p, axis=1).sum())
++    ds = length / len(p)
++    tangent = np.roll(p, -1, axis=0) - np.roll(p, 1, axis=0)
++    tangent /= np.maximum(np.linalg.norm(tangent, axis=1)[:, None], 1e-12)
++    normal = np.column_stack((-tangent[:, 1], tangent[:, 0]))
++    arc = np.arange(len(p)) * ds
++    launch_anchor = anchors[int(np.argmin(np.linalg.norm(anchors, axis=1)))]
++    launch_s = seed.project(*launch_anchor)[0]
++    from_launch = (arc - launch_s) % length
++    weight = np.clip((from_launch - 6.) / 1., 0, 1) * np.clip((length - from_launch - 1.) / .8, 0, 1)
++    weight = weight ** 3 * (10 - 15 * weight + 6 * weight ** 2)
++    # Connected displacement interval around the existing route. These sampled
++    # bounds only guide the solver; feasible() still checks the full candidate.
++    extents = []
++    for sign in (-1., 1.):
++        extent = np.zeros(len(p))
++        active = np.ones(len(p), dtype=bool)
++        for offset in np.arange(.003, .181, .003):
++            active &= planner.clearance_at(p + sign * offset * normal) >= planner.margin + 1e-6
++            extent[active] = offset
++        extents.append(sign * extent)
++    knots = np.arange(0., length, .6)
++    distance = np.abs(arc[:, None] - knots[None, :])
++    distance = np.minimum(distance, length - distance)
++    basis = np.exp(-.5 * (distance / (.6 * .7)) ** 2)
++    basis /= basis.sum(axis=1)[:, None]
++    basis *= weight[:, None]
++    window = max(1, round(.12 / ds))
++    displacement = normal[:, :, None] * basis[:, None, :]
++    second = (np.roll(displacement, window, axis=0) - 2 * displacement +
++              np.roll(displacement, -window, axis=0)) / (window * ds) ** 2
++    residual = (np.roll(p, window, axis=0) - 2 * p + np.roll(p, -window, axis=0)) / (window * ds) ** 2
++    third = (np.roll(second, -window, axis=0) - np.roll(second, window, axis=0)) / (2 * window * ds)
++    residual_rate = (np.roll(residual, -window, axis=0) - np.roll(residual, window, axis=0)) / (2 * window * ds)
++    hessian = (np.einsum('nik,nil->kl', second, second) +
++               .1 * np.einsum('nik,nil->kl', third, third)) / len(p) + np.eye(len(knots)) * 1e-4
++    linear = (np.einsum('nik,ni->k', second, residual) +
++              .1 * np.einsum('nik,ni->k', third, residual_rate)) / len(p)
++    solution = minimize(lambda z: float(z @ hessian @ z + 2 * linear @ z), np.zeros(len(knots)),
++                        jac=lambda z: 2 * (hessian @ z + linear), method='SLSQP',
++                        bounds=Bounds(-.18, .18),
++                        constraints=[LinearConstraint(basis, extents[0], extents[1])],
++                        options=dict(maxiter=70, ftol=1e-9))
++    report.update(solver_success=bool(solution.success), solver_message=str(solution.message),
++                  solver_iterations=int(solution.nit))
++    if not solution.success or not np.isfinite(solution.x).all():
++        return seed, report
++    best, best_score = seed, baseline
++    candidates = []
++    for scale in (strength, .6 * strength, .3 * strength):
++        offset = basis @ solution.x * scale
++        points = p + offset[:, None] * normal
++        # Preserve the original guard implementation, including .34m clearance,
++        # steering geometry, ordered anchors and no checkpoint bypass.
++        trial = planner.feasible(points, anchors)
++        if trial is None:
++            candidates.append(dict(scale=scale, feasible=False))
++            continue
++        score = planner.score(trial, *args)
++        candidates.append(dict(scale=scale, feasible=True, model_lap_seconds=score))
++        if score < best_score - .002:
++            best, best_score = trial, score
++            report.update(accepted=True, selected_scale=scale,
++                          selected_model_lap_seconds=score,
++                          maximum_normal_offset=float(np.max(np.abs(offset))),
++                          protected_input_displacement=float(np.max(np.abs(offset[weight == 0]))))
++    report['candidates'] = candidates
++    report['model_five_seconds_saved_without_startup'] = 5 * (baseline - best_score)
++    report['selected_route_sha256'] = hashlib.sha256(np.round(best.points, 4).tobytes()).hexdigest()
++    return best, report
+diff --git a/tianracer_gazebo/scripts/planned_race.py b/tianracer_gazebo/scripts/planned_race.py
+index 5f824f4..a7425e3 100755
+--- a/tianracer_gazebo/scripts/planned_race.py
++++ b/tianracer_gazebo/scripts/planned_race.py
+@@ -47,0 +48,15 @@ def main():
++    polish_report = None
++    if rospy.get_param('~route_joint_polish',False):
++        if not optimize:
++            raise ValueError('Joint line polish requires optimize_time')
++        from joint_line_polish import polish_line
++        center,polish_report=polish_line(planner,center,anchors,
++            {k:rospy.get_param('~'+k,v) for k,v in (
++                ('max_speed',2.0),('lateral_accel',5.0),('acceleration',2.0),('braking',3.0),
++                ('steering_rate',2.0),('yaw_rate',3.2),('response_delay',.25),('speed_planning','legacy'))},
++            strength=rospy.get_param('~route_polish_strength',.5))
++        planner.selection.update(joint_polish=polish_report,
++            estimated_lap_seconds=polish_report['selected_model_lap_seconds'])
++        if polish_report['accepted']:
++            planner.selection.update(route_changed=True,route_sha256=polish_report['selected_route_sha256'])
++        rospy.loginfo('Joint route polish (model only): %s',polish_report)
+@@ -62,0 +78 @@ def main():
++    controller.route_polish_report=polish_report
+@@ -72,0 +89 @@ def main():
++    report['route_joint_polish']=polish_report
+diff --git a/tianracer_gazebo/scripts/predictive_follower.py b/tianracer_gazebo/scripts/predictive_follower.py
+index ae010dc..415f2dc 100644
+--- a/tianracer_gazebo/scripts/predictive_follower.py
++++ b/tianracer_gazebo/scripts/predictive_follower.py
+@@ -17 +17,2 @@ class PredictiveFollower(LineFollower):
+-                 cross_track_gain=.8, startup_connector_length=2.5):
++                 cross_track_gain=.8, startup_connector_length=2.5,
++                 runtime_path_cache=False, steering_preview_mode='legacy'):
+@@ -51,0 +53,9 @@ class PredictiveFollower(LineFollower):
++        if not isinstance(runtime_path_cache, bool):
++            raise ValueError('runtime_path_cache must be boolean')
++        if steering_preview_mode not in ('legacy', 'curvature_adaptive'):
++            raise ValueError('Unknown steering_preview_mode')
++        if steering_preview_mode != 'legacy' and lateral_control != 'race_feedback':
++            raise ValueError('Adaptive steering preview requires race_feedback')
++        self.runtime_path_cache = runtime_path_cache
++        self.steering_preview_mode = steering_preview_mode
++        self.last_preview_advance = None
+@@ -88,0 +99,25 @@ class PredictiveFollower(LineFollower):
++        self.track_memory = None
++        if runtime_path_cache:
++            from track_memory import CyclicTrackMemory
++            self.track_memory = CyclicTrackMemory(path)
++
++    def steering_advance(self, distance, speed, dt):
++        legacy = min(2.5 * self.steering_preview_time, max(0., speed) * self.steering_preview_time)
++        # Keep departure, connector and readiness logic identical. No learning
++        # or mode reset at a lap seam; live pose/joints remain the feedback.
++        if (self.steering_preview_mode == 'legacy' or self.departure or
++                self.launch_limited or self.connector_active()):
++            self.last_preview_advance = legacy
++            return legacy
++        horizon = min(.60, max(0., speed) * self.steering_preview_time)
++        i = int(math.floor(distance / self.path.ds)) % self.path.n
++        count = min(self.path.n - 1, int(math.ceil(horizon / self.path.ds)))
++        curve = (self.track_memory.maximum_curvature(i, count) if self.track_memory else
++                 float(np.max(np.abs(self.path.curvature[(i + np.arange(count + 1)) % self.path.n]))))
++        # Limit the adaptive target to 0.60m / ~0.60rad of reference turn;
++        # transition toward it at a bounded rate. Existing safety limits remain.
++        target = min(horizon, .60 / max(curve, 1e-6))
++        previous = legacy if self.last_preview_advance is None else self.last_preview_advance
++        advance = previous + float(np.clip(target - previous, -2. * dt, 2. * dt))
++        self.last_preview_advance = advance
++        return advance
+@@ -154,0 +190,3 @@ class PredictiveFollower(LineFollower):
++                    runtime_path_cache=self.runtime_path_cache,
++                    track_memory=self.track_memory.report() if self.track_memory else dict(enabled=False),
++                    steering_preview_mode=self.steering_preview_mode,
+@@ -171,0 +210 @@ class PredictiveFollower(LineFollower):
++        self.last_preview_advance = None
+@@ -225 +264,2 @@ class PredictiveFollower(LineFollower):
+-        s,self.error = self.path.project(x,y,self.progress-0.1,self.progress+self.max_speed*elapsed*2+0.20)
++        project = self.track_memory.project if self.track_memory else self.path.project
++        s,self.error = project(x,y,self.progress-0.1,self.progress+self.max_speed*elapsed*2+0.20)
+@@ -291,0 +332 @@ class PredictiveFollower(LineFollower):
++        advance = self.steering_advance(tracking_s, measured_speed, dt)
+@@ -293 +333,0 @@ class PredictiveFollower(LineFollower):
+-            advance=min(2.5*self.steering_preview_time,max(0,measured_speed)*self.steering_preview_time)
+@@ -318 +357,0 @@ class PredictiveFollower(LineFollower):
+-            advance=min(2.5*self.steering_preview_time,max(0,measured_speed)*self.steering_preview_time)
+@@ -366 +405,2 @@ class PredictiveFollower(LineFollower):
+-        envelope=float(np.min(self.path.speeds[(i+np.arange(count+1))%self.path.n]))
++        envelope=(self.track_memory.minimum_speed(i,count) if self.track_memory else
++                  float(np.min(self.path.speeds[(i+np.arange(count+1))%self.path.n])))
+@@ -527,0 +568,3 @@ class PredictiveFollower(LineFollower):
++        self.last_report.update(runtime_path_cache=self.runtime_path_cache,
++                                steering_preview_mode=self.steering_preview_mode,
++                                steering_preview_distance=advance)
+diff --git a/tianracer_gazebo/scripts/run_final_speedup.sh b/tianracer_gazebo/scripts/run_final_speedup.sh
+index 10fad61..9b1b110 100755
+--- a/tianracer_gazebo/scripts/run_final_speedup.sh
++++ b/tianracer_gazebo/scripts/run_final_speedup.sh
+@@ -11 +11 @@ for argument in "$@"; do
+-    startup_speed|startup_acceleration|startup_connector_length|steering_preview_time|steering_feedback_gain|heading_feedback_gain|cross_track_gain|acceleration|lateral_accel|braking|yaw_rate|line_search_level|predict_pose|route_control_scoring|speed_recovery_hold|legacy_control) ;;
++    startup_speed|startup_acceleration|startup_connector_length|steering_preview_time|steering_feedback_gain|heading_feedback_gain|cross_track_gain|acceleration|lateral_accel|braking|yaw_rate|line_search_level|predict_pose|route_control_scoring|speed_recovery_hold|legacy_control|runtime_path_cache|steering_preview_mode|route_joint_polish|route_polish_strength) ;;
+diff --git a/tianracer_gazebo/scripts/track_memory.py b/tianracer_gazebo/scripts/track_memory.py
+new file mode 100644
+index 0000000..67af8d5
+--- /dev/null
++++ b/tianracer_gazebo/scripts/track_memory.py
+@@ -0,0 +1,91 @@
++"""Immutable cyclic reference cache, available before lap one; no ROS inputs.
++
++This caches geometry and nominal speed queries, never poses, commands or safety
++decisions. Live feedback and every existing protection remain mandatory.
++"""
++import copy
++import hashlib
++import math
++import numpy as np
++
++
++class CyclicTrackMemory:
++    def __init__(self, path):
++        if path.speeds is None or not np.isfinite(path.speeds).all() or np.any(path.speeds <= 0):
++            raise ValueError('Track memory needs a complete positive speed profile')
++        if not np.isfinite(path.points).all() or not np.isfinite(path.curvature).all():
++            raise ValueError('Track memory needs finite geometry')
++        self.path = path
++        self.points, self.curvature, self.speeds = path.points, path.curvature, path.speeds
++        self.n, self.ds, self.length = path.n, path.ds, path.length
++        for array in (self.points, self.curvature, self.speeds):
++            array.setflags(write=False)
++        self.segments = np.roll(self.points, -1, axis=0) - self.points
++        self.denominator = np.maximum(np.sum(self.segments * self.segments, axis=1), 1e-9)
++        self.speed_min = self._table(self.speeds, np.minimum)
++        self.curve_max = self._table(np.abs(self.curvature), np.maximum)
++        self.geometry_sha256 = path.fingerprint()
++        self.speed_sha256 = hashlib.sha256(self.speeds.astype('<f8').tobytes()).hexdigest()
++
++    @staticmethod
++    def _table(values, reduction):
++        tables = [values]
++        span = 1
++        while span * 2 <= len(values):
++            tables.append(reduction(tables[-1], np.roll(tables[-1], -span)))
++            span *= 2
++        for array in tables:
++            array.setflags(write=False)
++        return tables
++
++    def __deepcopy__(self, memo):
++        result = type(self)(copy.deepcopy(self.path, memo))
++        memo[id(self)] = result
++        return result
++
++    def validate(self):
++        if (self.path.points is not self.points or self.path.curvature is not self.curvature or
++                self.path.speeds is not self.speeds or self.path.n != self.n or
++                self.path.ds != self.ds or self.path.length != self.length or
++                any(a.flags.writeable for a in (self.points, self.curvature, self.speeds))):
++            raise ValueError('Track memory changed; rebuild while stationary')
++
++    def _range(self, tables, index, count, reduction):
++        self.validate()
++        if not isinstance(count, (int, np.integer)) or not 0 <= count < self.n:
++            raise ValueError('Invalid cyclic track-memory query')
++        size = int(count) + 1
++        level = size.bit_length() - 1
++        span = 1 << level
++        return float(reduction(tables[level][index % self.n],
++                               tables[level][(index + size - span) % self.n]))
++
++    def minimum_speed(self, index, count):
++        return self._range(self.speed_min, index, count, min)
++
++    def maximum_curvature(self, index, count):
++        return self._range(self.curve_max, index, count, max)
++
++    def project(self, x, y, begin, end):
++        self.validate()
++        # Preserve the original projection window, clipped geometry and tie order.
++        ids = np.arange(int(math.floor(begin / self.ds)), int(math.ceil(end / self.ds)) + 1)
++        ids = ids[(ids * self.ds <= end) & ((ids + 1) * self.ds >= begin)]
++        a = self.points[ids % self.n]
++        b = self.segments[ids % self.n]
++        q = np.array([x, y]) - a
++        t = np.clip(np.sum(q * b, axis=1) / self.denominator[ids % self.n], 0, 1)
++        lower = np.clip(begin / self.ds - ids, 0, 1)
++        upper = np.clip(end / self.ds - ids, 0, 1)
++        t = np.clip(t, lower, upper)
++        projected = a + t[:, None] * b
++        d = np.linalg.norm(projected - [x, y], axis=1)
++        best = int(np.argmin(d))
++        s = float((ids[best] + t[best]) * self.ds)
++        return max(begin, min(end, s)), float(d[best])
++
++    def report(self):
++        return dict(enabled=True, warmup_laps=0, geometry_sha256=self.geometry_sha256,
++                    speed_sha256=self.speed_sha256, samples=self.n,
++                    cached='fixed projection geometry and cyclic speed/curvature range queries',
++                    replay_commands=False, live_feedback_required=True)
+diff --git a/tianracer_gazebo/scripts/track_memory_audit.py b/tianracer_gazebo/scripts/track_memory_audit.py
+new file mode 100755
+index 0000000..5bca01f
+--- /dev/null
++++ b/tianracer_gazebo/scripts/track_memory_audit.py
+@@ -0,0 +1,95 @@
++#!/usr/bin/env python3
++"""Offline same-budget memory/preview comparison; never launches a vehicle."""
++import argparse
++import json
++from pathlib import Path
++import statistics
++import time
++import numpy as np
++from race60_audit import load_course, rear_path
++from final_speedup_audit import BUDGETS, OPTIONS, simulate
++from predictive_follower import PredictiveFollower
++
++
++def benchmark(center):
++    ordinary = PredictiveFollower(rear_path(center), **BUDGETS, **OPTIONS)
++    cached = PredictiveFollower(rear_path(center), **BUDGETS, **dict(OPTIONS, runtime_path_cache=True))
++    path = ordinary.path
++    samples = []
++    for s in np.linspace(0., 5 * path.length, 500):
++        x, y = path.sample(s) + [.01, -.01]
++        samples.append((x, y, s - .1, s + .6))
++    query_ms = {'ordinary': [], 'cached': []}
++    for repeat in range(6):
++        # Alternate evaluation order to reduce cache/CPU warmup bias.
++        methods = [('ordinary', path.project), ('cached', cached.track_memory.project)]
++        if repeat % 2:
++            methods.reverse()
++        for name, project in methods:
++            start = time.perf_counter()
++            for sample in samples:
++                project(*sample)
++            query_ms[name].append(1000 * (time.perf_counter() - start) / len(samples))
++    return dict(projection_median_ms={k: statistics.median(v) for k, v in query_ms.items()},
++                scope='Projection only, offline wall timing; not full control cycle or lap-time gain',
++                warmup_laps_required=0)
++
++
++def main():
++    parser = argparse.ArgumentParser(description=__doc__)
++    parser.add_argument('--output', type=Path, required=True)
++    parser.add_argument('--quick', action='store_true')
++    parser.add_argument('--route-only', action='store_true')
++    args = parser.parse_args()
++    package = Path(__file__).resolve().parents[1]
++    planner, anchors = load_course(package)
++    planner.margin = .34
++    planner.allowed = planner.clearance >= .34
++    center = planner.build(anchors, optimize_time=True, refine_line=True, line_search_level=3,
++                           response_delay=.25, speed_planning='delayed_braking', **BUDGETS)
++    print('Frozen original Level-3 route; same user71 budgets; all times are model-only.', flush=True)
++    cases = [('baseline', {}), ('memory_only', {'runtime_path_cache': True}),
++             ('adaptive_012', {'runtime_path_cache': True, 'steering_preview_mode': 'curvature_adaptive'}),
++             ('adaptive_010', {'runtime_path_cache': True, 'steering_preview_mode': 'curvature_adaptive',
++                               'steering_preview_time': .10})]
++    from joint_line_polish import polish_line
++    route_budgets = dict(BUDGETS, response_delay=.25, speed_planning='delayed_braking')
++    routes = {}
++    route_reports = []
++    for strength in (.5, 1.):
++        name = 'joint_route_' + str(strength)
++        routes[name], report = polish_line(planner, center, anchors, route_budgets, strength=strength)
++        report['name'] = name
++        route_reports.append(report)
++        print(json.dumps(report), flush=True)
++    if args.route_only:
++        cases = [('baseline', {})]
++    cases += [(name, {}) for name in routes]
++    responses = [(.08, .02, 0.), (.15, .02, 0.), (.15, .04, .04),
++                 (.25, .04, .04), (.15, .02, .12)]
++    if args.quick:
++        responses = responses[:2]
++    rows = []
++    for name, overrides in cases:
++        for lag, pose_age, joint_age in responses:
++            row = simulate(routes.get(name, center), planner, dict(OPTIONS, **overrides), lag, pose_age, joint_age)
++            row['name'] = name
++            rows.append(row)
++            print(json.dumps({k: row.get(k) for k in ('name', 'hypothetical_actuator_lag', 'pose_age',
++                'joint_transport_age', 'completed', 'total_seconds', 'peak_reference_error', 'fault')}), flush=True)
++    output = args.output.expanduser()
++    output.parent.mkdir(parents=True, exist_ok=True)
++    result = dict(official_result=False, official_under_60_verified=False, gazebo_tested=False,
++                  no_lap_time_improvement_claimed=True, route_selection=planner.selection,
++                  minimum_route_clearance=planner.segment_check(center.points),
++                  joint_route_reports=route_reports,
++                  benchmark=benchmark(center), rows=rows,
++                  assumptions='Same fixed route/budgets. Bicycle plus hypothetical first-order speed/steering lag; '
++                    'no tire dynamics, roll, AMCL jumps, laser/referee validation. '
++                    'Faster model time with worse error/drop is not acceptance evidence.')
++    output.write_text(json.dumps(result, indent=2, allow_nan=False) + '\n')
++    print('Saved model-only comparison: ' + str(output), flush=True)
++
++
++if __name__ == '__main__':
++    main()
+diff --git a/tianracer_gazebo/test/test_joint_line_polish.py b/tianracer_gazebo/test/test_joint_line_polish.py
+new file mode 100644
+index 0000000..e0dc19e
+--- /dev/null
++++ b/tianracer_gazebo/test/test_joint_line_polish.py
+@@ -0,0 +1,90 @@
++import math
++from pathlib import Path
++from types import SimpleNamespace
++import sys
++import unittest
++from unittest.mock import Mock, patch
++from xml.etree import ElementTree as ET
++import numpy as np
++
++sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'scripts'))
++from race_line import ClosedPath
++from joint_line_polish import polish_line
++
++
++class JointLineTests(unittest.TestCase):
++    def setUp(self):
++        angle = np.linspace(0, 2 * math.pi, 200)
++        self.seed = ClosedPath(np.column_stack((6 * np.cos(angle), 6 * np.sin(angle))), spacing=.1)
++        self.anchors = self.seed.points[::100]
++        self.planner = SimpleNamespace(margin=.34, score=Mock(return_value=20.),
++            clearance_at=lambda points: np.full(len(points), 1.), feasible=Mock(return_value=None))
++        self.budgets = dict(max_speed=10., lateral_accel=9.94, acceleration=7.3,
++            braking=3.7, steering_rate=2., yaw_rate=4.4, response_delay=.25, speed_planning='delayed_braking')
++
++    def fake_solver(self, success=True):
++        def solve(function, initial, **kwargs):
++            self.assertEqual(kwargs['method'], 'SLSQP')
++            return SimpleNamespace(success=success, message='test solver', nit=1,
++                                   x=np.full(len(initial), .01))
++        return solve
++
++    def test_invalid_strength_rejected(self):
++        for value in (0, .09, 1.01, True, math.nan, math.inf):
++            with self.subTest(value=value), self.assertRaises(ValueError):
++                polish_line(self.planner, self.seed, self.anchors, self.budgets, strength=value)
++        self.planner.score.assert_not_called()
++
++    def test_solver_failure_keeps_original_reference(self):
++        with patch('joint_line_polish.minimize', side_effect=self.fake_solver(False)):
++            result, report = polish_line(self.planner, self.seed, self.anchors, self.budgets)
++        self.assertIs(result, self.seed)
++        self.assertFalse(report['accepted'])
++        self.planner.feasible.assert_not_called()
++
++    def test_solver_success_never_bypasses_geometry_guard(self):
++        with patch('joint_line_polish.minimize', side_effect=self.fake_solver()):
++            result, report = polish_line(self.planner, self.seed, self.anchors, self.budgets)
++        self.assertIs(result, self.seed)
++        self.assertFalse(report['accepted'])
++        self.assertEqual(self.planner.feasible.call_count, 3)
++        self.assertTrue(all(not item['feasible'] for item in report['candidates']))
++
++    def test_feasible_but_slower_never_replaces_baseline(self):
++        self.planner.feasible.return_value = self.seed
++        self.planner.score.side_effect = [20., 21., 20., 20.001]
++        with patch('joint_line_polish.minimize', side_effect=self.fake_solver()):
++            result, report = polish_line(self.planner, self.seed, self.anchors, self.budgets)
++        self.assertIs(result, self.seed)
++        self.assertFalse(report['accepted'])
++
++    def test_accepted_candidate_preserves_start_and_budget(self):
++        original = self.seed.points.copy()
++        budget_copy = dict(self.budgets)
++        self.planner.feasible.return_value = self.seed
++        self.planner.score.side_effect = [20., 21., 19., 18.]
++        with patch('joint_line_polish.minimize', side_effect=self.fake_solver()):
++            result, report = polish_line(self.planner, self.seed, self.anchors, self.budgets)
++        self.assertTrue(report['accepted'])
++        self.assertEqual(report['protected_input_displacement'], 0.)
++        self.assertEqual(report['selected_model_lap_seconds'], 18.)
++        self.assertFalse(report['official_result'])
++        self.assertEqual(self.budgets, budget_copy)
++        np.testing.assert_array_equal(self.seed.points, original)
++
++    def test_all_features_default_off_and_legacy_forces_off(self):
++        launch = Path(__file__).resolve().parents[1] / 'launch'
++        for filename in ('planned_race.launch', 'final_speedup.launch', 'final_speedup_demo.launch'):
++            root = ET.parse(launch / filename).getroot()
++            args = {item.attrib['name']: item.attrib.get('default') for item in root.findall('arg')}
++            self.assertEqual(args['route_joint_polish'], 'false')
++            self.assertEqual(args['runtime_path_cache'], 'false')
++            self.assertEqual(args['steering_preview_mode'], 'legacy')
++        root = ET.parse(launch / 'final_speedup.launch').getroot()
++        forwarded = {item.attrib['name']: item.attrib['value'] for item in root.find('include').findall('arg')}
++        for name in ('route_joint_polish', 'runtime_path_cache', 'steering_preview_mode'):
++            self.assertIn("arg('legacy_control')", forwarded[name])
++
++
++if __name__ == '__main__':
++    unittest.main()
+diff --git a/tianracer_gazebo/test/test_track_memory.py b/tianracer_gazebo/test/test_track_memory.py
+new file mode 100644
+index 0000000..ac3e074
+--- /dev/null
++++ b/tianracer_gazebo/test/test_track_memory.py
+@@ -0,0 +1,149 @@
++import copy
++import math
++from pathlib import Path
++import sys
++import unittest
++import numpy as np
++
++sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'scripts'))
++from race_line import ClosedPath
++from predictive_follower import PredictiveFollower
++from track_memory import CyclicTrackMemory
++
++
++def make_follower(**overrides):
++    angle = np.linspace(0, 2 * math.pi, 700)
++    path = ClosedPath(np.column_stack((6 * np.cos(angle), 6 * np.sin(angle))), spacing=.04)
++    options = dict(max_speed=10., lateral_accel=9.94, acceleration=7.3, braking=3.7,
++                   yaw_rate=4.4, steering_rate=2., response_delay=.25,
++                   speed_planning='delayed_braking', lateral_control='race_feedback',
++                   steering_feedback_gain=.25, steering_preview_time=.12,
++                   startup_speed=2., startup_acceleration=2.5,
++                   startup_release_early=True, fast_start=True, start_blend=True)
++    options.update(overrides)
++    return PredictiveFollower(path, **options)
++
++
++class TrackMemoryTests(unittest.TestCase):
++    def test_cyclic_queries_match_brute_force_including_seam(self):
++        follower = make_follower(runtime_path_cache=True)
++        path, cache = follower.path, follower.track_memory
++        for i in (-2, 0, 3, path.n - 1, path.n + 1):
++            for count in (0, 1, 2, 3, 7, 32, path.n - 1):
++                ids = (i + np.arange(count + 1)) % path.n
++                self.assertEqual(cache.minimum_speed(i, count), float(path.speeds[ids].min()))
++                self.assertEqual(cache.maximum_curvature(i, count), float(abs(path.curvature[ids]).max()))
++
++    def test_projection_is_bit_identical_across_five_laps(self):
++        f = make_follower(runtime_path_cache=True)
++        for lap in range(5):
++            for s in np.linspace(-.03, f.path.length + .03, 60) + lap * f.path.length:
++                x, y = f.path.sample(s) + [.02, -.01]
++                begin, end = s - .15, s + .7
++                self.assertEqual(f.path.project(x, y, begin, end), f.track_memory.project(x, y, begin, end))
++
++    def test_changed_reference_fails_closed(self):
++        f = make_follower(runtime_path_cache=True)
++        with self.assertRaises(ValueError):
++            f.path.points[0] += 1.
++        f.path.speeds = f.path.speeds.copy()
++        with self.assertRaisesRegex(ValueError, 'rebuild while stationary'):
++            f.track_memory.minimum_speed(0, 0)
++
++    def test_prepare_deepcopy_preserves_cache_reference_and_isolation(self):
++        original = make_follower(runtime_path_cache=True)
++        probe = copy.deepcopy(original)
++        probe.track_memory.validate()
++        self.assertIs(probe.track_memory.path, probe.path)
++        self.assertIsNot(probe.path.points, original.path.points)
++        self.assertFalse(probe.path.points.flags.writeable)
++        original.track_memory.validate()
++
++    def test_cached_and_original_follower_outputs_match_over_five_laps(self):
++        ordinary = make_follower()
++        cached = make_follower(runtime_path_cache=True)
++        for f in (ordinary, cached):
++            f.start(6., 0., math.pi / 2)
++        for s in np.linspace(0., 5 * ordinary.path.length, 2500):
++            x, y = ordinary.path.sample(s)
++            tangent = ordinary.path.sample(s + .08) - ordinary.path.sample(s - .08)
++            yaw = math.atan2(tangent[1], tangent[0])
++            outputs = []
++            for f in (ordinary, cached):
++                f.measured_steer = math.atan(.26 / 6)
++                f.measured_steer_age = 0.
++                outputs.append(f.step(x, y, yaw, 4., .02))
++            self.assertEqual(outputs[0], outputs[1])
++            self.assertEqual(ordinary.progress, cached.progress)
++            self.assertEqual(ordinary.error, cached.error)
++
++    def test_invalid_memory_query_and_configuration(self):
++        f = make_follower(runtime_path_cache=True)
++        for count in (-1, f.path.n, 1.5):
++            with self.assertRaises(ValueError):
++                f.track_memory.minimum_speed(0, count)
++        for overrides in ({'runtime_path_cache': 'true'}, {'steering_preview_mode': 'blind_replay'},
++                          {'steering_preview_mode': 'curvature_adaptive', 'lateral_control': 'pursuit'}):
++            with self.assertRaises(ValueError):
++                make_follower(**overrides)
++
++    def test_hard_tracking_stop_still_triggers_with_cache(self):
++        f = make_follower(runtime_path_cache=True)
++        f.start(6., 0., math.pi / 2)
++        with self.assertRaisesRegex(ValueError, 'Tracking error exceeds safe corridor'):
++            f.step(6.2, 0., math.pi / 2, 1., .02)
++        self.assertEqual(f.speed, 0.)
++
++    def test_cached_plan_report_keeps_reference_and_can_evaluate_sensitivity(self):
++        f = make_follower(runtime_path_cache=True)
++        before = f.path.fingerprint()
++        report = f.plan_report()
++        self.assertEqual(report['track_memory']['geometry_sha256'], before)
++        self.assertIn('same_route_parameter_sensitivity', report)
++        f.track_memory.validate()
++
++
++class SteeringPreviewTests(unittest.TestCase):
++    def test_legacy_cap_and_no_first_lap_warmup(self):
++        f = make_follower(runtime_path_cache=True)
++        f.start(6., 0., math.pi / 2)
++        self.assertAlmostEqual(f.steering_advance(0., 6., .02), .30)
++        self.assertEqual(f.track_memory.report()['warmup_laps'], 0)
++        self.assertFalse(f.track_memory.report()['replay_commands'])
++
++    def test_adaptive_preview_keeps_departure_connector_and_startup_unchanged(self):
++        f = make_follower(steering_preview_mode='curvature_adaptive')
++        f.progress = f.origin = 0.
++        for departure, limited, offset in ((True, False, None), (False, True, None),
++                                           (False, False, np.array([.07, 0.]))):
++            f.departure, f.launch_limited, f.connector_offset = departure, limited, offset
++            self.assertAlmostEqual(f.steering_advance(0., 5., .02), .3)
++
++    def test_high_speed_preview_scales_and_changes_continuously(self):
++        f = make_follower(steering_preview_mode='curvature_adaptive')
++        f.progress = f.origin = 0.
++        f.departure = f.launch_limited = False
++        f.connector_offset = None
++        previous = .3
++        for _ in range(30):
++            advance = f.steering_advance(0., 5., .02)
++            self.assertLessEqual(abs(advance - previous), .04 + 1e-12)
++            previous = advance
++        self.assertAlmostEqual(advance, .6)
++        self.assertEqual(f.response_delay, .25)
++        self.assertEqual(f.max_error, .15)
++
++    def test_restart_resets_preview_state_not_lap_seam(self):
++        f = make_follower(steering_preview_mode='curvature_adaptive')
++        f.last_preview_advance = .6
++        f.start(6., 0., math.pi / 2)
++        self.assertIsNone(f.last_preview_advance)
++        f.progress = f.origin + f.path.length
++        f.departure = f.launch_limited = False
++        f.connector_offset = None
++        f.steering_advance(f.progress, 5., .02)
++        self.assertIsNotNone(f.last_preview_advance)
++
++
++if __name__ == '__main__':
++    unittest.main()
